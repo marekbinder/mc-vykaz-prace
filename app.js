@@ -7,9 +7,11 @@ const state = {
   jobs: [],
   clients: [],
   statuses: [],
-  entries: {}, // jobId -> { dateISO: hours }
+  entries: {}, // jobId -> { dateISO: number }
   filterClient: 'ALL'
 }
+
+const STEP = 0.5 // půlhodiny
 
 function startOfISOWeek(d){
   const dt = new Date(d); const day = (dt.getDay()+6)%7; // 0=Mon
@@ -17,6 +19,7 @@ function startOfISOWeek(d){
 }
 function fmtDate(d){ return dayjs(d).format('YYYY-MM-DD') }
 function addDays(d, n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
+function round1(x){ return Math.round(x*2)/2 } // na půlhodiny
 
 async function loadConfig(){
   const res = await fetch('./config.json'); 
@@ -60,7 +63,7 @@ function showLogin(){
     <div class="card login">
       <h2>Přihlášení</h2>
       <p class="helper">Zadej e-mail, pošleme magic link pro přihlášení.</p>
-      <input id="email" type="email" placeholder="name@example.com" />
+      <input id="email" type="email" class="text" placeholder="name@example.com" />
       <button id="sendLink" class="btn">Poslat přihlašovací odkaz</button>
     </div>`
   document.getElementById('sendLink').onclick = async () => {
@@ -78,7 +81,6 @@ function showLogin(){
 async function ensureProfile(){
   if(!state.session) return
   const uid = state.session.user.id
-  // všichni budou mít v profilu roli 'admin' (pro konzistenci, i když RLS to nevyžaduje)
   await state.sb.from('app_user')
     .upsert({ id: uid, full_name: state.session.user.email, role: 'admin' }, { onConflict: 'id' })
 }
@@ -127,7 +129,7 @@ async function loadEntries(){
   for(const row of data){
     const d = row.work_date
     if(!map[row.job_id]) map[row.job_id] = {}
-    map[row.job_id][d] = (map[row.job_id][d] || 0) + (row.hours||0)
+    map[row.job_id][d] = round1((map[row.job_id][d] || 0) + Number(row.hours||0))
   }
   return map
 }
@@ -150,24 +152,22 @@ function buildTable(){
         <button class="btn" id="export">Export do Excelu</button>
       </div>
 
-      <div class="helper">Klik = +1 h, pravé tlačítko = −1 h</div>
-      <div class="helper">Zobrazují se všechny aktivní zakázky; hodiny se ukládají k přihlášenému uživateli.</div>
+      <div class="helper">Klik = +0,5 h, pravé tlačítko = −0,5 h</div>
+      <div class="helper">Ve výpisu lze upravit klienta, název i stav zakázky (inline).</div>
     </div>
 
     <div class="card" style="margin-top:10px">
       <strong>Přidat klienta / zakázku</strong>
       <div class="controls" style="margin-top:8px">
-        <!-- Nový klient -->
-        <input id="newClientName" placeholder="Název klienta">
+        <input id="newClientName" class="text" placeholder="Název klienta">
         <button class="btn" id="addClient">Přidat klienta</button>
 
         <div class="spacer"></div>
 
-        <!-- Nová zakázka -->
         <select id="jobClient" class="btn">
           ${state.clients.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}
         </select>
-        <input id="newJobName" placeholder="Název zakázky">
+        <input id="newJobName" class="text" placeholder="Název zakázky">
         <select id="jobStatus" class="btn">
           ${state.statuses.map(s => `<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')}
         </select>
@@ -180,19 +180,22 @@ function buildTable(){
         <table>
           <thead>
             <tr>
-              <th>Klient</th>
-              <th>Zakázka</th>
+              <th style="width:240px">Klient</th>
+              <th style="width:360px">Zakázka</th>
               <th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th>
               <th>Celkem</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
+          <tfoot>
+            <tr id="sumRow"></tr>
+          </tfoot>
         </table>
       </div>
     </div>
   `
-  document.getElementById('prevWeek').onclick = ()=>{ state.weekStart = addDays(state.weekStart, -7); renderBody() }
-  document.getElementById('nextWeek').onclick = ()=>{ state.weekStart = addDays(state.weekStart, 7); renderBody() }
+  document.getElementById('prevWeek').onclick = ()=>{ state.weekStart = addDays(state.weekStart, -7); refreshData() }
+  document.getElementById('nextWeek').onclick = ()=>{ state.weekStart = addDays(state.weekStart, 7); refreshData() }
   document.getElementById('export').onclick = exportExcel
   document.getElementById('filterClient').onchange = (e)=>{ state.filterClient = e.target.value; renderBody(); }
   document.getElementById('addClient').onclick = addClient
@@ -208,14 +211,16 @@ function cellValue(jobId, dateISO){
 }
 
 async function bump(jobId, dateISO, delta){
-  // Optimistic update
+  // Optimistic update (půlhodiny)
   state.entries[jobId] = state.entries[jobId] || {}
-  state.entries[jobId][dateISO] = Math.max(0, (state.entries[jobId][dateISO] || 0) + delta)
+  const next = Math.max(0, round1((state.entries[jobId][dateISO] || 0) + delta))
+  state.entries[jobId][dateISO] = next
   updateRow(jobId)
-  // Persist
+  // Persist do DB
   const { error } = await state.sb.from('time_entry').insert({ job_id: jobId, work_date: dateISO, hours: delta })
   if(error){
-    state.entries[jobId][dateISO] = Math.max(0, (state.entries[jobId][dateISO] || 0) - delta)
+    // revert
+    state.entries[jobId][dateISO] = round1(next - delta)
     updateRow(jobId)
     alert('Nepovedlo se uložit: ' + error.message)
   }
@@ -228,10 +233,11 @@ function updateRow(jobId){
   const tr = document.querySelector(`tr[data-job="${jobId}"]`)
   if(!tr) return
   days.forEach((d,idx)=>{
-    const td = tr.querySelector(`td[data-day="${idx}"] button`)
-    if(td) td.textContent = cellValue(jobId, d)
+    const btn = tr.querySelector(`td[data-day="${idx}"] button`)
+    if(btn) btn.textContent = cellValue(jobId, d).toFixed(1).replace('.0','')
   })
-  tr.querySelector('td.total').textContent = sum
+  tr.querySelector('td.total').textContent = sum.toFixed(1).replace('.0','')
+  updateTotalsRow()
 }
 
 function renderBody(){
@@ -243,27 +249,94 @@ function renderBody(){
     const tr = document.createElement('tr')
     tr.dataset.job = j.id
     tr.innerHTML = `
-      <td><span class="client">${escapeHtml(j.client)}</span></td>
-      <td>${escapeHtml(j.name)} &nbsp; <span class="status">• ${escapeHtml(j.status||'')}</span></td>
+      <td>
+        <select class="btn jobClientSelect" data-job="${j.id}">
+          ${state.clients.map(c => `<option value="${c.id}" ${c.id===j.client_id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <div class="inlineRow">
+          <input type="text" class="text jobNameInput" value="${escapeHtml(j.name)}" data-job="${j.id}" />
+          <select class="btn jobStatusSelect" data-job="${j.id}">
+            ${state.statuses.map(s => `<option value="${s.id}" ${s.id===j.status_id?'selected':''}>${escapeHtml(s.label)}</option>`).join('')}
+          </select>
+        </div>
+      </td>
       ${days.map((d,i)=>`<td data-day="${i}" class="tc"><button class="cellBtn" data-date="${d}" data-job="${j.id}">0</button></td>`).join('')}
       <td class="total">0</td>
     `
     tbody.appendChild(tr)
   }
+  // naplnit hodnoty a navázat handlery
   for(const j of visibleJobs){ updateRow(j.id) }
+
   tbody.querySelectorAll('.cellBtn').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       const job = e.currentTarget.getAttribute('data-job')
       const dateISO = e.currentTarget.getAttribute('data-date')
-      bump(job, dateISO, 1)
+      bump(job, dateISO, +STEP)
     })
     btn.addEventListener('contextmenu', (e)=>{
       e.preventDefault()
       const job = e.currentTarget.getAttribute('data-job')
       const dateISO = e.currentTarget.getAttribute('data-date')
-      bump(job, dateISO, -1)
+      bump(job, dateISO, -STEP)
     })
   })
+
+  // inline edit job fields
+  tbody.querySelectorAll('.jobClientSelect').forEach(sel=>{
+    sel.addEventListener('change', async (e)=>{
+      const jobId = e.currentTarget.getAttribute('data-job')
+      const clientId = e.currentTarget.value
+      await updateJob(jobId, { client_id: clientId })
+    })
+  })
+  tbody.querySelectorAll('.jobNameInput').forEach(inp=>{
+    let t=null
+    inp.addEventListener('input', (e)=>{
+      clearTimeout(t)
+      const jobId = e.currentTarget.getAttribute('data-job')
+      const name = e.currentTarget.value
+      t = setTimeout(async ()=>{ await updateJob(jobId, { name }) }, 400)
+    })
+  })
+  tbody.querySelectorAll('.jobStatusSelect').forEach(sel=>{
+    sel.addEventListener('change', async (e)=>{
+      const jobId = e.currentTarget.getAttribute('data-job')
+      const status_id = parseInt(e.currentTarget.value,10)
+      await updateJob(jobId, { status_id })
+    })
+  })
+
+  updateTotalsRow()
+}
+
+function updateTotalsRow(){
+  const days = getDays()
+  const visibleJobs = state.filterClient==='ALL' ? state.jobs : state.jobs.filter(j => j.client_id === state.filterClient)
+  const sums = days.map((d)=>{
+    let s=0
+    for(const j of visibleJobs){ s += cellValue(j.id, d) }
+    return round1(s)
+  })
+  const tr = document.getElementById('sumRow')
+  const colorClass = (h)=> h<=3 ? 'sumRed' : (h<=6 ? 'sumOrange' : 'sumGreen')
+  tr.innerHTML = `
+    <td colspan="2" style="text-align:right">Součet za den:</td>
+    ${sums.map(h => `<td class="sumCell ${colorClass(h)}">${h.toFixed(1).replace('.0','')}</td>`).join('')}
+    <td></td>
+  `
+}
+
+async function updateJob(jobId, patch){
+  const { error } = await state.sb.from('job').update(patch).eq('id', jobId)
+  if(error){ alert('Nelze upravit zakázku: ' + error.message) }
+  else{
+    // obnovíme jobs (aby se props jako client/status text hned propsaly)
+    state.jobs = await loadJobs()
+    renderBody()
+  }
 }
 
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
@@ -279,6 +352,10 @@ async function exportExcel(){
     const total = vals.reduce((a,b)=>a+b,0)
     ws.addRow([j.client, j.name, ...vals, total])
   }
+  // poslední řádek: denní součty
+  const daySums = days.map(d => visibleJobs.reduce((acc,j)=>acc+cellValue(j.id,d),0))
+  ws.addRow(['Součet za den','', ...daySums, ''])
+
   const buf = await wb.xlsx.writeBuffer()
   const a = document.createElement('a')
   a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
@@ -293,7 +370,6 @@ async function addClient(){
   if(error){ return alert(error.message) }
   document.getElementById('newClientName').value=''
   state.clients = await loadClients()
-  // přestavíme panel i selecty
   buildTable()
 }
 
@@ -306,6 +382,11 @@ async function addJob(){
   if(error){ return alert(error.message) }
   document.getElementById('newJobName').value=''
   state.jobs = await loadJobs()
+  renderBody()
+}
+
+async function refreshData(){
+  state.entries  = await loadEntries()
   renderBody()
 }
 

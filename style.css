@@ -1,30 +1,43 @@
 *{box-sizing:border-box}
-:root{--bg:#0f172a;--fg:#e2e8f0;--muted:#94a3b8;--card:#111827;--accent:#22c55e;--border:#1f2937}
+:root{
+  --bg:#f7fafc; --fg:#111827; --muted:#6b7280; --card:#ffffff; --accent:#2563eb; --border:#e5e7eb;
+  --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444;
+}
 html,body{height:100%}
-body{margin:0;background:linear-gradient(180deg,#0b1023,#0f172a);color:var(--fg);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial}
 header,footer{max-width:1100px;margin:0 auto;padding:16px 20px}
 header{display:flex;align-items:center;gap:12px;justify-content:space-between}
 h1{margin:0;font-size:22px}
-#userBox button{background:#1f2937;border:1px solid var(--border);color:var(--fg);padding:8px 10px;border-radius:10px;cursor:pointer}
-#userBox button:hover{background:#263140}
+#userBox button{background:#fff;border:1px solid var(--border);color:var(--fg);padding:8px 10px;border-radius:10px;cursor:pointer}
+#userBox button:hover{background:#f3f4f6}
 main{max-width:1100px;margin:12px auto 40px;padding:0 20px}
-.card{background:rgba(17,24,39,.7);border:1px solid var(--border);border-radius:16px;padding:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
 .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 .controls .spacer{flex:1}
-.controls .btn{background:#0b1222;border:1px solid var(--border);color:var(--fg);padding:8px 10px;border-radius:10px;cursor:pointer}
-.controls .btn:hover{background:#101931}
-.range{font-weight:600}
+.btn{background:#fff;border:1px solid var(--border);color:var(--fg);padding:8px 10px;border-radius:10px;cursor:pointer}
+.btn:hover{background:#f3f4f6}
+.range{font-weight:700}
+select.btn, input.text{appearance:none}
+input.text{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--fg)}
+
+.tableWrap{overflow-x:auto}
 table{width:100%;border-collapse:separate;border-spacing:0;margin-top:8px}
-thead th{position:sticky;top:0;background:#0b1222;border-bottom:1px solid var(--border);padding:10px;text-align:left;font-weight:600}
-tbody td, tbody th{border-bottom:1px solid var(--border);padding:8px}
-.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:#0b1222;padding:4px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
-.cellBtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:#0b1222;color:var(--fg);cursor:pointer}
-.cellBtn:hover{background:#132038}
+thead th{position:sticky;top:0;background:#f9fafb;border-bottom:1px solid var(--border);padding:10px;text-align:left;font-weight:700}
+tbody td, tbody th{border-bottom:1px solid var(--border);padding:8px;vertical-align:middle}
+tfoot td{border-top:2px solid var(--border);padding:10px;font-weight:700}
+.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:#fff;padding:4px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
+.cellBtn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--fg);cursor:pointer}
+.cellBtn:hover{background:#f3f4f6}
 .total{font-weight:700}
 .helper{color:var(--muted);font-size:13px;margin-top:4px}
-.login{max-width:420px;margin:60px auto}
-input[type="email"], input[type='text']{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#0b1222;color:var(--fg)}
-.login .btn{margin-top:10px;width:100%}
-.client{color:#93c5fd}
-.status{font-size:12px;color:#a3e635}
-select.btn{appearance:none}
+
+.client{color:#2563eb;font-weight:600}
+.statusTag{font-size:12px;color:#6b7280;}
+
+.sumCell{border-radius:8px;text-align:center;font-weight:800}
+.sumRed{background:#fee2e2;color:#991b1b}
+.sumOrange{background:#ffedd5;color:#9a3412}
+.sumGreen{background:#dcfce7;color:#14532d}
+
+.inlineRow{display:flex;gap:8px;align-items:center}
+.inlineRow input[type="text"]{flex:1}

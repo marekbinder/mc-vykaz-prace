@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Výkaz práce</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header>
+    <h1>Výkaz práce</h1>
+    <div id="userBox"></div>
+  </header>
+
+  <main id="app">
+    <div class="card">
+      <p>Načítám…</p>
+    </div>
+  </main>
+
+  <footer>
+    <small>Frontend běží na GitHub Pages, data v Supabase (Postgres + Auth).</small>
+  </footer>
+
+  <!-- Supabase a ExcelJS z CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

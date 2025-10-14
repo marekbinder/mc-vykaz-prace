@@ -63,10 +63,11 @@ function showLogin(){
   document.getElementById('sendLink').onclick = async () => {
     const email = document.getElementById('email').value.trim()
     if(!email) return alert('Zadej e‑mail')
-    const url = window.location.origin + window.location.pathname; // např. https://uzivatel.github.io/repo/
-const { error } = await state.sb.auth.signInWithOtp({
+    const { error } = await state.sb.auth.signInWithOtp({
   email,
-  options: { emailRedirectTo: url }
+  options: {
+    emailRedirectTo: 'https://marekbinder.github.io/mc-vykaz-prace/index.html'
+  }
 })
 
     if(error) return alert(error.message)

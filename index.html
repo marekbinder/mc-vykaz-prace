@@ -7,9 +7,10 @@
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <header>
+  <header class="siteHeader">
+    <div class="leftSlot"></div>
     <h1>Výkaz práce</h1>
-    <div id="userBox"></div>
+    <div class="rightSlot"></div>
   </header>
 
   <main id="app">
@@ -18,8 +19,8 @@
     </div>
   </main>
 
-  <footer>
-    <small>Frontend: GitHub Pages · Data: Supabase (Postgres + Auth)</small>
+  <footer class="siteFooter">
+    <small>Frontend: GitHub Pages · Data: Supabase</small>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

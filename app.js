@@ -70,24 +70,25 @@ function circle(label){ const b=document.createElement('button'); b.className='c
 function buildShell(){
   const app=document.getElementById('app'); app.innerHTML=''
 
-  // nav
+  // nav (okamžitě aktualizujeme range; load je async)
   const nav=document.createElement('div'); nav.className='nav'
   const prev=circle('◀'); const next=circle('▶')
-  const range=pill('div','pill dark navRange'); range.textContent=`${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`
-  prev.onclick=()=>{ state.weekStart=addDays(state.weekStart,-7); refreshData() }
-  next.onclick=()=>{ state.weekStart=addDays(state.weekStart, 7); refreshData() }
-  nav.append(prev,range,next); app.append(nav)
+  const range=pill('div','pill dark navRange'); const setRange=()=>range.textContent=`${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`; setRange()
+  const exportBtn=document.createElement('button'); exportBtn.className='pill-btn'; exportBtn.textContent='Export do Excelu'; exportBtn.onclick=exportExcel
+  prev.onclick=()=>{ state.weekStart=addDays(state.weekStart,-7); setRange(); refreshData() }
+  next.onclick=()=>{ state.weekStart=addDays(state.weekStart, 7); setRange(); refreshData() }
+  nav.append(prev,range,next, exportBtn); app.append(nav)
 
-  // filters (nadpis bez pill), jednotlivé filtry jako pill-select
+  // filters
   const filters=document.createElement('div'); filters.className='filters'
   const label=document.createElement('div'); label.className='label'; label.textContent='Nastavení filtru:'; filters.append(label)
   const fClient=document.createElement('select'); fClient.className='pill-select'; fClient.innerHTML = `<option value="ALL">Všichni klienti</option>` + state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
-  fClient.onchange=(e)=>{ state.filterClient=e.target.value; renderTable() }
+  fClient.value = state.filterClient; fClient.onchange=(e)=>{ state.filterClient=e.target.value; renderTable() }
   const fStat=document.createElement('select'); fStat.className='pill-select'; fStat.innerHTML = `<option value="ALL">Všechny zakázky</option>` + state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')
-  fStat.onchange=(e)=>{ state.filterStatus=e.target.value; renderTable() }
+  fStat.value = state.filterStatus; fStat.onchange=(e)=>{ state.filterStatus=e.target.value; renderTable() }
   filters.append(fClient, fStat); app.append(filters)
 
-  // add client/job bar (selecty jako pill)
+  // add client/job
   const admin=document.createElement('div'); admin.className='card'
   const row=document.createElement('div'); row.style.display='flex'; row.style.gap='10px'; row.style.alignItems='center'
   const newClient=document.createElement('input'); newClient.className='pill-input'; newClient.placeholder='Název klienta'
@@ -112,7 +113,11 @@ function buildShell(){
     <th>Celkem</th>
   </tr></thead>
   <tbody id="tbody"></tbody>
-  <tfoot><tr><td colspan="2"></td><td colspan="5"><div id="sumBar" class="sumBar"></div></td><td></td></tr></tfoot>`
+  <tfoot><tr id="sumRow">
+    <td></td><td></td>
+    <td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td>
+    <td></td>
+  </tr></tfoot>`
 
   renderTable()
 }
@@ -133,7 +138,7 @@ function renderTable(){
 
     const tdJob=document.createElement('td'); tdJob.className='jobCell'
     const name=document.createElement('input'); name.className='pill-input jobName'; name.value=j.name
-    let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ await updateJob(j.id,{name:e.target.value}) }, 350) }
+    let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ await updateJob(j.id,{name:e.target.value}) }, 250) }
     const st=document.createElement('select'); st.className='pill-select statusSel'
     st.innerHTML = state.statuses.map(s=>`<option value="${s.id}" ${s.id===j.status_id?'selected':''}>${escapeHtml(s.label)}</option>`).join('')
     st.onchange=async(e)=>{ await updateJob(j.id,{status_id:parseInt(e.target.value,10)}) }
@@ -152,33 +157,39 @@ function renderTable(){
 
     tbody.append(tr); updateRow(j.id)
   }
-  updateSumBar(visible)
+  updateSumRow(visible)
 }
 
 function getDays(){ return [0,1,2,3,4].map(i=>fmtDate(addDays(state.weekStart,i))) }
 function cellValue(jobId, dateISO){ return (state.entries[jobId] && state.entries[jobId][dateISO]) ? state.entries[jobId][dateISO] : 0 }
 
 async function bump(jobId,dateISO,delta){
+  // okamžité UI
   state.entries[jobId] ??= {}
   const next = Math.max(0, round05((state.entries[jobId][dateISO]||0) + delta))
   state.entries[jobId][dateISO]=next; updateRow(jobId)
-  const { error } = await state.sb.from('time_entry').insert({ job_id:jobId, work_date:dateISO, hours:delta })
-  if(error){ state.entries[jobId][dateISO]=round05(next-delta); updateRow(jobId); alert(error.message) }
+  // async persist (bez blokace UI)
+  state.sb.from('time_entry').insert({ job_id:jobId, work_date:dateISO, hours:delta }).then(({error})=>{
+    if(error){ state.entries[jobId][dateISO]=round05(next-delta); updateRow(jobId); alert(error.message) }
+  })
 }
 function updateRow(jobId){
   const days=getDays(); const tr=document.querySelector(`tr[data-job="${jobId}"]`); if(!tr) return
   let sum=0; days.forEach((d,i)=>{ const val=cellValue(jobId,d); sum+=val; const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b) b.textContent=(val%1===0)? String(val): val.toFixed(1) })
   tr.querySelector('.totalCell').textContent=(sum%1===0)? String(sum): sum.toFixed(1)
+  // přepočítat sumRow jen jednou na anim frame (debounce micro)
+  queueMicrotask(()=>updateSumRow())
 }
-function updateSumBar(visibleJobs){
+function updateSumRow(visibleJobs){
   const days=getDays()
-  const sums=days.map(d=>visibleJobs.reduce((a,j)=>a+cellValue(j.id,d),0))
-  const bar=document.getElementById('sumBar'); if(!bar) return
-  bar.innerHTML = sums.map(h=>{
+  const visible = visibleJobs || state.jobs.filter(j=> (state.filterClient==='ALL'||j.client_id===state.filterClient) && (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
+  const sums=days.map(d=>visible.reduce((a,j)=>a+cellValue(j.id,d),0))
+  const tds = document.querySelectorAll('#sumRow .sumCell')
+  sums.forEach((h,i)=>{
+    const td = tds[i]; if(!td) return
     const cls = h<=3 ? 'sumRed' : (h<=6 ? 'sumOrange' : 'sumGreen')
-    const label = (h%1===0)? String(h): h.toFixed(1)
-    return `<span class="sumBubble ${cls}">${label}</span>`
-  }).join('')
+    td.innerHTML = `<span class="sumBubble ${cls}">${(h%1===0)? String(h): h.toFixed(1)}</span>`
+  })
 }
 
 async function updateJob(jobId, patch){
@@ -197,7 +208,30 @@ async function deleteJob(jobId){
 
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
 
-async function refreshData(){ state.entries=await loadEntries(); renderTable() }
+async function exportExcel(){
+  const days=getDays()
+  const visible = state.jobs.filter(j=> (state.filterClient==='ALL'||j.client_id===state.filterClient) && (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
+  const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('Souhrn týdne')
+  ws.addRow(['Klient','Zakázka','Po','Út','St','Čt','Pá','Celkem'])
+  for(const j of visible){
+    const vals = days.map(d=>cellValue(j.id,d)); const total = vals.reduce((a,b)=>a+b,0)
+    ws.addRow([j.client, j.name, ...vals, total])
+  }
+  const daySums = days.map(d => visible.reduce((acc,j)=>acc+cellValue(j.id,d),0))
+  ws.addRow(['Součet za den','', ...daySums, ''])
+  const buf = await wb.xlsx.writeBuffer()
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=`vykaz-${fmtDate(state.weekStart)}.xlsx`; a.click()
+}
+
+async function refreshData(){
+  // rychlá UI reakce: přepíšeme bubliny na nuly a sum row, ať hned vidíš nový týden
+  state.entries = {}
+  document.getElementById('tbody')?.querySelectorAll('.bubble')?.forEach(b=>b.textContent='0')
+  updateSumRow([])
+  // teprve teď načteme data asynchronně
+  state.entries = await loadEntries()
+  renderTable()
+}
 
 async function render(){
   userBox()

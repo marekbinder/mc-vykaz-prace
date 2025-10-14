@@ -3,6 +3,7 @@
   --bg:#ffffff; --fg:#0f172a; --muted:#6b7280; --line:#e5e7eb; --card:#fff;
   --pill:#111827; --pill-fg:#fff; --bubble:#e5e7eb; --bubble-fg:#111827;
   --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+  --h:36px; --r:999px;
 }
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial}
@@ -13,43 +14,47 @@ main{max-width:1100px;margin:8px auto 40px;padding:0 20px}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
 
+/* Pills & controls */
+.pill{height:var(--h);line-height:var(--h);border-radius:var(--r);display:inline-flex;align-items:center;gap:8px;padding:0 14px;border:1px solid var(--line);background:#f3f4f6;font-weight:700}
+.pill.dark{background:var(--pill);color:var(--pill-fg);border:0}
+.pill-select{height:var(--h);border-radius:var(--r);border:1px solid var(--line);background:#f3f4f6;padding:0 14px;appearance:none;outline:none;font-weight:700}
+.pill-input{height:var(--h);border-radius:var(--r);border:1px solid var(--line);background:#fff;padding:0 14px}
+.pill-btn{height:var(--h);border-radius:var(--r);border:1px solid var(--line);background:#fff;padding:0 14px;cursor:pointer}
+.pill-btn:hover{background:#f9fafb}
+.circle{width:var(--h);height:var(--h);border-radius:var(--r);display:inline-flex;justify-content:center;align-items:center;cursor:pointer}
+.circle.dark{background:var(--pill);color:#fff;border:0}
+.circle:hover{filter:brightness(.95)}
+
 .nav{display:flex;gap:10px;justify-content:center;align-items:center;margin:14px 0 18px}
-.navBtn{background:var(--pill);color:var(--pill-fg);border:none;border-radius:999px;padding:8px 12px;cursor:pointer;font-weight:700}
-.navRange{background:#111827;color:#fff;border-radius:999px;padding:10px 16px;font-weight:700}
+.navRange{min-width:320px;justify-content:center}
 
 .filters{display:flex;gap:10px;justify-content:center;align-items:center;margin:12px 0 22px;color:var(--muted)}
-.pill{display:inline-flex;align-items:center;gap:8px;background:#f3f4f6;border:1px solid var(--line);border-radius:999px;padding:8px 12px}
-.pill select{border:none;background:transparent;outline:none;color:var(--fg);font-weight:600}
+.filters .label{font-weight:600;margin-right:6px} /* bez podbarvení, jen text */
 
 .tableWrap{overflow-x:auto}
 table{width:100%;border-collapse:separate;border-spacing:0}
-thead th{background:#0f0f10;color:#fff;padding:12px 10px;text-align:left}
-thead th:first-child{border-top-left-radius:16px}
-thead th:last-child{border-top-right-radius:16px}
+/* Pill záhlaví tabulky */
+thead th{background:#0f0f10;color:#fff;padding:12px 14px;text-align:left;border-top:0}
+thead tr th:first-child{border-top-left-radius:var(--r);border-bottom-left-radius:var(--r)}
+thead tr th:last-child{border-top-right-radius:var(--r);border-bottom-right-radius:var(--r)}
 tbody td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
 tfoot td{padding:12px 10px}
 
-.clientCell{font-weight:700}
+.clientSel{min-width:140px}
 .jobCell{display:flex;align-items:center;gap:10px}
-.jobName{font-weight:600}
-.jobDelete{margin-left:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 8px;cursor:pointer}
-.jobDelete:hover{background:#fee2e2;border-color:#fecaca}
+.jobName{min-width:240px}
+.statusSel{}
 
-.statusSel{appearance:none;background:#eef2ff;border:1px solid #e5e7eb;border-radius:999px;padding:6px 10px;font-weight:700}
+.jobDelete{margin-left:auto;border:none;background:transparent;cursor:pointer;font-size:18px;line-height:1}
 
-.bubble{display:inline-flex;justify-content:center;align-items:center;min-width:34px;height:34px;border-radius:999px;background:var(--bubble);color:var(--bubble-fg);font-weight:800;border:1px solid var(--line)}
+.bubble{display:inline-flex;justify-content:center;align-items:center;min-width:var(--h);height:var(--h);border-radius:var(--r);background:var(--bubble);color:var(--bubble-fg);font-weight:800;border:1px solid var(--line)}
 .totalCell{font-weight:800;text-align:center}
 
 .sumBar{display:flex;gap:10px;justify-content:center;align-items:center;padding:10px 0 2px}
-.sumBubble{display:inline-flex;justify-content:center;align-items:center;min-width:34px;height:34px;border-radius:999px;font-weight:800;color:#fff}
+.sumBubble{display:inline-flex;justify-content:center;align-items:center;min-width:var(--h);height:var(--h);border-radius:var(--r);font-weight:800;color:#fff}
 .sumRed{background:#ef4444}
 .sumOrange{background:#f59e0b}
 .sumGreen{background:#22c55e}
 
-.adminBar{display:flex;gap:10px;align-items:center;margin-top:10px}
-.text{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
-.btn{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer}
-.btn:hover{background:#f9fafb}
-
 .helper{color:var(--muted);text-align:center;margin-top:6px}
-.hidden{display:none}
+.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;padding:0 10px;height:var(--h);border-radius:var(--r);font-size:13px;color:var(--muted)}

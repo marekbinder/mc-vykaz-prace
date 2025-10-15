@@ -62,3 +62,5 @@ tfoot td{padding:12px 10px}
 .statusSel.is-nova, .statusSel.is-probiha, .statusSel.is-hotovo{border-color:transparent;color:var(--st-fg);font-weight:800}
 
 .badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;padding:0 10px;height:var(--h);border-radius:var(--r);font-size:13px;color:var(--muted)}
+
+.err{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:12px;padding:10px 14px;max-width:90%;box-shadow:0 6px 20px rgba(0,0,0,.12)}

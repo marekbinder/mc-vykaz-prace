@@ -4,7 +4,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Výkaz práce</title>
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./style.css?v=103" />
+  <script>
+  // Inline error catcher – ZOBRAZÍ CHYBU I BEZ KONZOLE
+  (function(){
+    function banner(txt, bg){ 
+      var d=document.createElement('div');
+      d.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:99999;padding:10px 14px;border-radius:12px;font:14px system-ui;background:'+ (bg||'#fee2e2') +';color:#111;border:1px solid #fecaca;box-shadow:0 6px 20px rgba(0,0,0,.12)';
+      d.textContent=txt; document.body.appendChild(d); setTimeout(function(){d.remove()},7000);
+    }
+    window.__vpBanner = banner;
+    window.addEventListener('error', function(e){ banner('JS chyba: '+(e.message||e.error||e.filename), '#fee2e2') });
+    window.addEventListener('unhandledrejection', function(e){ banner('Promise chyba: '+(e.reason&&e.reason.message||e.reason), '#fee2e2') });
+    banner('INDEX NAČTEN — OK', '#d1fae5');
+  })();
+  </script>
 </head>
 <body>
   <header class="siteHeader">
@@ -25,8 +39,11 @@
     <small>Frontend: GitHub Pages · Data: Supabase</small>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>
-  <script type="module" src="./app.js"></script>
+  <!-- Modulově i dynamicky, s onerror -->
+  <script type="module">
+    const src = './app.js?v=103';
+    import(src).catch(e=>{ window.__vpBanner && __vpBanner('Nelze načíst app.js: '+(e.message||e), '#fee2e2') });
+  </script>
+  <noscript>Pro aplikaci je potřeba JavaScript.</noscript>
 </body>
 </html>

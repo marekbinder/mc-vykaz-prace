@@ -1,16 +1,11 @@
-*{box-sizing:border-box}
-:root{--bg:#fff;--fg:#0f172a;--muted:#6b7280;--line:#e5e7eb;--card:#fff;--pill:#111827;--pill-fg:#fff;--h:36px;--r:999px;
---st-new:#dbeafe;--st-pro:#fde68a;--st-done:#bbf7d0;--st-fg:#0f172a}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial}
+body{margin:0;background:#fff;color:#0f172a;font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial}
 .siteHeader,.siteFooter{max-width:1100px;margin:0 auto;padding:18px 20px;position:relative}
 .siteHeader{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
 .siteHeader h1{margin:0;font-size:34px;text-align:center}
 .siteHeader .rightSlot{position:absolute;right:20px;top:10px;display:flex;gap:8px}
 main{max-width:1100px;margin:8px auto 40px;padding:0 20px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-.card--plain{border:0;box-shadow:none}
-.card--table{border:0;box-shadow:none}
-.pill-btn,.pill-input,.pill-select{height:var(--h);border-radius:var(--r);border:1px solid var(--line);background:#fff;padding:0 14px}
-.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;padding:0 10px;height:var(--h);border-radius:var(--r);font-size:13px;color:var(--muted)}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.pill-btn,.pill-input,.pill-select{height:36px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;padding:0 14px}
+.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;background:#fff;padding:0 10px;height:36px;border-radius:999px;font-size:13px;color:#6b7280}
 .err{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:12px;padding:10px 14px;max-width:90%;box-shadow:0 6px 20px rgba(0,0,0,.12)}
 .step{background:#f3f4f6;border:1px dashed #d1d5db;border-radius:12px;padding:10px 12px;margin:10px 0;color:#374151}

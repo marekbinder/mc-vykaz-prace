@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Výkaz práce</title>
-  <link rel="stylesheet" href="./style.css?v=90fa" />
+  <link rel="stylesheet" href="./style.css?v=90ux" />
 </head>
 <body>
   <header class="siteHeader">
@@ -14,11 +14,12 @@
   </header>
 
   <main id="app">
-    <section class="toolbar toolbar--grid">
+    <section class="toolbar toolbar--grid3">
+      <div class="toolbarLeft"></div>
       <div class="navGroup">
-        <button class="circle" id="prevWeek">◀</button>
+        <button class="circle ghost" id="prevWeek" aria-label="Předchozí týden">◀</button>
         <div class="pill dark navRange" id="weekRange">1. 1. 2025 – 5. 1. 2025</div>
-        <button class="circle" id="nextWeek">▶</button>
+        <button class="circle ghost" id="nextWeek" aria-label="Další týden">▶</button>
       </div>
       <div class="toolbarRight">
         <button class="pill-btn" id="exportXlsx">Export do Excelu</button>
@@ -68,9 +69,5 @@
   <footer class="siteFooter">
     <small>Frontend: GitHub Pages · Data: Supabase</small>
   </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>
-  <script type="module" src="./app.js?v=90fa"></script>
 </body>
 </html>

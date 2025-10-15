@@ -4,6 +4,7 @@
   --pill:#111827; --pill-fg:#fff; --bubble:#e5e7eb; --bubble-fg:#111827;
   --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
   --h:36px; --r:999px;
+  --st-new:#dbeafe; --st-pro:#fde68a; --st-done:#bbf7d0; --st-fg:#0f172a;
 }
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial}
@@ -38,7 +39,7 @@ table{width:100%;border-collapse:separate;border-spacing:0}
 thead th{background:#0f0f10;color:#fff;padding:12px 14px;text-align:left;border-top:0}
 thead tr th:first-child{border-top-left-radius:var(--r);border-bottom-left-radius:var(--r)}
 thead tr th:last-child{border-top-right-radius:var(--r);border-bottom-right-radius:var(--r)}
-tbody td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody td{padding:12px 10px;border-bottom:0;vertical-align:middle} /* odstraněné oddělovací čáry */
 tfoot td{padding:12px 10px}
 
 .clientSel{min-width:140px}
@@ -54,5 +55,10 @@ tfoot td{padding:12px 10px}
 .sumOrange{background:#f59e0b}
 .sumGreen{background:#22c55e}
 
-.helper{color:var(--muted);text-align:center;margin-top:6px}
+.statusSel{}
+.statusSel.is-nova{background:var(--st-new)}
+.statusSel.is-probiha{background:var(--st-pro)}
+.statusSel.is-hotovo{background:var(--st-done)}
+.statusSel.is-nova, .statusSel.is-probiha, .statusSel.is-hotovo{border-color:transparent;color:var(--st-fg);font-weight:800}
+
 .badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;padding:0 10px;height:var(--h);border-radius:var(--r);font-size:13px;color:var(--muted)}

@@ -1,6 +1,4 @@
-// PRVNÍ VĚC: viditelný banner => víme, že app.js se spustil
 (function(){ window.__vpBanner && __vpBanner('APP START — OK', '#dbeafe'); })();
-
 import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1/+esm'
 
 const STEP = 0.5
@@ -17,7 +15,7 @@ function round05(x){ return Math.round(x*2)/2 }
 
 async function tryLoadConfigFile(){
   try{
-    const r=await fetch('./config.json?v=103',{cache:'no-store'})
+    const r=await fetch('./config.json?v=104',{cache:'no-store'})
     if(!r.ok) return null
     const json = await r.json()
     if(!json.supabaseUrl || !json.supabaseAnonKey) return null
@@ -56,49 +54,24 @@ function renderConfigForm(){
 }
 
 async function initSupabase(){
-  step('1/5 – načítám konfiguraci…')
-  const cfg = await tryLoadConfigFile() || tryLoadConfigFromLocal()
-  if(!cfg){ renderConfigForm(); return false }
-  step('2/5 – inicializuji Supabase…')
-  state.sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth:{persistSession:true,autoRefreshToken:true} })
-  const { data:{ session } } = await state.sb.auth.getSession()
-  state.session = session
-  state.sb.auth.onAuthStateChange((_e,s)=>{ state.session=s; render().catch(showErr) })
-  return true
+  try{
+    step('1/5 – načítám konfiguraci…')
+    const cfg = await tryLoadConfigFile() || tryLoadConfigFromLocal()
+    if(!cfg){ renderConfigForm(); return false }
+    step('2/5 – inicializuji Supabase…')
+    if(!window.supabase){ showErr('window.supabase není načtený – zablokované CDN?'); return false }
+    state.sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth:{persistSession:true,autoRefreshToken:true} })
+    const { data:{ session } } = await state.sb.auth.getSession()
+    state.session = session
+    state.sb.auth.onAuthStateChange((_e,s)=>{ state.session=s; render().catch(showErr) })
+    return true
+  }catch(e){ showErr(e); return false }
 }
 
-function userBox(){
-  const box=document.getElementById('userBoxTopRight'); box.innerHTML=''
-  if(!state.session){
-    const b=document.createElement('button'); b.className='pill-btn'; b.textContent='Přihlásit'; b.onclick=showLogin; box.append(b)
-  }else{
-    const email=document.createElement('span'); email.className='badge'; email.textContent=state.session.user.email
-    const out=document.createElement('button'); out.className='pill-btn'; out.textContent='Odhlásit'; out.onclick=async()=>{ await state.sb.auth.signOut() }
-    box.append(email,out)
-  }
-}
-function showLogin(){
-  const app=document.getElementById('app')
-  app.innerHTML = `<div class="card" style="text-align:center">
-    <div style="display:inline-flex;gap:8px">
-      <input id="email" class="pill-input" type="email" placeholder="name@example.com" style="width:260px">
-      <button id="send" class="pill-btn">Poslat přihlašovací odkaz</button>
-    </div>
-  </div>`
-  document.getElementById('send').onclick = async ()=>{
-    const email = document.getElementById('email').value.trim()
-    if(!email) return showErr('Zadej e-mail')
-    const { error } = await state.sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: window.location.origin + window.location.pathname + 'index.html' } })
-    if(error) return showErr(error.message)
-    alert('Zkontroluj e-mail.')
-  }
-}
+function getDays(){ return [0,1,2,3,4].map(i=>fmtDate(addDays(state.weekStart,i))) }
+function cellValue(jobId, dateISO){ return (state.entries[jobId] && state.entries[jobId][dateISO]) ? state.entries[jobId][dateISO] : 0 }
+function formatNum(x){ return (x%1===0)? String(x): x.toFixed(1) }
 
-async function ensureProfile(){
-  const uid = state.session?.user?.id
-  if(!uid) return
-  await state.sb.from('app_user').upsert({ id:uid, full_name:state.session.user.email, role:'admin' }, { onConflict:'id' })
-}
 async function loadClients(){ const {data,error}=await state.sb.from('client').select('id,name').eq('is_active',true).order('name'); if(error) showErr(error); return data||[] }
 async function loadStatuses(){ const {data,error}=await state.sb.from('job_status').select('id,label').order('id'); if(error) showErr(error); return data||[] }
 async function loadJobs(){
@@ -110,46 +83,40 @@ async function loadEntriesMine(){
   const from=fmtDate(state.weekStart), to=fmtDate(addDays(state.weekStart,6))
   const {data,error}=await state.sb.from('time_entry').select('job_id,work_date,hours,user_id').gte('work_date',from).lte('work_date',to).eq('user_id', state.session.user.id)
   if(error) showErr(error)
-  const map={}; for(const r of (data||[])){ map[r.job_id] ??= {}; map[r.job_id][r.work_date] = round05((map[r.job_id][r.work_date]||0) + Number(r.hours||0)) }
+  const map={}; for(const r of (data||[])){ map[r.job_id] ??= {}; map[r.job_id][r.work_date] = Math.round(((map[r.job_id][r.work_date]||0) + Number(r.hours||0))*2)/2 }
   return map
 }
 async function loadTotalsAllUsersAllTime(){
   const { data, error } = await state.sb.from('time_entry').select('job_id,hours')
-  if(error){ showErr('Nelze načíst týmové součty – pravděpodobně RLS. Aplikace poběží i bez nich.'); return {} }
-  const totals = {}; for(const r of (data||[])){ totals[r.job_id] = round05((totals[r.job_id]||0) + Number(r.hours||0)) }
+  if(error){ showErr('Nelze načíst týmové součty – RLS? Aplikace poběží i bez nich.'); return {} }
+  const totals = {}; for(const r of (data||[])){ totals[r.job_id] = Math.round(((totals[r.job_id]||0) + Number(r.hours||0))*2)/2 }
   return totals
 }
-
-function getDays(){ return [0,1,2,3,4].map(i=>fmtDate(addDays(state.weekStart,i))) }
-function cellValue(jobId, dateISO){ return (state.entries[jobId] && state.entries[jobId][dateISO]) ? state.entries[jobId][dateISO] : 0 }
-function formatNum(x){ return (x%1===0)? String(x): x.toFixed(1) }
 
 async function bump(jobId,dateISO,delta){
   try{
     state.entries[jobId] ??= {}
     const current = state.entries[jobId][dateISO] || 0
-    const next = Math.max(0, round05(current + delta))
-    const effective = round05(next - current)
+    const next = Math.max(0, Math.round((current + delta)*2)/2)
+    const effective = Math.round((next - current)*2)/2
     if (effective === 0) { updateRow(jobId); return }
     state.entries[jobId][dateISO]=next; updateRow(jobId)
     const { error } = await state.sb.from('time_entry').insert({ job_id:jobId, work_date:dateISO, hours:effective, user_id: state.session.user.id })
     if(error){ state.entries[jobId][dateISO]=current; updateRow(jobId); return showErr(error.message) }
-    state.totalsAllJobsAllTime[jobId] = round05((state.totalsAllJobsAllTime[jobId]||0) + effective)
+    state.totalsAllJobsAllTime[jobId] = Math.round(((state.totalsAllJobsAllTime[jobId]||0) + effective)*2)/2
   }catch(e){ showErr(e.message||e) }
 }
-
-function row(j){ const days=getDays(); return `<tr data-job="${j.id}">
-  <td>${j.client||''}</td>
-  <td>${j.name||''}</td>
-  ${days.map((d,i)=>`<td data-day="${i}"><button class="pill-btn" data-job="${j.id}" data-date="${d}" data-idx="${i}">0</button></td>`).join('')}
-  <td class="totalCell">${formatNum(state.totalsAllJobsAllTime[j.id]||0)}</td>
-</tr>` }
 
 function renderTable(){
   const tbody=document.getElementById('tbody'); if(!tbody) return
   const visible = state.jobs
-  tbody.innerHTML = visible.map(row).join('')
-  // bind events
+  const days = getDays()
+  tbody.innerHTML = visible.map(j => `<tr data-job="${j.id}">
+    <td>${j.client||''}</td>
+    <td>${j.name||''}</td>
+    ${days.map((d,i)=>`<td data-day="${i}"><button class="pill-btn" data-job="${j.id}" data-date="${d}" data-idx="${i}">0</button></td>`).join('')}
+    <td class="totalCell">${formatNum(state.totalsAllJobsAllTime[j.id]||0)}</td>
+  </tr>`).join('')
   tbody.querySelectorAll('button.pill-btn').forEach(b=>{
     const job=+b.dataset.job, date=b.dataset.date
     b.onclick=()=>bump(job,date,+STEP)
@@ -182,13 +149,11 @@ async function render(){
   try{
     const app=document.getElementById('app')
     if(!state.session){ app.innerHTML='<div class="card" style="text-align:center">Přihlas se, prosím.</div>'; return }
-    // data
     step('3/5 – načítám klienty/stavy/zakázky…')
     state.clients=await loadClients(); state.statuses=await loadStatuses(); state.jobs=await loadJobs();
     step('4/5 – načítám tvoje zápisy + týmové součty…')
     const [mine, totals] = await Promise.all([ loadEntriesMine(), loadTotalsAllUsersAllTime() ])
     state.entries = mine; state.totalsAllJobsAllTime = totals
-    // UI
     step('5/5 – vykresluji…')
     buildShell()
   }catch(e){ showErr(e) }
@@ -196,8 +161,6 @@ async function render(){
 
 function buildShell(){
   const app=document.getElementById('app'); app.innerHTML=''
-  const nav=document.createElement('div'); nav.className='step'; nav.textContent='UI běží'; app.append(nav)
-  // tabulka
   const card=document.createElement('div'); card.className='card'
   card.innerHTML = `<div class="tableWrap"><table style="width:100%">
     <thead><tr><th>Klient</th><th>Zakázka</th><th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th><th>Celkem</th></tr></thead>

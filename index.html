@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Výkaz práce</title>
-  <link rel="stylesheet" href="./style.css?v=90r" />
+  <link rel="stylesheet" href="./style.css?v=90s2" />
 </head>
 <body>
   <header class="siteHeader">
@@ -14,25 +14,29 @@
   </header>
 
   <main id="app">
-    <section class="toolbar">
-      <button class="circle" id="prevWeek">◀</button>
-      <div class="pill dark navRange" id="weekRange">1. 1. 2025 – 5. 1. 2025</div>
-      <button class="circle" id="nextWeek">▶</button>
-      <button class="pill-btn" id="exportXlsx">Export do Excelu</button>
+    <section class="toolbar toolbar--grid">
+      <div class="navGroup">
+        <button class="circle" id="prevWeek">◀</button>
+        <div class="pill dark navRange" id="weekRange">1. 1. 2025 – 5. 1. 2025</div>
+        <button class="circle" id="nextWeek">▶</button>
+      </div>
+      <div class="toolbarRight">
+        <button class="pill-btn" id="exportXlsx">Export do Excelu</button>
+      </div>
     </section>
 
-    <section class="filters">
+    <section class="filters filters--center">
       <span class="label">Nastavení filtru:</span>
       <select class="pill-select" id="filterClient"><option value="ALL">Všichni klienti</option></select>
       <select class="pill-select" id="filterStatus"><option value="ALL">Všechny zakázky</option></select>
     </section>
 
-    <section class="addRow">
+    <section class="addRow addRow--stretch">
       <input class="pill-input" id="newClientName" placeholder="Název klienta" />
       <button class="pill-btn" id="addClientBtn">Přidat klienta</button>
 
       <select class="pill-select" id="newJobClient"></select>
-      <input class="pill-input jobName" id="newJobName" placeholder="Název zakázky" />
+      <input class="pill-input jobName flexGrow" id="newJobName" placeholder="Název zakázky" />
       <select class="pill-select statusSel" id="newJobStatus"></select>
       <button class="pill-btn" id="addJobBtn">Přidat zakázku</button>
     </section>

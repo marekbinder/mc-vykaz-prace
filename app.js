@@ -8,10 +8,19 @@ function startOfISOWeek(d){ const dt=new Date(d); const wd=(dt.getDay()+6)%7; dt
 function fmtDate(d){ return dayjs(d).format('YYYY-MM-DD') }
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
 function round05(x){ return Math.round(x*2)/2 }
+function showErr(msg){ console.error(msg); const e=document.getElementById('err'); if(!e) return; e.textContent=(msg?.message)||String(msg); e.style.display='block'; setTimeout(()=>e.style.display='none', 7000) }
 
-async function loadConfig(){ const r=await fetch('./config.json'); if(!r.ok) throw new Error('config.json'); return r.json() }
-async function initSupabase(){
+async function loadConfig(){
+  try{ const r=await fetch('./config.json?v=90r',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(j.supabaseUrl&&j.supabaseAnonKey) return j } }catch{}
+  const supabaseUrl = localStorage.getItem('vp.supabaseUrl')
+  const supabaseAnonKey = localStorage.getItem('vp.supabaseAnonKey')
+  if(supabaseUrl && supabaseAnonKey) return { supabaseUrl, supabaseAnonKey }
+  throw new Error('Chybí konfigurace Supabase.')
+}
+
+async function init(){
   const cfg = await loadConfig()
+  if(!window.supabase) throw new Error('Knihovna Supabase není načtená.')
   state.sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth:{persistSession:true,autoRefreshToken:true} })
   const { data:{ session } } = await state.sb.auth.getSession()
   state.session = session
@@ -30,17 +39,17 @@ function userBox(){
 }
 function showLogin(){
   const app=document.getElementById('app')
-  app.innerHTML = `<div class="card" style="text-align:center">
-    <div class="pill" style="background:#fff;display:inline-flex;gap:8px">
+  app.innerHTML = `<div class="card" style="max-width:600px;margin:0 auto;text-align:center">
+    <div style="display:inline-flex;gap:8px">
       <input id="email" class="pill-input" type="email" placeholder="name@example.com" style="width:260px">
       <button id="send" class="pill-btn">Poslat přihlašovací odkaz</button>
     </div>
   </div>`
   document.getElementById('send').onclick = async ()=>{
     const email = document.getElementById('email').value.trim()
-    if(!email) return alert('Zadej e-mail')
+    if(!email) return showErr('Zadej e-mail')
     const { error } = await state.sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: window.location.origin + window.location.pathname + 'index.html' } })
-    if(error) return alert(error.message)
+    if(error) return showErr(error.message)
     alert('Zkontroluj e-mail.')
   }
 }
@@ -50,77 +59,87 @@ async function ensureProfile(){
   if(!uid) return
   await state.sb.from('app_user').upsert({ id:uid, full_name:state.session.user.email, role:'admin' }, { onConflict:'id' })
 }
+
 async function loadClients(){ const {data}=await state.sb.from('client').select('id,name').eq('is_active',true).order('name'); return data||[] }
 async function loadStatuses(){ const {data}=await state.sb.from('job_status').select('id,label').order('id'); return data||[] }
 async function loadJobs(){
-  const {data}=await state.sb.from('job')
-    .select('id,name,status_id,client_id, client:client_id (id,name), status:status_id (id,label)')
-    .eq('is_active',true).order('name')
+  const {data}=await state.sb.from('job').select('id,name,status_id,client_id, client:client_id (id,name), status:status_id (id,label)').eq('is_active',true).order('name')
   return (data||[]).map(j=>({ id:j.id, name:j.name, client_id:j.client?.id||j.client_id, client:j.client?.name||'', status_id:j.status_id, status:j.status?.label||'' }))
 }
-async function loadEntries(){
+async function loadEntriesMine(){
   const from=fmtDate(state.weekStart), to=fmtDate(addDays(state.weekStart,6))
-  const {data}=await state.sb.from('time_entry').select('job_id,work_date,hours').gte('work_date',from).lte('work_date',to)
+  const {data}=await state.sb.from('time_entry').select('job_id,work_date,hours,user_id').gte('work_date',from).lte('work_date',to).eq('user_id', state.session.user.id)
   const map={}; for(const r of (data||[])){ map[r.job_id] ??= {}; map[r.job_id][r.work_date] = round05((map[r.job_id][r.work_date]||0) + Number(r.hours||0)) }
   return map
 }
 
-function pill(tag='div', cls='pill'){ const e=document.createElement(tag); e.className=cls; return e }
-function circle(label){ const b=document.createElement('button'); b.className='circle dark'; b.textContent=label; return b }
+function circle(label){ const b=document.createElement('button'); b.className='circle'; b.textContent=label; return b }
+
+function colorizeStatus(sel){
+  sel.classList.remove('is-nova','is-probiha','is-hotovo')
+  const txt = (sel.options[sel.selectedIndex]?.text || '').toLowerCase()
+  if(txt.includes('nov')) sel.classList.add('is-nova')
+  else if(txt.includes('pro') || txt.includes('běh')) sel.classList.add('is-probiha')
+  else if(txt.includes('hot')) sel.classList.add('is-hotovo')
+}
+
+function setWeekRangeLabel(){
+  document.getElementById('weekRange').textContent =
+    `${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`
+}
 
 function buildShell(){
-  const app=document.getElementById('app'); app.innerHTML=''
+  // toolbar handlers
+  document.getElementById('prevWeek').onclick=()=>{ state.weekStart=addDays(state.weekStart,-7); setWeekRangeLabel(); refreshData() }
+  document.getElementById('nextWeek').onclick=()=>{ state.weekStart=addDays(state.weekStart, 7); setWeekRangeLabel(); refreshData() }
+  document.getElementById('exportXlsx').onclick=exportExcel
 
-  // nav
-  const nav=document.createElement('div'); nav.className='nav'
-  const prev=circle('◀'); const next=circle('▶')
-  const range=pill('div','pill dark navRange'); const setRange=()=>range.textContent=`${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`; setRange()
-  const exportBtn=document.createElement('button'); exportBtn.className='pill-btn'; exportBtn.textContent='Export do Excelu'; exportBtn.onclick=exportExcel
-  prev.onclick=()=>{ state.weekStart=addDays(state.weekStart,-7); setRange(); refreshData() }
-  next.onclick=()=>{ state.weekStart=addDays(state.weekStart, 7); setRange(); refreshData() }
-  nav.append(prev,range,next, exportBtn); app.append(nav)
+  // filters options
+  const fClient=document.getElementById('filterClient')
+  fClient.innerHTML = `<option value="ALL">Všichni klienti</option>` + state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
+  fClient.value = state.filterClient
+  fClient.onchange=(e)=>{ state.filterClient=e.target.value; renderTable() }
 
-  // filters
-  const filters=document.createElement('div'); filters.className='filters'
-  const label=document.createElement('div'); label.className='label'; label.textContent='Nastavení filtru:'; filters.append(label)
-  const fClient=document.createElement('select'); fClient.className='pill-select'; fClient.innerHTML = `<option value="ALL">Všichni klienti</option>` + state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
-  fClient.value = state.filterClient; fClient.onchange=(e)=>{ state.filterClient=e.target.value; renderTable() }
-  const fStat=document.createElement('select'); fStat.className='pill-select'; fStat.innerHTML = `<option value="ALL">Všechny zakázky</option>` + state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')
-  fStat.value = state.filterStatus; fStat.onchange=(e)=>{ state.filterStatus=e.target.value; renderTable() }
-  filters.append(fClient, fStat); app.append(filters)
+  const fStat=document.getElementById('filterStatus')
+  fStat.innerHTML = `<option value="ALL">Všechny zakázky</option>` + state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')
+  fStat.value = state.filterStatus
+  fStat.onchange=(e)=>{ state.filterStatus=e.target.value; renderTable() }
 
-  // add client/job (plain)
-  const admin=document.createElement('div'); admin.className='card card--plain'
-  const row=document.createElement('div'); row.style.display='flex'; row.style.gap='10px'; row.style.alignItems='center'
-  const newClient=document.createElement('input'); newClient.className='pill-input'; newClient.placeholder='Název klienta'
-  const addClientBtn=document.createElement('button'); addClientBtn.className='pill-btn'; addClientBtn.textContent='Přidat klienta'
-  addClientBtn.onclick=async()=>{ const name=newClient.value.trim(); if(!name) return alert('Zadej název'); const {error}=await state.sb.from('client').insert({name}); if(error) return alert(error.message); newClient.value=''; state.clients=await loadClients(); buildShell() }
-  const jobClient=document.createElement('select'); jobClient.className='pill-select clientSel'; jobClient.innerHTML = state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
-  const jobName=document.createElement('input'); jobName.className='pill-input jobName'; jobName.placeholder='Název zakázky'
-  const jobStatus=document.createElement('select'); jobStatus.className='pill-select statusSel'; jobStatus.innerHTML = state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')
-  const addJobBtn=document.createElement('button'); addJobBtn.className='pill-btn'; addJobBtn.textContent='Přidat zakázku'
-  addJobBtn.onclick=async()=>{ const name=jobName.value.trim(); if(!name) return alert('Zadej název zakázky'); const {error}=await state.sb.from('job').insert({ client_id: jobClient.value, name, status_id: parseInt(jobStatus.value,10) }); if(error) return alert(error.message); jobName.value=''; state.jobs=await loadJobs(); renderTable() }
-  row.append(newClient, addClientBtn, jobClient, jobName, jobStatus, addJobBtn); admin.append(row)
-  app.append(admin)
+  // add row
+  const jobClient=document.getElementById('newJobClient')
+  jobClient.innerHTML = state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
+  const jobStatus=document.getElementById('newJobStatus')
+  jobStatus.innerHTML = state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')
+  colorizeStatus(jobStatus)
+  jobStatus.onchange=()=>colorizeStatus(jobStatus)
 
-  // table (restore per-job total column)
-  const card=document.createElement('div'); card.className='card card--table'
-  const wrap=document.createElement('div'); wrap.className='tableWrap'; const table=document.createElement('table'); wrap.append(table); card.append(wrap); app.append(card)
-  table.innerHTML = `<thead><tr>
-    <th style="width:220px">Klient</th>
-    <th style="width:460px">Zakázka</th>
-    <th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th>
-    <th>Celkem</th>
-  </tr></thead>
-  <tbody id="tbody"></tbody>
-  <tfoot><tr id="sumRow">
-    <td></td><td></td>
-    <td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td>
-    <td></td>
-  </tr></tfoot>`
+  document.getElementById('addClientBtn').onclick=async()=>{
+    const name=document.getElementById('newClientName').value.trim()
+    if(!name) return showErr('Zadej název klienta')
+    const {error}=await state.sb.from('client').insert({name})
+    if(error) return showErr(error.message)
+    document.getElementById('newClientName').value=''
+    state.clients=await loadClients()
+    buildShell()
+  }
 
+  document.getElementById('addJobBtn').onclick=async()=>{
+    const name=document.getElementById('newJobName').value.trim()
+    if(!name) return showErr('Zadej název zakázky')
+    const client_id=document.getElementById('newJobClient').value
+    const status_id=parseInt(document.getElementById('newJobStatus').value,10)
+    const {error}=await state.sb.from('job').insert({ client_id, name, status_id })
+    if(error) return showErr(error.message)
+    document.getElementById('newJobName').value=''
+    state.jobs=await loadJobs()
+    renderTable()
+  }
+
+  setWeekRangeLabel()
   renderTable()
 }
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
 
 function renderTable(){
   const tbody=document.getElementById('tbody'); if(!tbody) return
@@ -133,16 +152,15 @@ function renderTable(){
     const tdClient=document.createElement('td')
     const clientSel=document.createElement('select'); clientSel.className='pill-select clientSel'
     clientSel.innerHTML = state.clients.map(c=>`<option value="${c.id}" ${c.id===j.client_id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')
-    clientSel.onchange=async(e)=>{ await updateJob(j.id,{client_id:e.target.value}) }
+    clientSel.onchange=async(e)=>{ await state.sb.from('job').update({client_id:e.target.value}).eq('id', j.id) }
     tdClient.append(clientSel)
 
     const tdJob=document.createElement('td'); tdJob.className='jobCell'
-    const name=document.createElement('input'); name.className='pill-input jobName'; name.value=j.name
-    let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ await updateJob(j.id,{name:e.target.value}) }, 250) }
+    const name=document.createElement('input'); name.className='pill-input jobNameIn'; name.value=j.name
+    let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ await state.sb.from('job').update({name:e.target.value}).eq('id', j.id) }, 250) }
     const st=document.createElement('select'); st.className='pill-select statusSel'
     st.innerHTML = state.statuses.map(s=>`<option value="${s.id}" ${s.id===j.status_id?'selected':''}>${escapeHtml(s.label)}</option>`).join('')
-    colorizeStatus(st)
-    st.onchange=async(e)=>{ colorizeStatus(st); await updateJob(j.id,{status_id:parseInt(e.target.value,10)}) }
+    colorizeStatus(st); st.onchange=async(e)=>{ colorizeStatus(st); await state.sb.from('job').update({status_id:parseInt(e.target.value,10)}).eq('id', j.id) }
     const del=document.createElement('button'); del.className='jobDelete'; del.title='Odstranit'; del.textContent='🗑'; del.onclick=()=>deleteJob(j.id)
     tdJob.append(name, st, del)
 
@@ -150,70 +168,62 @@ function renderTable(){
 
     days.forEach((d,i)=>{
       const td=document.createElement('td'); td.dataset.day=i
-      const b=document.createElement('button'); b.className='bubble'; b.textContent='0'; b.setAttribute('data-job',j.id); b.setAttribute('data-date',d)
+      const b=document.createElement('button'); b.className='bubble'; b.textContent='0'
       b.onclick=()=>bump(j.id,d,+STEP); b.oncontextmenu=(e)=>{e.preventDefault(); bump(j.id,d,-STEP)}
       td.append(b); tr.append(td)
     })
 
-    const total=document.createElement('td'); total.className='totalCell'; total.textContent='0'; tr.append(total)
+    const total=document.createElement('td'); total.className='totalCell'; total.textContent= formatNum( days.reduce((acc,dt)=> acc + cellValue(j.id, dt), 0) )
+    tr.append(total)
 
     tbody.append(tr); updateRow(j.id)
   }
   updateSumRow(visible)
 }
 
-function colorizeStatus(sel){
-  sel.classList.remove('is-nova','is-probiha','is-hotovo')
-  const txt = (sel.options[sel.selectedIndex]?.text || '').toLowerCase()
-  if(txt.includes('nov')) sel.classList.add('is-nova')
-  else if(txt.includes('pro') || txt.includes('běh')) sel.classList.add('is-probiha')
-  else if(txt.includes('hot')) sel.classList.add('is-hotovo')
-}
-
 function getDays(){ return [0,1,2,3,4].map(i=>fmtDate(addDays(state.weekStart,i))) }
 function cellValue(jobId, dateISO){ return (state.entries[jobId] && state.entries[jobId][dateISO]) ? state.entries[jobId][dateISO] : 0 }
+function formatNum(x){ return (x%1===0)? String(x): x.toFixed(1) }
 
 async function bump(jobId,dateISO,delta){
-  state.entries[jobId] ??= {}
-  const next = Math.max(0, round05((state.entries[jobId][dateISO]||0) + delta))
-  state.entries[jobId][dateISO]=next; updateRow(jobId)
-  state.sb.from('time_entry').insert({ job_id:jobId, work_date:dateISO, hours:delta }).then(({error})=>{
-    if(error){ state.entries[jobId][dateISO]=round05(next-delta); updateRow(jobId); alert(error.message) }
-  })
+  try{
+    const current = cellValue(jobId,dateISO)
+    const next = Math.max(0, round05(current + delta))
+    const eff = round05(next - current)
+    if (eff === 0) return
+    state.entries[jobId] ??= {}; state.entries[jobId][dateISO] = next
+    updateRow(jobId)
+    const payload = { job_id: jobId, work_date: dateISO, hours: eff, user_id: state.session.user.id }
+    const { error } = await state.sb.from('time_entry').insert(payload)
+    if(error){ state.entries[jobId][dateISO] = current; updateRow(jobId); return showErr(error.message) }
+  }catch(e){ showErr(e.message||e) }
 }
+
 function updateRow(jobId){
   const days=getDays(); const tr=document.querySelector(`tr[data-job="${jobId}"]`); if(!tr) return
-  let sum=0; days.forEach((d,i)=>{ const val=cellValue(jobId,d); sum+=val; const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b) b.textContent=(val%1===0)? String(val): val.toFixed(1) })
-  const totalCell = tr.querySelector('.totalCell'); if(totalCell) totalCell.textContent=(sum%1===0)? String(sum): sum.toFixed(1)
+  days.forEach((d,i)=>{ const val=cellValue(jobId,d); const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b) b.textContent=formatNum(val) })
+  const weekTotal = days.reduce((acc,dt)=> acc + cellValue(jobId,dt), 0)
+  tr.querySelector('.totalCell').textContent = formatNum(weekTotal)
   queueMicrotask(()=>updateSumRow())
 }
 function updateSumRow(visibleJobs){
   const days=getDays()
-  const visible = visibleJobs || state.jobs.filter(j=> (state.filterClient==='ALL'||j.client_id===state.filterClient) && (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
+  const visible = visibleJobs || state.jobs
   const sums=days.map(d=>visible.reduce((a,j)=>a+cellValue(j.id,d),0))
   const tds = document.querySelectorAll('#sumRow .sumCell')
   tds.forEach((td,i)=>{
     const h = sums[i]||0
     const cls = h<=3 ? 'sumRed' : (h<=6 ? 'sumOrange' : 'sumGreen')
-    td.innerHTML = `<span class="sumBubble ${cls}">${(h%1===0)? String(h): h.toFixed(1)}</span>`
+    td.innerHTML = `<span class="sumBubble ${cls}">${formatNum(h)}</span>`
   })
 }
 
-async function updateJob(jobId, patch){
-  const { error } = await state.sb.from('job').update(patch).eq('id', jobId)
-  if(error) return alert('Nelze upravit zakázku: ' + error.message)
-  state.jobs = await loadJobs()
-  renderTable()
-}
 async function deleteJob(jobId){
   if(!confirm('Opravdu odstranit zakázku? (Bude skryta)')) return
-  const { error } = await state.sb.from('job').update({ is_active:false }).eq('id', jobId)
-  if(error) return alert('Nelze odstranit zakázku: ' + error.message)
+  await state.sb.from('job').update({ is_active:false }).eq('id', jobId)
   state.jobs = await loadJobs()
   renderTable()
 }
-
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
 
 async function exportExcel(){
   const days = [0,1,2,3,4].map(i=>addDays(state.weekStart,i))
@@ -223,26 +233,22 @@ async function exportExcel(){
   const wb = new ExcelJS.Workbook()
   const ws = wb.addWorksheet('Výkaz')
 
-  // Header
   const user = state.session?.user?.email || ''
   const rangeText = `${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`
   ws.addRow([`Uživatel: ${user}`])
   ws.addRow([`Týden: ${rangeText}`])
   ws.addRow([])
 
-  // Table header (dates), right align date columns
   const header = ['Klient','Zakázka', ...daysTxt]
   ws.addRow(header)
   ws.getRow(4).font = { bold:true }
   for(let i=3;i<=7;i++){ ws.getColumn(i).alignment = { horizontal:'right' } }
 
-  // Rows (no per-job total in export)
   for(const j of visible){
     const vals = days.map(d => cellValue(j.id, dayjs(d).format('YYYY-MM-DD')))
     ws.addRow([j.client, j.name, ...vals])
   }
 
-  // Per-day totals row
   const daySums = days.map(d => visible.reduce((acc,job)=> acc + cellValue(job.id, dayjs(d).format('YYYY-MM-DD')), 0))
   ws.addRow(['Součet za den','', ...daySums])
 
@@ -254,23 +260,18 @@ async function exportExcel(){
 
 async function refreshData(){
   state.entries = {}
-  document.getElementById('tbody')?.querySelectorAll('.bubble')?.forEach(b=>b.textContent='0')
-  updateSumRow([])
-  state.entries = await loadEntries()
+  const [mine] = await Promise.all([ loadEntriesMine() ])
+  state.entries = mine
   renderTable()
 }
 
 async function render(){
   userBox()
   const app=document.getElementById('app')
-  if(!state.session){ app.innerHTML='<div class="card" style="text-align:center">Přihlas se, prosím.</div>'; return }
+  if(!state.session){ app.querySelector('.filters')?.remove(); app.querySelector('.addRow')?.remove(); app.querySelector('.tableWrap')?.remove(); return showLogin() }
   await ensureProfile()
-  state.clients=await loadClients(); state.statuses=await loadStatuses(); state.jobs=await loadJobs(); state.entries=await loadEntries()
-  buildShell()
+  state.clients=await loadClients(); state.statuses=await loadStatuses(); state.jobs=await loadJobs();
+  buildShell(); await refreshData()
 }
 
-// Init
-initSupabase().then(render).catch(err=>{
-  console.error(err)
-  document.getElementById('app').innerHTML = `<div class="card"><p>Chyba inicializace: ${err.message}</p></div>`
-})
+init().then(render).catch(showErr)

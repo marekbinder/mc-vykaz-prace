@@ -4,27 +4,69 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Výkaz práce</title>
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./style.css?v=90r" />
 </head>
 <body>
   <header class="siteHeader">
-    <div class="leftSlot"></div>
+    <div></div>
     <h1>Výkaz práce</h1>
     <div class="rightSlot" id="userBoxTopRight"></div>
   </header>
 
   <main id="app">
-    <div class="card">
-      <p>Načítám…</p>
-    </div>
+    <section class="toolbar">
+      <button class="circle" id="prevWeek">◀</button>
+      <div class="pill dark navRange" id="weekRange">1. 1. 2025 – 5. 1. 2025</div>
+      <button class="circle" id="nextWeek">▶</button>
+      <button class="pill-btn" id="exportXlsx">Export do Excelu</button>
+    </section>
+
+    <section class="filters">
+      <span class="label">Nastavení filtru:</span>
+      <select class="pill-select" id="filterClient"><option value="ALL">Všichni klienti</option></select>
+      <select class="pill-select" id="filterStatus"><option value="ALL">Všechny zakázky</option></select>
+    </section>
+
+    <section class="addRow">
+      <input class="pill-input" id="newClientName" placeholder="Název klienta" />
+      <button class="pill-btn" id="addClientBtn">Přidat klienta</button>
+
+      <select class="pill-select" id="newJobClient"></select>
+      <input class="pill-input jobName" id="newJobName" placeholder="Název zakázky" />
+      <select class="pill-select statusSel" id="newJobStatus"></select>
+      <button class="pill-btn" id="addJobBtn">Přidat zakázku</button>
+    </section>
+
+    <section class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Klient</th>
+            <th>Zakázka</th>
+            <th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th>
+            <th>Celkem</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot>
+          <tr id="sumRow">
+            <td></td><td></td>
+            <td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+
+    <div id="err" class="err" style="display:none"></div>
   </main>
 
   <footer class="siteFooter">
     <small>Frontend: GitHub Pages · Data: Supabase</small>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>
-  <script src="./app.js" type="module"></script>
+  <script type="module" src="./app.js?v=90r"></script>
 </body>
 </html>

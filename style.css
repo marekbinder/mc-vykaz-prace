@@ -39,7 +39,7 @@ table{width:100%;border-collapse:separate;border-spacing:0}
 thead th{background:#0f0f10;color:#fff;padding:12px 14px;text-align:left;border-top:0}
 thead tr th:first-child{border-top-left-radius:var(--r);border-bottom-left-radius:var(--r)}
 thead tr th:last-child{border-top-right-radius:var(--r);border-bottom-right-radius:var(--r)}
-tbody td{padding:12px 10px;border-bottom:0;vertical-align:middle} /* odstraněné oddělovací čáry */
+tbody td{padding:12px 10px;border-bottom:0;vertical-align:middle}
 tfoot td{padding:12px 10px}
 
 .clientSel{min-width:140px}
@@ -47,7 +47,7 @@ tfoot td{padding:12px 10px}
 .jobName{min-width:240px}
 .jobDelete{margin-left:auto;border:none;background:transparent;cursor:pointer;font-size:18px;line-height:1}
 
-.bubble{display:inline-flex;justify-content:center;align-items:center;min-width:var(--h);height:var(--h);border-radius:var(--r);background:var(--bubble);color:var(--bubble-fg);font-weight:800;border:1px solid var(--line)}
+.bubble{display:inline-flex;justify-content:center;align-items:center;min-width:var(--h);height:var(--h);border-radius:var(--r);background:#e5e7eb;color:#111827;font-weight:800;border:1px solid var(--line)}
 .totalCell{font-weight:800;text-align:center}
 
 .sumBubble{display:inline-flex;justify-content:center;align-items:center;min-width:var(--h);height:var(--h);border-radius:var(--r);font-weight:800;color:#fff}

@@ -249,3 +249,8 @@ async function render(){
 }
 
 init().then(render).catch(showErr)
+
+
+// legacy podpora: pokud někde starší HTML volá renderTable() globálně
+try { window.renderTable = renderTable; } catch (e) {}
+

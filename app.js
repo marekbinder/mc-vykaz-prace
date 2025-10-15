@@ -89,8 +89,8 @@ function buildShell(){
   fStat.value = state.filterStatus; fStat.onchange=(e)=>{ state.filterStatus=e.target.value; renderTable() }
   filters.append(fClient, fStat); app.append(filters)
 
-  // add client/job
-  const admin=document.createElement('div'); admin.className='card'
+  // add client/job (plain, no outline) and no helper text
+  const admin=document.createElement('div'); admin.className='card card--plain'
   const row=document.createElement('div'); row.style.display='flex'; row.style.gap='10px'; row.style.alignItems='center'
   const newClient=document.createElement('input'); newClient.className='pill-input'; newClient.placeholder='Název klienta'
   const addClientBtn=document.createElement('button'); addClientBtn.className='pill-btn'; addClientBtn.textContent='Přidat klienta'
@@ -101,23 +101,20 @@ function buildShell(){
   const addJobBtn=document.createElement('button'); addJobBtn.className='pill-btn'; addJobBtn.textContent='Přidat zakázku'
   addJobBtn.onclick=async()=>{ const name=jobName.value.trim(); if(!name) return alert('Zadej název zakázky'); const {error}=await state.sb.from('job').insert({ client_id: jobClient.value, name, status_id: parseInt(jobStatus.value,10) }); if(error) return alert(error.message); jobName.value=''; state.jobs=await loadJobs(); renderTable() }
   row.append(newClient, addClientBtn, jobClient, jobName, jobStatus, addJobBtn); admin.append(row)
-  const helper=document.createElement('div'); helper.className='helper'; helper.textContent='Klik = +0,5 h, pravé tlačítko = −0,5 h'; admin.append(helper)
   app.append(admin)
 
-  // table
+  // table (no per-job total column)
   const card=document.createElement('div'); card.className='card card--table'
   const wrap=document.createElement('div'); wrap.className='tableWrap'; const table=document.createElement('table'); wrap.append(table); card.append(wrap); app.append(card)
   table.innerHTML = `<thead><tr>
     <th style="width:220px">Klient</th>
     <th style="width:460px">Zakázka</th>
     <th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th>
-    <th>Celkem</th>
   </tr></thead>
   <tbody id="tbody"></tbody>
   <tfoot><tr id="sumRow">
     <td></td><td></td>
     <td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td>
-    <td></td>
   </tr></tfoot>`
 
   renderTable()
@@ -154,7 +151,6 @@ function renderTable(){
       b.onclick=()=>bump(j.id,d,+STEP); b.oncontextmenu=(e)=>{e.preventDefault(); bump(j.id,d,-STEP)}
       td.append(b); tr.append(td)
     })
-    const total=document.createElement('td'); total.className='totalCell'; total.textContent='0'; tr.append(total)
 
     tbody.append(tr); updateRow(j.id)
   }
@@ -174,8 +170,7 @@ async function bump(jobId,dateISO,delta){
 }
 function updateRow(jobId){
   const days=getDays(); const tr=document.querySelector(`tr[data-job="${jobId}"]`); if(!tr) return
-  let sum=0; days.forEach((d,i)=>{ const val=cellValue(jobId,d); sum+=val; const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b) b.textContent=(val%1===0)? String(val): val.toFixed(1) })
-  tr.querySelector('.totalCell').textContent=(sum%1===0)? String(sum): sum.toFixed(1)
+  days.forEach((d,i)=>{ const val=cellValue(jobId,d); const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b) b.textContent=(val%1===0)? String(val): val.toFixed(1) })
   queueMicrotask(()=>updateSumRow())
 }
 function updateSumRow(visibleJobs){
@@ -183,8 +178,8 @@ function updateSumRow(visibleJobs){
   const visible = visibleJobs || state.jobs.filter(j=> (state.filterClient==='ALL'||j.client_id===state.filterClient) && (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
   const sums=days.map(d=>visible.reduce((a,j)=>a+cellValue(j.id,d),0))
   const tds = document.querySelectorAll('#sumRow .sumCell')
-  sums.forEach((h,i)=>{
-    const td = tds[i]; if(!td) return
+  tds.forEach((td,i)=>{
+    const h = sums[i]||0
     const cls = h<=3 ? 'sumRed' : (h<=6 ? 'sumOrange' : 'sumGreen')
     td.innerHTML = `<span class="sumBubble ${cls}">${(h%1===0)? String(h): h.toFixed(1)}</span>`
   })
@@ -214,22 +209,32 @@ async function exportExcel(){
   const wb = new ExcelJS.Workbook()
   const ws = wb.addWorksheet('Výkaz')
 
+  // Header
   const user = state.session?.user?.email || ''
   const rangeText = `${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`
   ws.addRow([`Uživatel: ${user}`])
   ws.addRow([`Týden: ${rangeText}`])
   ws.addRow([])
 
-  ws.addRow(['Klient','Zakázka', ...daysTxt, 'Celkem'])
+  // Table header (dates instead of Po/Út...), right aligned
+  const header = ['Klient','Zakázka', ...daysTxt]
+  ws.addRow(header)
+  ws.getRow(4).font = { bold:true }
+  // right align date columns (3..7)
+  for(let i=3;i<=7;i++){ ws.getColumn(i).alignment = { horizontal:'right' } }
 
+  // Rows (no per-job total)
   for(const j of visible){
     const vals = days.map(d => cellValue(j.id, dayjs(d).format('YYYY-MM-DD')))
-    const total = vals.reduce((a,b)=>a+b,0)
-    ws.addRow([j.client, j.name, ...vals, total])
+    ws.addRow([j.client, j.name, ...vals])
   }
 
-  ws.columns.forEach(col => { col.width = 18 })
-  ws.getRow(4).font = { bold:true }
+  // Bottom: daily sums row
+  const daySums = days.map(d => visible.reduce((acc,job)=> acc + cellValue(job.id, dayjs(d).format('YYYY-MM-DD')), 0))
+  ws.addRow(['Součet za den','', ...daySums])
+
+  // column widths
+  ws.columns.forEach((col, idx) => { col.width = idx<3 ? 22 : 14 })
 
   const buf = await wb.xlsx.writeBuffer()
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=`vykaz-${dayjs(state.weekStart).format('YYYY-MM-DD')}.xlsx`; a.click()

@@ -1,7 +1,7 @@
 :root{
   --h:36px; --r:999px; --line:#e5e7eb; --muted:#6b7280; --fg:#0f172a; --bg:#fff;
   --pill:#111827; --pill-fg:#fff;
-  --st-new:#dbeafe; --st-pro:#fde68a; --st-done:#bbf7d0; --st-fg:#0f172a;
+  --st-new:#dbeafe; --st-pro:#fde68a; --st-done:#bbf7d0;
   --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;
 }
 *{box-sizing:border-box}

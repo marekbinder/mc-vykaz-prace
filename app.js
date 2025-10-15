@@ -1,21 +1,19 @@
 import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1/+esm'
 
-/** ---------- utils & state ---------- */
 const STEP = 0.5
 const state = { sb:null, session:null, weekStart: startOfISOWeek(new Date()),
-  clients:[], statuses:[], jobs:[], entries:{}, totalsAll:{}, filterClient:'ALL', filterStatus:'ALL' }
+  clients:[], statuses:[], jobs:[], entries:{}, totalsAll:{}, filterClient:'ALL', filterStatus:'ALL', totalsScope:'ALL' }
 
 function startOfISOWeek(d){ const dt=new Date(d); const wd=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-wd); dt.setHours(0,0,0,0); return dt }
 function fmtDate(d){ return dayjs(d).format('YYYY-MM-DD') }
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
 function round05(x){ return Math.round(x*2)/2 }
 function formatNum(x){ return (x%1===0)? String(x): x.toFixed(1) }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"\'":'&#39;'}[m])) }
 function showErr(msg){ console.error(msg); const e=document.getElementById('err'); if(!e) return; e.textContent=(msg?.message)||String(msg); e.style.display='block'; setTimeout(()=>e.style.display='none', 7000) }
 
-/** ---------- config & auth ---------- */
 async function loadConfig(){
-  try{ const r=await fetch('./config.json?v=11',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(j.supabaseUrl&&j.supabaseAnonKey) return j } }catch{}
+  try{ const r=await fetch('./config.json?v=12',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(j.supabaseUrl&&j.supabaseAnonKey) return j } }catch{}
   const supabaseUrl = localStorage.getItem('vp.supabaseUrl')
   const supabaseAnonKey = localStorage.getItem('vp.supabaseAnonKey')
   if(supabaseUrl && supabaseAnonKey) return { supabaseUrl, supabaseAnonKey }
@@ -30,7 +28,6 @@ async function init(){
   state.sb.auth.onAuthStateChange((_e,s)=>{ state.session=s; render() })
 }
 
-/** ---------- data loaders ---------- */
 async function ensureProfile(){
   const uid = state.session?.user?.id
   if(!uid) return
@@ -48,14 +45,26 @@ async function loadEntriesMine(){
   const map={}; for(const r of (data||[])){ map[r.job_id] ??= {}; map[r.job_id][r.work_date] = round05((map[r.job_id][r.work_date]||0) + Number(r.hours||0)) }
   return map
 }
+
 async function loadTotalsAll(jobIds){
   if(!jobIds.length) return {}
-  const { data, error } = await state.sb.from('time_entry').select('job_id,hours').in('job_id', jobIds)
-  if(error){ showErr(error.message); return {} }
-  const map = {}; for(const r of (data||[])){ map[r.job_id] = (map[r.job_id]||0) + Number(r.hours||0) } return map
+  if(state.totalsScope === 'ME'){
+    const { data, error } = await state.sb.from('time_entry').select('job_id,hours').in('job_id', jobIds).eq('user_id', state.session.user.id)
+    if(error){ showErr(error.message); return {} }
+    const map={}; for(const r of (data||[])){ map[r.job_id]=(map[r.job_id]||0)+Number(r.hours||0) } return map
+  }else{
+    const { data:rpcData, error:rpcErr } = await state.sb.rpc('fn_job_totals')
+    if(!rpcErr && rpcData){
+      const map={}; for(const r of rpcData){ map[r.job_id]=Number(r.sum_hours||0) } return map
+    }else{
+      const { data, error } = await state.sb.from('time_entry').select('job_id,hours').in('job_id', jobIds)
+      if(error){ showErr(error.message); return {} }
+      if(!data?.length){ showErr('Souhrn za VŠECHNY uživatele je prázdný – pravděpodobně brání RLS. Přidej RPC fn_job_totals (viz návod).') }
+      const map={}; for(const r of (data||[])){ map[r.job_id]=(map[r.job_id]||0)+Number(r.hours||0) } return map
+    }
+  }
 }
 
-/** ---------- UI helpers ---------- */
 function setWeekRangeLabel(){ document.getElementById('weekRange').textContent = `${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}` }
 function colorizeStatus(sel){
   sel.classList.remove('is-nova','is-probiha','is-hotovo')
@@ -67,7 +76,6 @@ function colorizeStatus(sel){
 function getDays(){ return [0,1,2,3,4].map(i=>fmtDate(addDays(state.weekStart,i))) }
 function cellValue(jobId, dateISO){ return (state.entries[jobId] && state.entries[jobId][dateISO]) ? state.entries[jobId][dateISO] : 0 }
 
-/** ---------- TABLE RENDER (define early & expose) ---------- */
 function renderTable(){
   const tbody=document.getElementById('tbody'); if(!tbody) return
   tbody.innerHTML=''
@@ -107,10 +115,8 @@ function renderTable(){
   }
   updateSumRow(visible)
 }
-// expose for any legacy/global calls
 try { window.renderTable = renderTable; } catch(e){}
 
-/** ---------- row/sum updates ---------- */
 function updateRow(jobId){
   const days=getDays(); const tr=document.querySelector(`tr[data-job="${jobId}"]`); if(!tr) return
   days.forEach((d,i)=>{ const val=cellValue(jobId,d); const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b) b.textContent=formatNum(val) })
@@ -130,7 +136,6 @@ function updateSumRow(visibleJobs){
   })
 }
 
-/** ---------- actions ---------- */
 async function bump(jobId,dateISO,delta){
   try{
     const current = cellValue(jobId,dateISO)
@@ -142,9 +147,20 @@ async function bump(jobId,dateISO,delta){
     const payload = { job_id: jobId, work_date: dateISO, hours: eff, user_id: state.session.user.id }
     const { error } = await state.sb.from('time_entry').insert(payload)
     if(error){ state.entries[jobId][dateISO] = current; updateRow(jobId); return showErr(error.message) }
-    // refresh cumulative for this job
-    const { data, error:err2 } = await state.sb.from('time_entry').select('hours').eq('job_id', jobId)
-    if(!err2 && data){ state.totalsAll[jobId] = data.reduce((a,r)=>a+Number(r.hours||0),0); updateRow(jobId) }
+    // refresh cumulative for this job according to scope
+    if(state.totalsScope==='ALL'){
+      const { data:rpcData, error:rpcErr } = await state.sb.rpc('fn_job_totals')
+      if(!rpcErr && rpcData){
+        const row = rpcData.find(r=>r.job_id===jobId)
+        if(row){ state.totalsAll[jobId]=Number(row.sum_hours||0); updateRow(jobId); return }
+      }
+      const { data } = await state.sb.from('time_entry').select('hours').eq('job_id', jobId)
+      state.totalsAll[jobId] = (data||[]).reduce((a,r)=>a+Number(r.hours||0),0)
+    }else{
+      const { data } = await state.sb.from('time_entry').select('hours').eq('job_id', jobId).eq('user_id', state.session.user.id)
+      state.totalsAll[jobId] = (data||[]).reduce((a,r)=>a+Number(r.hours||0),0)
+    }
+    updateRow(jobId)
   }catch(e){ showErr(e.message||e) }
 }
 async function deleteJob(jobId){
@@ -153,7 +169,6 @@ async function deleteJob(jobId){
   state.jobs = await loadJobs(); await refreshTotals(); renderTable()
 }
 
-/** ---------- export ---------- */
 async function exportExcel(){
   const days = [0,1,2,3,4].map(i=>addDays(state.weekStart,i))
   const daysTxt = days.map(d => dayjs(d).format('D. M. YYYY'))
@@ -174,7 +189,6 @@ async function exportExcel(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=`vykaz-${dayjs(state.weekStart).format('YYYY-MM-DD')}.xlsx`; a.click()
 }
 
-/** ---------- refresh & shell ---------- */
 async function refreshTotals(){ const visibleJobIds = state.jobs.map(j=>j.id); state.totalsAll = await loadTotalsAll(visibleJobIds) }
 async function refreshData(){ state.entries = {}; const mine = await loadEntriesMine(); state.entries = mine; await refreshTotals(); renderTable() }
 
@@ -194,6 +208,10 @@ async function buildShell(){
   fStat.innerHTML = `<option value="ALL">Všechny zakázky</option>` + state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')
   fStat.value = state.filterStatus
   fStat.onchange=(e)=>{ state.filterStatus=e.target.value; renderTable() }
+
+  const scope=document.getElementById('totalsScope')
+  scope.value = state.totalsScope
+  scope.onchange = async (e)=>{ state.totalsScope = e.target.value; await refreshTotals(); renderTable() }
 
   const jobClient=document.getElementById('newJobClient')
   jobClient.innerHTML = state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
@@ -224,9 +242,7 @@ async function buildShell(){
   renderTable()
 }
 
-/** ---------- entry ---------- */
 async function render(){
-  // user box
   const box=document.getElementById('userBoxTopRight'); box.innerHTML=''
   if(!state.session){
     const b=document.createElement('button'); b.className='pill-btn'; b.textContent='Přihlásit'; b.onclick=showLogin; box.append(b)
@@ -242,6 +258,7 @@ async function render(){
   state.clients=await loadClients(); state.statuses=await loadStatuses(); state.jobs=await loadJobs();
   await buildShell(); await refreshData()
 }
+
 function showLogin(){
   const app=document.getElementById('app')
   app.innerHTML = `<div class="card" style="max-width:600px;margin:0 auto;text-align:center">

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Výkaz práce</title>
-  <link rel="stylesheet" href="./style.css?v=11" />
+  <link rel="stylesheet" href="./style.css?v=12" />
 </head>
 <body>
   <header class="siteHeader">
@@ -30,6 +30,10 @@
       <span class="label">Nastavení filtru:</span>
       <select class="pill-select" id="filterClient"><option value="ALL">Všichni klienti</option></select>
       <select class="pill-select" id="filterStatus"><option value="ALL">Všechny zakázky</option></select>
+      <select class="pill-select" id="totalsScope">
+        <option value="ME">Součty: Já</option>
+        <option value="ALL">Součty: Všichni</option>
+      </select>
     </section>
 
     <section class="addRow addRow--stretch">
@@ -72,6 +76,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>
-  <script type="module" src="./app.js?v=11"></script>
+  <script type="module" src="./app.js?v=12"></script>
 </body>
 </html>

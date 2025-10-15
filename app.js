@@ -46,7 +46,8 @@ function showLogin(){
 }
 
 async function ensureProfile(){
-  const uid = state.session.user.id
+  const uid = state.session?.user?.id
+  if(!uid) return
   await state.sb.from('app_user').upsert({ id:uid, full_name:state.session.user.email, role:'admin' }, { onConflict:'id' })
 }
 async function loadClients(){ const {data}=await state.sb.from('client').select('id,name').eq('is_active',true).order('name'); return data||[] }
@@ -70,7 +71,7 @@ function circle(label){ const b=document.createElement('button'); b.className='c
 function buildShell(){
   const app=document.getElementById('app'); app.innerHTML=''
 
-  // nav (okamžitě aktualizujeme range; load je async)
+  // nav
   const nav=document.createElement('div'); nav.className='nav'
   const prev=circle('◀'); const next=circle('▶')
   const range=pill('div','pill dark navRange'); const setRange=()=>range.textContent=`${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`; setRange()
@@ -104,7 +105,7 @@ function buildShell(){
   app.append(admin)
 
   // table
-  const card=document.createElement('div'); card.className='card'
+  const card=document.createElement('div'); card.className='card card--table'
   const wrap=document.createElement('div'); wrap.className='tableWrap'; const table=document.createElement('table'); wrap.append(table); card.append(wrap); app.append(card)
   table.innerHTML = `<thead><tr>
     <th style="width:220px">Klient</th>
@@ -164,11 +165,9 @@ function getDays(){ return [0,1,2,3,4].map(i=>fmtDate(addDays(state.weekStart,i)
 function cellValue(jobId, dateISO){ return (state.entries[jobId] && state.entries[jobId][dateISO]) ? state.entries[jobId][dateISO] : 0 }
 
 async function bump(jobId,dateISO,delta){
-  // okamžité UI
   state.entries[jobId] ??= {}
   const next = Math.max(0, round05((state.entries[jobId][dateISO]||0) + delta))
   state.entries[jobId][dateISO]=next; updateRow(jobId)
-  // async persist (bez blokace UI)
   state.sb.from('time_entry').insert({ job_id:jobId, work_date:dateISO, hours:delta }).then(({error})=>{
     if(error){ state.entries[jobId][dateISO]=round05(next-delta); updateRow(jobId); alert(error.message) }
   })
@@ -177,7 +176,6 @@ function updateRow(jobId){
   const days=getDays(); const tr=document.querySelector(`tr[data-job="${jobId}"]`); if(!tr) return
   let sum=0; days.forEach((d,i)=>{ const val=cellValue(jobId,d); sum+=val; const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b) b.textContent=(val%1===0)? String(val): val.toFixed(1) })
   tr.querySelector('.totalCell').textContent=(sum%1===0)? String(sum): sum.toFixed(1)
-  // přepočítat sumRow jen jednou na anim frame (debounce micro)
   queueMicrotask(()=>updateSumRow())
 }
 function updateSumRow(visibleJobs){
@@ -209,26 +207,38 @@ async function deleteJob(jobId){
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
 
 async function exportExcel(){
-  const days=getDays()
+  const days = [0,1,2,3,4].map(i=>addDays(state.weekStart,i))
+  const daysTxt = days.map(d => dayjs(d).format('D. M. YYYY'))
   const visible = state.jobs.filter(j=> (state.filterClient==='ALL'||j.client_id===state.filterClient) && (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
-  const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('Souhrn týdne')
-  ws.addRow(['Klient','Zakázka','Po','Út','St','Čt','Pá','Celkem'])
+
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet('Výkaz')
+
+  const user = state.session?.user?.email || ''
+  const rangeText = `${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`
+  ws.addRow([`Uživatel: ${user}`])
+  ws.addRow([`Týden: ${rangeText}`])
+  ws.addRow([])
+
+  ws.addRow(['Klient','Zakázka', ...daysTxt, 'Celkem'])
+
   for(const j of visible){
-    const vals = days.map(d=>cellValue(j.id,d)); const total = vals.reduce((a,b)=>a+b,0)
+    const vals = days.map(d => cellValue(j.id, dayjs(d).format('YYYY-MM-DD')))
+    const total = vals.reduce((a,b)=>a+b,0)
     ws.addRow([j.client, j.name, ...vals, total])
   }
-  const daySums = days.map(d => visible.reduce((acc,j)=>acc+cellValue(j.id,d),0))
-  ws.addRow(['Součet za den','', ...daySums, ''])
+
+  ws.columns.forEach(col => { col.width = 18 })
+  ws.getRow(4).font = { bold:true }
+
   const buf = await wb.xlsx.writeBuffer()
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=`vykaz-${fmtDate(state.weekStart)}.xlsx`; a.click()
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=`vykaz-${dayjs(state.weekStart).format('YYYY-MM-DD')}.xlsx`; a.click()
 }
 
 async function refreshData(){
-  // rychlá UI reakce: přepíšeme bubliny na nuly a sum row, ať hned vidíš nový týden
   state.entries = {}
   document.getElementById('tbody')?.querySelectorAll('.bubble')?.forEach(b=>b.textContent='0')
   updateSumRow([])
-  // teprve teď načteme data asynchronně
   state.entries = await loadEntries()
   renderTable()
 }

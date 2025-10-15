@@ -2,7 +2,7 @@ import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1/+esm'
 
 const STEP = 0.5
 const state = { sb:null, session:null, weekStart: startOfISOWeek(new Date()),
-  clients:[], statuses:[], jobs:[], entries:{}, filterClient:'ALL', filterStatus:'ALL' }
+  clients:[], statuses:[], jobs:[], entries:{}, totalsAll:{}, filterClient:'ALL', filterStatus:'ALL' }
 
 function startOfISOWeek(d){ const dt=new Date(d); const wd=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-wd); dt.setHours(0,0,0,0); return dt }
 function fmtDate(d){ return dayjs(d).format('YYYY-MM-DD') }
@@ -11,7 +11,7 @@ function round05(x){ return Math.round(x*2)/2 }
 function showErr(msg){ console.error(msg); const e=document.getElementById('err'); if(!e) return; e.textContent=(msg?.message)||String(msg); e.style.display='block'; setTimeout(()=>e.style.display='none', 7000) }
 
 async function loadConfig(){
-  try{ const r=await fetch('./config.json?v=90fac',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(j.supabaseUrl&&j.supabaseAnonKey) return j } }catch{}
+  try{ const r=await fetch('./config.json?v=10ct',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(j.supabaseUrl&&j.supabaseAnonKey) return j } }catch{}
   const supabaseUrl = localStorage.getItem('vp.supabaseUrl')
   const supabaseAnonKey = localStorage.getItem('vp.supabaseAnonKey')
   if(supabaseUrl && supabaseAnonKey) return { supabaseUrl, supabaseAnonKey }
@@ -72,8 +72,16 @@ async function loadEntriesMine(){
   const map={}; for(const r of (data||[])){ map[r.job_id] ??= {}; map[r.job_id][r.work_date] = round05((map[r.job_id][r.work_date]||0) + Number(r.hours||0)) }
   return map
 }
-
-function circle(label){ const b=document.createElement('button'); b.className='circle'; b.textContent=label; return b }
+async function loadTotalsAll(jobIds){
+  if(!jobIds.length) return {}
+  // Aggregate across ALL time & ALL users for the visible jobs
+  const q = state.sb.from('time_entry').select('job_id, sum(hours)').in('job_id', jobIds).group('job_id')
+  const { data, error } = await q
+  if(error){ showErr(error.message); return {} }
+  const map = {}
+  for(const r of (data||[])){ map[r.job_id] = Number(r.sum)||0 }
+  return map
+}
 
 function colorizeStatus(sel){
   sel.classList.remove('is-nova','is-probiha','is-hotovo')
@@ -82,104 +90,12 @@ function colorizeStatus(sel){
   else if(txt.includes('pro') || txt.includes('běh')) sel.classList.add('is-probiha')
   else if(txt.includes('hot')) sel.classList.add('is-hotovo')
 }
-
 function setWeekRangeLabel(){
   document.getElementById('weekRange').textContent =
     `${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`
 }
 
-function buildShell(){
-  // toolbar handlers
-  document.getElementById('prevWeek').onclick=()=>{ state.weekStart=addDays(state.weekStart,-7); setWeekRangeLabel(); refreshData() }
-  document.getElementById('nextWeek').onclick=()=>{ state.weekStart=addDays(state.weekStart, 7); setWeekRangeLabel(); refreshData() }
-  document.getElementById('exportXlsx').onclick=exportExcel
-
-  // filters options
-  const fClient=document.getElementById('filterClient')
-  fClient.innerHTML = `<option value="ALL">Všichni klienti</option>` + state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
-  fClient.value = state.filterClient
-  fClient.onchange=(e)=>{ state.filterClient=e.target.value; renderTable() }
-
-  const fStat=document.getElementById('filterStatus')
-  fStat.innerHTML = `<option value="ALL">Všechny zakázky</option>` + state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')
-  fStat.value = state.filterStatus
-  fStat.onchange=(e)=>{ state.filterStatus=e.target.value; renderTable() }
-
-  // add row
-  const jobClient=document.getElementById('newJobClient')
-  jobClient.innerHTML = state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
-  const jobStatus=document.getElementById('newJobStatus')
-  jobStatus.innerHTML = state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')
-  colorizeStatus(jobStatus)
-  jobStatus.onchange=()=>colorizeStatus(jobStatus)
-
-  document.getElementById('addClientBtn').onclick=async()=>{
-    const name=document.getElementById('newClientName').value.trim()
-    if(!name) return showErr('Zadej název klienta')
-    const {error}=await state.sb.from('client').insert({name})
-    if(error) return showErr(error.message)
-    document.getElementById('newClientName').value=''
-    state.clients=await loadClients()
-    buildShell()
-  }
-
-  document.getElementById('addJobBtn').onclick=async()=>{
-    const name=document.getElementById('newJobName').value.trim()
-    if(!name) return showErr('Zadej název zakázky')
-    const client_id=document.getElementById('newJobClient').value
-    const status_id=parseInt(document.getElementById('newJobStatus').value,10)
-    const {error}=await state.sb.from('job').insert({ client_id, name, status_id })
-    if(error) return showErr(error.message)
-    document.getElementById('newJobName').value=''
-    state.jobs=await loadJobs()
-    renderTable()
-  }
-
-  setWeekRangeLabel()
-  renderTable()
-}
-
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
-
-function renderTable(){
-  const tbody=document.getElementById('tbody'); if(!tbody) return
-  tbody.innerHTML=''
-  const days=getDays()
-  const visible = state.jobs.filter(j=> (state.filterClient==='ALL'||j.client_id===state.filterClient) && (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
-  for(const j of visible){
-    const tr=document.createElement('tr'); tr.dataset.job=j.id
-
-    const tdClient=document.createElement('td')
-    const clientSel=document.createElement('select'); clientSel.className='pill-select clientSel'
-    clientSel.innerHTML = state.clients.map(c=>`<option value="${c.id}" ${c.id===j.client_id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')
-    clientSel.onchange=async(e)=>{ await state.sb.from('job').update({client_id:e.target.value}).eq('id', j.id) }
-    tdClient.append(clientSel)
-
-    const tdJob=document.createElement('td'); tdJob.className='jobCell'
-    const name=document.createElement('input'); name.className='pill-input jobNameIn'; name.value=j.name
-    let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ await state.sb.from('job').update({name:e.target.value}).eq('id', j.id) }, 250) }
-    const st=document.createElement('select'); st.className='pill-select statusSel'
-    st.innerHTML = state.statuses.map(s=>`<option value="${s.id}" ${s.id===j.status_id?'selected':''}>${escapeHtml(s.label)}</option>`).join('')
-    colorizeStatus(st); st.onchange=async(e)=>{ colorizeStatus(st); await state.sb.from('job').update({status_id:parseInt(e.target.value,10)}).eq('id', j.id) }
-    const del=document.createElement('button'); del.className='jobDelete'; del.title='Odstranit'; del.textContent='🗑'; del.onclick=()=>deleteJob(j.id)
-    tdJob.append(name, st, del)
-
-    tr.append(tdClient, tdJob)
-
-    days.forEach((d,i)=>{
-      const td=document.createElement('td'); td.dataset.day=i
-      const b=document.createElement('button'); b.className='bubble'; b.textContent='0'
-      b.onclick=()=>bump(j.id,d,+STEP); b.oncontextmenu=(e)=>{e.preventDefault(); bump(j.id,d,-STEP)}
-      td.append(b); tr.append(td)
-    })
-
-    const total=document.createElement('td'); total.className='totalCell'; total.textContent= formatNum( days.reduce((acc,dt)=> acc + cellValue(j.id, dt), 0) )
-    tr.append(total)
-
-    tbody.append(tr); updateRow(j.id)
-  }
-  updateSumRow(visible)
-}
 
 function getDays(){ return [0,1,2,3,4].map(i=>fmtDate(addDays(state.weekStart,i))) }
 function cellValue(jobId, dateISO){ return (state.entries[jobId] && state.entries[jobId][dateISO]) ? state.entries[jobId][dateISO] : 0 }
@@ -196,14 +112,17 @@ async function bump(jobId,dateISO,delta){
     const payload = { job_id: jobId, work_date: dateISO, hours: eff, user_id: state.session.user.id }
     const { error } = await state.sb.from('time_entry').insert(payload)
     if(error){ state.entries[jobId][dateISO] = current; updateRow(jobId); return showErr(error.message) }
+    // refresh cumulative total for this job only
+    const { data, error:err2 } = await state.sb.from('time_entry').select('sum(hours)').eq('job_id', jobId)
+    if(!err2 && data && data[0]){ state.totalsAll[jobId] = Number(data[0].sum)||0; updateRow(jobId) }
   }catch(e){ showErr(e.message||e) }
 }
 
 function updateRow(jobId){
   const days=getDays(); const tr=document.querySelector(`tr[data-job="${jobId}"]`); if(!tr) return
   days.forEach((d,i)=>{ const val=cellValue(jobId,d); const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b) b.textContent=formatNum(val) })
-  const weekTotal = days.reduce((acc,dt)=> acc + cellValue(jobId,dt), 0)
-  tr.querySelector('.totalCell').textContent = formatNum(weekTotal)
+  const cum = state.totalsAll[jobId] || 0
+  tr.querySelector('.totalCell').textContent = formatNum(cum)
   queueMicrotask(()=>updateSumRow())
 }
 function updateSumRow(visibleJobs){
@@ -222,6 +141,7 @@ async function deleteJob(jobId){
   if(!confirm('Opravdu odstranit zakázku? (Bude skryta)')) return
   await state.sb.from('job').update({ is_active:false }).eq('id', jobId)
   state.jobs = await loadJobs()
+  await refreshTotals()  // refresh totals because visible set changed
   renderTable()
 }
 
@@ -258,11 +178,107 @@ async function exportExcel(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=`vykaz-${dayjs(state.weekStart).format('YYYY-MM-DD')}.xlsx`; a.click()
 }
 
+async function refreshTotals(){
+  const visibleJobIds = state.jobs.map(j=>j.id)
+  state.totalsAll = await loadTotalsAll(visibleJobIds)
+}
+
 async function refreshData(){
   state.entries = {}
   const [mine] = await Promise.all([ loadEntriesMine() ])
   state.entries = mine
+  await refreshTotals()
   renderTable()
+}
+
+function setWeekHandlers(){
+  document.getElementById('prevWeek').onclick=()=>{ state.weekStart=addDays(state.weekStart,-7); setWeekRangeLabel(); refreshData() }
+  document.getElementById('nextWeek').onclick=()=>{ state.weekStart=addDays(state.weekStart, 7); setWeekRangeLabel(); refreshData() }
+  document.getElementById('exportXlsx').onclick=exportExcel
+}
+
+async function buildShell(){
+  setWeekHandlers()
+  // filters options
+  const fClient=document.getElementById('filterClient')
+  fClient.innerHTML = `<option value="ALL">Všichni klienti</option>` + state.clients.map(c=>`<option value="\${c.id}">\${escapeHtml(c.name)}</option>`).join('')
+  fClient.value = state.filterClient
+  fClient.onchange=(e)=>{ state.filterClient=e.target.value; renderTable() }
+
+  const fStat=document.getElementById('filterStatus')
+  fStat.innerHTML = `<option value="ALL">Všechny zakázky</option>` + state.statuses.map(s=>`<option value="\${s.id}">\${escapeHtml(s.label)}</option>`).join('')
+  fStat.value = state.filterStatus
+  fStat.onchange=(e)=>{ state.filterStatus=e.target.value; renderTable() }
+
+  // add row
+  const jobClient=document.getElementById('newJobClient')
+  jobClient.innerHTML = state.clients.map(c=>`<option value="\${c.id}">\${escapeHtml(c.name)}</option>`).join('')
+  const jobStatus=document.getElementById('newJobStatus')
+  jobStatus.innerHTML = state.statuses.map(s=>`<option value="\${s.id}">\${escapeHtml(s.label)}</option>`).join('')
+  colorizeStatus(jobStatus); jobStatus.onchange=()=>colorizeStatus(jobStatus)
+
+  document.getElementById('addClientBtn').onclick=async()=>{
+    const name=document.getElementById('newClientName').value.trim()
+    if(!name) return showErr('Zadej název klienta')
+    const {error}=await state.sb.from('client').insert({name})
+    if(error) return showErr(error.message)
+    document.getElementById('newClientName').value=''
+    state.clients=await loadClients(); await buildShell()
+  }
+
+  document.getElementById('addJobBtn').onclick=async()=>{
+    const name=document.getElementById('newJobName').value.trim()
+    if(!name) return showErr('Zadej název zakázky')
+    const client_id=document.getElementById('newJobClient').value
+    const status_id=parseInt(document.getElementById('newJobStatus').value,10)
+    const {error}=await state.sb.from('job').insert({ client_id, name, status_id })
+    if(error) return showErr(error.message)
+    document.getElementById('newJobName').value=''
+    state.jobs=await loadJobs(); await refreshTotals(); renderTable()
+  }
+
+  setWeekRangeLabel()
+  renderTable()
+}
+
+function renderTable(){
+  const tbody=document.getElementById('tbody'); if(!tbody) return
+  tbody.innerHTML=''
+  const days=getDays()
+  const visible = state.jobs.filter(j=> (state.filterClient==='ALL'||j.client_id===state.filterClient) && (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
+  for(const j of visible){
+    const tr=document.createElement('tr'); tr.dataset.job=j.id
+
+    const tdClient=document.createElement('td')
+    const clientSel=document.createElement('select'); clientSel.className='pill-select clientSel'
+    clientSel.innerHTML = state.clients.map(c=>`<option value="\${c.id}" \${c.id===j.client_id?'selected':''}>\${escapeHtml(c.name)}</option>`).join('')
+    clientSel.onchange=async(e)=>{ await state.sb.from('job').update({client_id:e.target.value}).eq('id', j.id) }
+    tdClient.append(clientSel)
+
+    const tdJob=document.createElement('td'); tdJob.className='jobCell'
+    const name=document.createElement('input'); name.className='pill-input jobNameIn'; name.value=j.name
+    let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ await state.sb.from('job').update({name:e.target.value}).eq('id', j.id) }, 250) }
+    const st=document.createElement('select'); st.className='pill-select statusSel'
+    st.innerHTML = state.statuses.map(s=>`<option value="\${s.id}" \${s.id===j.status_id?'selected':''}>\${escapeHtml(s.label)}</option>`).join('')
+    colorizeStatus(st); st.onchange=async(e)=>{ colorizeStatus(st); await state.sb.from('job').update({status_id:parseInt(e.target.value,10)}).eq('id', j.id) }
+    const del=document.createElement('button'); del.className='jobDelete'; del.title='Odstranit'; del.textContent='🗑'; del.onclick=()=>deleteJob(j.id)
+    tdJob.append(name, st, del)
+
+    tr.append(tdClient, tdJob)
+
+    days.forEach((d,i)=>{
+      const td=document.createElement('td'); td.dataset.day=i
+      const b=document.createElement('button'); b.className='bubble'; b.textContent='0'
+      b.onclick=()=>bump(j.id,d,+STEP); b.oncontextmenu=(e)=>{e.preventDefault(); bump(j.id,d,-STEP)}
+      td.append(b); tr.append(td)
+    })
+
+    const total=document.createElement('td'); total.className='totalCell'; total.textContent= formatNum(state.totalsAll[j.id]||0)
+    tr.append(total)
+
+    tbody.append(tr); updateRow(j.id)
+  }
+  updateSumRow(visible)
 }
 
 async function render(){
@@ -271,7 +287,7 @@ async function render(){
   if(!state.session){ app.querySelector('.filters')?.remove(); app.querySelector('.addRow')?.remove(); app.querySelector('.tableWrap')?.remove(); return showLogin() }
   await ensureProfile()
   state.clients=await loadClients(); state.statuses=await loadStatuses(); state.jobs=await loadJobs();
-  buildShell(); await refreshData()
+  await buildShell(); await refreshData()
 }
 
 init().then(render).catch(showErr)

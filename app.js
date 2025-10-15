@@ -11,7 +11,7 @@ function round05(x){ return Math.round(x*2)/2 }
 function showErr(msg){ console.error(msg); const e=document.getElementById('err'); if(!e) return; e.textContent=(msg?.message)||String(msg); e.style.display='block'; setTimeout(()=>e.style.display='none', 7000) }
 
 async function loadConfig(){
-  try{ const r=await fetch('./config.json?v=90fa',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(j.supabaseUrl&&j.supabaseAnonKey) return j } }catch{}
+  try{ const r=await fetch('./config.json?v=90fac',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(j.supabaseUrl&&j.supabaseAnonKey) return j } }catch{}
   const supabaseUrl = localStorage.getItem('vp.supabaseUrl')
   const supabaseAnonKey = localStorage.getItem('vp.supabaseAnonKey')
   if(supabaseUrl && supabaseAnonKey) return { supabaseUrl, supabaseAnonKey }

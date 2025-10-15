@@ -4,24 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Výkaz práce</title>
-  <link rel="stylesheet" href="./style.css?v=104" />
-  <script>
-  (function(){
-    function banner(txt, bg){ 
-      var d=document.createElement('div');
-      d.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:99999;padding:10px 14px;border-radius:12px;font:14px system-ui;background:'+ (bg||'#fee2e2') +';color:#111;border:1px solid #fecaca;box-shadow:0 6px 20px rgba(0,0,0,.12)';
-      d.textContent=txt; document.body.appendChild(d); setTimeout(function(){d.remove()},7000);
-    }
-    window.__vpBanner = banner;
-    window.addEventListener('error', function(e){ banner('JS chyba: '+(e.message||e.error||e.filename), '#fee2e2') });
-    window.addEventListener('unhandledrejection', function(e){ banner('Promise chyba: '+(e.reason&&e.reason.message||e.reason), '#fee2e2') });
-    banner('INDEX NAČTEN — OK', '#d1fae5');
-  })();
-  </script>
+  <link rel="stylesheet" href="./style.css?v=110" />
 </head>
 <body>
   <header class="siteHeader">
-    <div class="leftSlot"></div>
     <h1>Výkaz práce</h1>
     <div class="rightSlot" id="userBoxTopRight"></div>
   </header>
@@ -38,16 +24,9 @@
     <small>Frontend: GitHub Pages · Data: Supabase</small>
   </footer>
 
-  <!-- DŮLEŽITÉ: načíst UMD bundle, aby existovalo window.supabase -->
+  <!-- Libs -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <!-- ExcelJS pro export -->
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>
-
-  <!-- Modulové načtení app.js s chybovým bannerem -->
-  <script type="module">
-    const src = './app.js?v=104';
-    import(src).catch(e=>{ window.__vpBanner && __vpBanner('Nelze načíst app.js: '+(e.message||e), '#fee2e2') });
-  </script>
-  <noscript>Pro aplikaci je potřeba JavaScript.</noscript>
+  <script type="module" src="./app.js?v=110"></script>
 </body>
 </html>

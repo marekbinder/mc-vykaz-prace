@@ -1,11 +1,55 @@
-body{margin:0;background:#fff;color:#0f172a;font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial}
-.siteHeader,.siteFooter{max-width:1100px;margin:0 auto;padding:18px 20px;position:relative}
+*{box-sizing:border-box}
+:root{
+  --bg:#ffffff; --fg:#0f172a; --muted:#6b7280; --line:#e5e7eb; --card:#fff;
+  --pill:#111827; --pill-fg:#fff; --h:36px; --r:999px;
+  --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+  --st-new:#dbeafe; --st-pro:#fde68a; --st-done:#bbf7d0; --st-fg:#0f172a;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial}
+.siteHeader, .siteFooter{max-width:1100px;margin:0 auto;padding:18px 20px;position:relative}
 .siteHeader{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
 .siteHeader h1{margin:0;font-size:34px;text-align:center}
 .siteHeader .rightSlot{position:absolute;right:20px;top:10px;display:flex;gap:8px}
+
 main{max-width:1100px;margin:8px auto 40px;padding:0 20px}
-.card{background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-.pill-btn,.pill-input,.pill-select{height:36px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;padding:0 14px}
-.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;background:#fff;padding:0 10px;height:36px;border-radius:999px;font-size:13px;color:#6b7280}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.card--plain{border:0;box-shadow:none}
+.card--table{border:0;box-shadow:none}
+
+.pill-btn,.pill-input,.pill-select{height:var(--h);border-radius:var(--r);border:1px solid var(--line);background:#fff;padding:0 14px}
+.pill{height:var(--h);line-height:var(--h);border-radius:var(--r);display:inline-flex;align-items:center;gap:8px;padding:0 14px;border:1px solid var(--line);background:#f3f4f6;font-weight:700}
+.pill.dark{background:var(--pill);color:var(--pill-fg);border:0}
+.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;padding:0 10px;height:var(--h);border-radius:var(--r);font-size:13px;color:var(--muted)}
+
+.nav{display:flex;gap:10px;justify-content:center;align-items:center;margin:14px 0 18px}
+.nav .circle{width:var(--h);height:var(--h);border-radius:var(--r);display:inline-flex;justify-content:center;align-items:center;font-weight:800;border:1px solid var(--line)}
+.navRange{min-width:320px;justify-content:center}
+
+.tableWrap{overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0}
+thead th{background:#0f0f10;color:#fff;padding:12px 14px;text-align:left;border-top:0}
+thead tr th:first-child{border-top-left-radius:var(--r);border-bottom-left-radius:var(--r)}
+thead tr th:last-child{border-top-right-radius:var(--r);border-bottom-right-radius:var(--r)}
+tbody td{padding:12px 10px;border-bottom:0;vertical-align:middle}
+tfoot td{padding:12px 10px}
+
+.clientSel{min-width:140px}
+.jobCell{display:flex;align-items:center;gap:10px}
+.jobName{min-width:240px}
+.jobDelete{margin-left:auto;border:none;background:transparent;cursor:pointer;font-size:18px;line-height:1}
+
+.bubble{display:inline-flex;justify-content:center;align-items:center;min-width:var(--h);height:var(--h);border-radius:var(--r);background:#e5e7eb;color:#111827;font-weight:800;border:1px solid var(--line)}
+.totalCell{font-weight:800;text-align:center}
+
+.sumBubble{display:inline-flex;justify-content:center;align-items:center;min-width:var(--h);height:var(--h);border-radius:var(--r);font-weight:800;color:#fff}
+.sumRed{background:#ef4444}
+.sumOrange{background:#f59e0b}
+.sumGreen{background:#22c55e}
+
+.statusSel.is-nova{background:var(--st-new)}
+.statusSel.is-probiha{background:var(--st-pro)}
+.statusSel.is-hotovo{background:var(--st-done)}
+.statusSel.is-nova, .statusSel.is-probiha, .statusSel.is-hotovo{border-color:transparent;color:var(--st-fg);font-weight:800}
+
 .err{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:12px;padding:10px 14px;max-width:90%;box-shadow:0 6px 20px rgba(0,0,0,.12)}
-.step{background:#f3f4f6;border:1px dashed #d1d5db;border-radius:12px;padding:10px 12px;margin:10px 0;color:#374151}

@@ -4,10 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Výkaz práce</title>
-  <link rel="stylesheet" href="./style.css?v=110" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <header class="siteHeader">
+    <div class="leftSlot"></div>
     <h1>Výkaz práce</h1>
     <div class="rightSlot" id="userBoxTopRight"></div>
   </header>
@@ -18,15 +19,12 @@
     </div>
   </main>
 
-  <div id="err" class="err" style="display:none"></div>
-
   <footer class="siteFooter">
     <small>Frontend: GitHub Pages · Data: Supabase</small>
   </footer>
 
-  <!-- Libs -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>
-  <script type="module" src="./app.js?v=110"></script>
+  <script src="./app.js" type="module"></script>
 </body>
 </html>

@@ -11,7 +11,7 @@ function round05(x){ return Math.round(x*2)/2 }
 function showErr(msg){ console.error(msg); const e=document.getElementById('err'); if(!e) return; e.textContent=(msg?.message)||String(msg); e.style.display='block'; setTimeout(()=>e.style.display='none', 7000) }
 
 async function loadConfig(){
-  try{ const r=await fetch('./config.json?v=10ct',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(j.supabaseUrl&&j.supabaseAnonKey) return j } }catch{}
+  try{ const r=await fetch('./config.json?v=10fix',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(j.supabaseUrl&&j.supabaseAnonKey) return j } }catch{}
   const supabaseUrl = localStorage.getItem('vp.supabaseUrl')
   const supabaseAnonKey = localStorage.getItem('vp.supabaseAnonKey')
   if(supabaseUrl && supabaseAnonKey) return { supabaseUrl, supabaseAnonKey }
@@ -74,12 +74,11 @@ async function loadEntriesMine(){
 }
 async function loadTotalsAll(jobIds){
   if(!jobIds.length) return {}
-  // Aggregate across ALL time & ALL users for the visible jobs
-  const q = state.sb.from('time_entry').select('job_id, sum(hours)').in('job_id', jobIds).group('job_id')
-  const { data, error } = await q
+  // Fallback: fetch raw rows and reduce client-side (works on all PostgREST versions)
+  const { data, error } = await state.sb.from('time_entry').select('job_id,hours').in('job_id', jobIds)
   if(error){ showErr(error.message); return {} }
   const map = {}
-  for(const r of (data||[])){ map[r.job_id] = Number(r.sum)||0 }
+  for(const r of (data||[])){ map[r.job_id] = (map[r.job_id]||0) + Number(r.hours||0) }
   return map
 }
 
@@ -112,9 +111,9 @@ async function bump(jobId,dateISO,delta){
     const payload = { job_id: jobId, work_date: dateISO, hours: eff, user_id: state.session.user.id }
     const { error } = await state.sb.from('time_entry').insert(payload)
     if(error){ state.entries[jobId][dateISO] = current; updateRow(jobId); return showErr(error.message) }
-    // refresh cumulative total for this job only
-    const { data, error:err2 } = await state.sb.from('time_entry').select('sum(hours)').eq('job_id', jobId)
-    if(!err2 && data && data[0]){ state.totalsAll[jobId] = Number(data[0].sum)||0; updateRow(jobId) }
+    // refresh cumulative for just this job
+    const { data, error:err2 } = await state.sb.from('time_entry').select('hours').eq('job_id', jobId)
+    if(!err2 && data){ state.totalsAll[jobId] = data.reduce((a,r)=>a+Number(r.hours||0),0); updateRow(jobId) }
   }catch(e){ showErr(e.message||e) }
 }
 
@@ -141,7 +140,7 @@ async function deleteJob(jobId){
   if(!confirm('Opravdu odstranit zakázku? (Bude skryta)')) return
   await state.sb.from('job').update({ is_active:false }).eq('id', jobId)
   state.jobs = await loadJobs()
-  await refreshTotals()  // refresh totals because visible set changed
+  await refreshTotals()
   renderTable()
 }
 
@@ -171,7 +170,6 @@ async function exportExcel(){
 
   const daySums = days.map(d => visible.reduce((acc,job)=> acc + cellValue(job.id, dayjs(d).format('YYYY-MM-DD')), 0))
   ws.addRow(['Součet za den','', ...daySums])
-
   ws.columns.forEach((col, idx) => { col.width = idx<3 ? 22 : 14 })
 
   const buf = await wb.xlsx.writeBuffer()
@@ -201,20 +199,20 @@ async function buildShell(){
   setWeekHandlers()
   // filters options
   const fClient=document.getElementById('filterClient')
-  fClient.innerHTML = `<option value="ALL">Všichni klienti</option>` + state.clients.map(c=>`<option value="\${c.id}">\${escapeHtml(c.name)}</option>`).join('')
+  fClient.innerHTML = `<option value="ALL">Všichni klienti</option>` + state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
   fClient.value = state.filterClient
   fClient.onchange=(e)=>{ state.filterClient=e.target.value; renderTable() }
 
   const fStat=document.getElementById('filterStatus')
-  fStat.innerHTML = `<option value="ALL">Všechny zakázky</option>` + state.statuses.map(s=>`<option value="\${s.id}">\${escapeHtml(s.label)}</option>`).join('')
+  fStat.innerHTML = `<option value="ALL">Všechny zakázky</option>` + state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')
   fStat.value = state.filterStatus
   fStat.onchange=(e)=>{ state.filterStatus=e.target.value; renderTable() }
 
   // add row
   const jobClient=document.getElementById('newJobClient')
-  jobClient.innerHTML = state.clients.map(c=>`<option value="\${c.id}">\${escapeHtml(c.name)}</option>`).join('')
+  jobClient.innerHTML = state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
   const jobStatus=document.getElementById('newJobStatus')
-  jobStatus.innerHTML = state.statuses.map(s=>`<option value="\${s.id}">\${escapeHtml(s.label)}</option>`).join('')
+  jobStatus.innerHTML = state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')
   colorizeStatus(jobStatus); jobStatus.onchange=()=>colorizeStatus(jobStatus)
 
   document.getElementById('addClientBtn').onclick=async()=>{
@@ -239,46 +237,6 @@ async function buildShell(){
 
   setWeekRangeLabel()
   renderTable()
-}
-
-function renderTable(){
-  const tbody=document.getElementById('tbody'); if(!tbody) return
-  tbody.innerHTML=''
-  const days=getDays()
-  const visible = state.jobs.filter(j=> (state.filterClient==='ALL'||j.client_id===state.filterClient) && (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
-  for(const j of visible){
-    const tr=document.createElement('tr'); tr.dataset.job=j.id
-
-    const tdClient=document.createElement('td')
-    const clientSel=document.createElement('select'); clientSel.className='pill-select clientSel'
-    clientSel.innerHTML = state.clients.map(c=>`<option value="\${c.id}" \${c.id===j.client_id?'selected':''}>\${escapeHtml(c.name)}</option>`).join('')
-    clientSel.onchange=async(e)=>{ await state.sb.from('job').update({client_id:e.target.value}).eq('id', j.id) }
-    tdClient.append(clientSel)
-
-    const tdJob=document.createElement('td'); tdJob.className='jobCell'
-    const name=document.createElement('input'); name.className='pill-input jobNameIn'; name.value=j.name
-    let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ await state.sb.from('job').update({name:e.target.value}).eq('id', j.id) }, 250) }
-    const st=document.createElement('select'); st.className='pill-select statusSel'
-    st.innerHTML = state.statuses.map(s=>`<option value="\${s.id}" \${s.id===j.status_id?'selected':''}>\${escapeHtml(s.label)}</option>`).join('')
-    colorizeStatus(st); st.onchange=async(e)=>{ colorizeStatus(st); await state.sb.from('job').update({status_id:parseInt(e.target.value,10)}).eq('id', j.id) }
-    const del=document.createElement('button'); del.className='jobDelete'; del.title='Odstranit'; del.textContent='🗑'; del.onclick=()=>deleteJob(j.id)
-    tdJob.append(name, st, del)
-
-    tr.append(tdClient, tdJob)
-
-    days.forEach((d,i)=>{
-      const td=document.createElement('td'); td.dataset.day=i
-      const b=document.createElement('button'); b.className='bubble'; b.textContent='0'
-      b.onclick=()=>bump(j.id,d,+STEP); b.oncontextmenu=(e)=>{e.preventDefault(); bump(j.id,d,-STEP)}
-      td.append(b); tr.append(td)
-    })
-
-    const total=document.createElement('td'); total.className='totalCell'; total.textContent= formatNum(state.totalsAll[j.id]||0)
-    tr.append(total)
-
-    tbody.append(tr); updateRow(j.id)
-  }
-  updateSumRow(visible)
 }
 
 async function render(){

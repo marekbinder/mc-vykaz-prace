@@ -9,7 +9,7 @@ function fmtDate(d){ return dayjs(d).format('YYYY-MM-DD') }
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
 function round05(x){ return Math.round(x*2)/2 }
 function formatNum(x){ return (x%1===0)? String(x): x.toFixed(1) }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"\'":'&#39;'}[m])) }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"\\'":'&#39;'}[m])) }
 function showErr(msg){ console.error(msg); const e=document.getElementById('err'); if(!e) return; e.textContent=(msg?.message)||String(msg); e.style.display='block'; setTimeout(()=>e.style.display='none', 7000) }
 
 async function loadConfig(){
@@ -45,7 +45,6 @@ async function loadEntriesMine(){
   const map={}; for(const r of (data||[])){ map[r.job_id] ??= {}; map[r.job_id][r.work_date] = round05((map[r.job_id][r.work_date]||0) + Number(r.hours||0)) }
   return map
 }
-
 async function loadTotalsAll(jobIds){
   if(!jobIds.length) return {}
   if(state.totalsScope === 'ME'){
@@ -64,7 +63,6 @@ async function loadTotalsAll(jobIds){
     }
   }
 }
-
 function setWeekRangeLabel(){ document.getElementById('weekRange').textContent = `${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}` }
 function colorizeStatus(sel){
   sel.classList.remove('is-nova','is-probiha','is-hotovo')
@@ -101,7 +99,8 @@ function renderTable(){
 
     tr.append(tdClient, tdJob)
 
-    days.forEach((d,i)=>{
+    const daysISO = getDays()
+    daysISO.forEach((d,i)=>{
       const td=document.createElement('td'); td.dataset.day=i
       const b=document.createElement('button'); b.className='bubble'; b.textContent='0'
       b.onclick=()=>bump(j.id,d,+STEP); b.oncontextmenu=(e)=>{e.preventDefault(); bump(j.id,d,-STEP)}
@@ -147,7 +146,6 @@ async function bump(jobId,dateISO,delta){
     const payload = { job_id: jobId, work_date: dateISO, hours: eff, user_id: state.session.user.id }
     const { error } = await state.sb.from('time_entry').insert(payload)
     if(error){ state.entries[jobId][dateISO] = current; updateRow(jobId); return showErr(error.message) }
-    // refresh cumulative for this job according to scope
     if(state.totalsScope==='ALL'){
       const { data:rpcData, error:rpcErr } = await state.sb.rpc('fn_job_totals')
       if(!rpcErr && rpcData){
@@ -171,8 +169,13 @@ async function deleteJob(jobId){
 
 async function exportExcel(){
   const days = [0,1,2,3,4].map(i=>addDays(state.weekStart,i))
+  const daysISO = days.map(d => dayjs(d).format('YYYY-MM-DD'))
   const daysTxt = days.map(d => dayjs(d).format('D. M. YYYY'))
+
   const visible = state.jobs.filter(j=> (state.filterClient==='ALL'||j.client_id===state.filterClient) && (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
+
+  // Skip jobs with zero hours in the selected week (current user only)
+  const withHours = visible.filter(j => daysISO.some(d => cellValue(j.id, d) > 0))
 
   const wb = new ExcelJS.Workbook()
   const ws = wb.addWorksheet('Výkaz')
@@ -181,9 +184,16 @@ async function exportExcel(){
   ws.addRow([`Uživatel: ${user}`]); ws.addRow([`Týden: ${rangeText}`]); ws.addRow([])
   const header = ['Klient','Zakázka', ...daysTxt]; ws.addRow(header); ws.getRow(4).font = { bold:true }
   for(let i=3;i<=7;i++){ ws.getColumn(i).alignment = { horizontal:'right' } }
-  for(const j of visible){ const vals = days.map(d => cellValue(j.id, dayjs(d).format('YYYY-MM-DD'))); ws.addRow([j.client, j.name, ...vals]) }
-  const daySums = days.map(d => visible.reduce((acc,job)=> acc + cellValue(job.id, dayjs(d).format('YYYY-MM-DD')), 0))
+
+  for(const j of withHours){
+    const vals = daysISO.map(d => cellValue(j.id, d))
+    ws.addRow([j.client, j.name, ...vals])
+  }
+
+  // Day totals only for included rows
+  const daySums = daysISO.map(d => withHours.reduce((acc,job)=> acc + cellValue(job.id, d), 0))
   ws.addRow(['Součet za den','', ...daySums])
+
   ws.columns.forEach((col, idx) => { col.width = idx<3 ? 22 : 14 })
   const buf = await wb.xlsx.writeBuffer()
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=`vykaz-${dayjs(state.weekStart).format('YYYY-MM-DD')}.xlsx`; a.click()

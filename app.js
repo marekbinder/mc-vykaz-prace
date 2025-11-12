@@ -18,6 +18,21 @@ const state = {
   newJobAssignees: []
 };
 
+// --- Jména do exportu (email -> zobrazované jméno) ---
+const USER_NAME_BY_EMAIL = {
+  'binder.marek@gmail.com': 'Marek',
+  'grafika@media-consult.cz': 'Viki',
+  'stanislav.hron@icloud.com': 'Standa',
+};
+
+// Vrátí hezké jméno k e-mailu (fallback: část před @)
+function nameFromEmail(email) {
+  if (!email || typeof email !== 'string') return '';
+  const key = email.toLowerCase().trim();
+  return USER_NAME_BY_EMAIL[key] || key.split('@')[0];
+}
+
+
 // ==== HELPERY ====
 function startOfISOWeek(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }

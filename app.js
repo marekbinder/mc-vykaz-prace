@@ -356,3 +356,28 @@ function showLogin(){
 
 // ==== BOOT ====
 init().then(render).catch(showErr);
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Najdi tlačítko "Přidat zakázku"
+  const allBtns = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+  const addBtn = allBtns.find(el => el.textContent.trim().toLowerCase() === 'přidat zakázku');
+
+  // Najdi poslední th v hlavičce tabulky (sloupec "Celkem")
+  const headerLastTh =
+    document.querySelector('.jobsTable thead tr th:last-child') ||
+    document.querySelector('table thead tr th:last-child');
+
+  if (addBtn && headerLastTh) {
+    // zajisti správné zarovnání a vlož tlačítko dovnitř buňky "Celkem"
+    headerLastTh.style.display = 'flex';
+    headerLastTh.style.alignItems = 'center';
+    headerLastTh.style.justifyContent = 'flex-end';
+    headerLastTh.style.gap = '12px';
+
+    headerLastTh.appendChild(addBtn);
+    addBtn.style.margin = '0'; // už žádné plavání vpravo
+  }
+});
+</script>
+

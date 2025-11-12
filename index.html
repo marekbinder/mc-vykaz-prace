@@ -5,25 +5,25 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Výkaz práce</title>
 
-  <!-- Písmo -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Styly -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- SheetJS pro Excel export -->
+  <!-- SheetJS pro Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
-  <!-- Supabase JS -->
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.3/dist/umd/supabase.min.js"></script>
 </head>
 <body>
+  <div id="warn" class="warn hide"></div>
+
   <header class="page-header">
     <h1>Výkaz práce</h1>
 
     <div class="week-nav">
       <button id="prevWeek" class="icon-btn" title="Předchozí týden" aria-label="Předchozí týden">‹</button>
-      <div id="weekLabel" class="week-pill">–</div>
+      <div id="weekLabel" class="week-pill">-</div>
       <button id="nextWeek" class="icon-btn" title="Další týden" aria-label="Další týden">›</button>
     </div>
 
@@ -88,16 +88,9 @@
             <option>Hotovo</option>
           </select>
         </div>
-        <div class="pill-select">
-          <select id="newJobAssignees" multiple>
-            <option>Viki</option>
-            <option>Standa</option>
-            <option>Marek</option>
-          </select>
-        </div>
 
-        <!-- TLAČÍTKO PŘIDAT ZAKÁZKU – ZAROVNÁNÍ NA PRAVO -->
         <div class="spacer"></div>
+        <!-- ZAROVNÁNO NA PRAVO, NEPŘESAHUJE -->
         <button id="btnAddJob" class="pill primary add-job">Přidat zakázku</button>
       </div>
     </section>
@@ -116,9 +109,7 @@
             <th class="th-right">Celkem</th>
           </tr>
         </thead>
-        <tbody id="tbodyJobs">
-          <!-- řádky doplní JS -->
-        </tbody>
+        <tbody id="tbodyJobs"></tbody>
       </table>
 
       <div class="totals-row" id="weekTotalsRow">
@@ -132,9 +123,7 @@
     </section>
   </main>
 
-  <footer class="footer-note">
-    Frontend: GitHub Pages · Data: Supabase
-  </footer>
+  <footer class="footer-note">Frontend: GitHub Pages · Data: Supabase</footer>
 
   <script src="app.js"></script>
 </body>

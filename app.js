@@ -1,4 +1,9 @@
-/* ====== Robustní verze bez tvrdých throw v initu ====== */
+/* App – kompletní robustní verze
+   - Načte config.json (url/anon nebo supabaseUrl/supabaseAnonKey)
+   - Klik = +0.5h, Alt/Meta/Ctrl+klik = -0.5h (nezáporné)
+   - Součty: Já / Všichni
+   - Export XLSX: autor = Marek/Viki/Standa (grafika@media-consult.cz), hlavička s datumy Po–Pá, vynechá 0h řádky
+*/
 
 const EMAIL_NAME_MAP = {
   "binder.marek@gmail.com": "Marek",
@@ -9,8 +14,7 @@ const EMAIL_NAME_MAP = {
 // utils
 const $  = (s, r=document)=>r.querySelector(s);
 const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
-const warn = (t)=>{ const w=$("#warn"); w.textContent=t; w.classList.remove("hide"); };
-const clearWarn = ()=>$("#warn").classList.add("hide");
+const showWarn = (t)=>{ const w=$("#warn"); w.textContent=t; w.classList.toggle("hide", !t); };
 
 function toISO(d){ const x=new Date(d.getTime()-d.getTimezoneOffset()*60000); return x.toISOString().slice(0,10); }
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
@@ -20,9 +24,6 @@ function emailToName(e){ const k=String(e||"").toLowerCase(); return EMAIL_NAME_
 function escapeHtml(s){ return String(s).replace(/[&<>"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m])); }
 function escapeAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;"); }
 function num(v){ return (Math.round(v*2)/2).toString().replace(".",","); }
-function parseNum(s){ return Number(String(s).replace(",", ".")) || 0; }
-function statusClass(s){ if(!s) return "status-new"; const t=s.toLowerCase(); if(t.includes("hotovo"))return"status-done"; if(t.includes("prob"))return"status-doing"; return"status-new"; }
-function labelDay(st,plus){ const d=addDays(st,plus); const wd=d.toLocaleDateString("cs-CZ",{weekday:"short"}); const dm=d.toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit"}); return `${wd} ${dm}`; }
 
 // state
 const state = {
@@ -40,32 +41,43 @@ window.addEventListener("DOMContentLoaded", init);
 
 async function init(){
   bindUI();
-
-  // Týden ukážeme hned, i kdyby data selhala.
   setWeekLabel();
 
-  try {
-    const cfg = await (await fetch("config.json")).json();
-    state.sb = supabase.createClient(cfg.url, cfg.anon);
-  } catch(e){
-    console.error(e);
-    warn("Nepodařilo se načíst konfiguraci (config.json). UI běží, ale data se nenačtou.");
-    return;
-  }
+  await loadConfig(); // nastaví state.sb nebo ukáže varování
+  if (!state.sb) return; // bez DB nemá smysl pokračovat
 
   try {
     const { data:{ user } } = await state.sb.auth.getUser();
     state.user = user || { email:"" };
-    $("#userEmail").textContent = state.user.email || "";
-  } catch(e){
-    console.error(e);
-    warn("Nepodařilo se načíst uživatele. Pokračuji bez přihlášení.");
-  }
+  } catch(e){ console.error(e); showWarn("Nepodařilo se načíst uživatele."); }
+
+  $("#userEmail").textContent = state.user?.email || "";
 
   await safeLoadAll();
   renderAll();
 }
 
+// načtení configu (podpora obou schémat klíčů)
+async function loadConfig() {
+  try {
+    const res = await fetch('config.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const cfg = await res.json();
+
+    const url  = cfg.url  || cfg.supabaseUrl;
+    const anon = cfg.anon || cfg.supabaseAnonKey;
+
+    if (!url || !anon) throw new Error('Chybí "url/anon" nebo "supabaseUrl/supabaseAnonKey".');
+
+    state.sb = window.supabase.createClient(url, anon);
+    showWarn(""); // schovat případné varování
+  } catch (e) {
+    console.error('Config load error:', e);
+    showWarn('Nepodařilo se načíst konfiguraci (config.json). UI běží, ale data se nenačtou.');
+  }
+}
+
+// UI
 function bindUI(){
   $("#prevWeek").addEventListener("click", ()=>{ state.weekStart = addDays(state.weekStart,-7); setWeekLabel(); renderAll(); });
   $("#nextWeek").addEventListener("click", ()=>{ state.weekStart = addDays(state.weekStart,+7); setWeekLabel(); renderAll(); });
@@ -86,11 +98,11 @@ function setWeekLabel(){
   $("#weekLabel").textContent = fmtWeekLabel(st,en);
 }
 
+// data
 async function safeLoadAll(){
-  clearWarn();
-  try { await loadClients(); } catch(e){ console.error(e); warn("Chyba při načítání klientů."); }
-  try { await loadJobs(); }    catch(e){ console.error(e); warn("Chyba při načítání zakázek."); }
-  try { await loadHours(); }   catch(e){ console.error(e); warn("Chyba při načítání hodin."); }
+  try { await loadClients(); } catch(e){ console.error(e); showWarn("Chyba při načítání klientů."); }
+  try { await loadJobs(); }    catch(e){ console.error(e); showWarn("Chyba při načítání zakázek."); }
+  try { await loadHours(); }   catch(e){ console.error(e); showWarn("Chyba při načítání hodin."); }
   try { fillFilterSources(); } catch(e){ console.error(e); }
 }
 
@@ -104,7 +116,9 @@ async function loadJobs(){
   const { data, error } = await state.sb.from("jobs").select("*").order("id",{ascending:true});
   if (error) throw error;
   state.jobs = (data||[]).map(j=>{
-    if (typeof j.assignees === "string") { try{ j.assignees = JSON.parse(j.assignees); }catch{ j.assignees=[]; } }
+    if (typeof j.assignees === "string") {
+      try{ j.assignees = JSON.parse(j.assignees); }catch{ j.assignees=[]; }
+    }
     if (!Array.isArray(j.assignees)) j.assignees = [];
     return j;
   });
@@ -245,7 +259,7 @@ async function onTableChange(e){
       await state.sb.from("jobs").update({ name:String(t.value) }).eq("id",jobId);
       await safeLoadAll(); renderAll();
     }
-  }catch(err){ console.error(err); warn("Uložení změny se nepodařilo."); }
+  }catch(err){ console.error(err); showWarn("Uložení změny se nepodařilo."); }
 }
 
 async function onTableClick(e){
@@ -257,7 +271,7 @@ async function onTableClick(e){
         await state.sb.from("time_entry").delete().eq("job_id",id);
         await state.sb.from("jobs").delete().eq("id",id);
         await safeLoadAll(); renderAll();
-      }catch(err){ console.error(err); warn("Odstranění se nepodařilo."); }
+      }catch(err){ console.error(err); showWarn("Odstranění se nepodařilo."); }
     }
     return;
   }
@@ -270,13 +284,14 @@ async function onTableClick(e){
     try{
       await bumpHours(jobId, dateISO, minus ? -0.5 : +0.5);
       await loadHours(); renderAll();
-    }catch(err){ console.error(err); warn("Uložení hodin se nepodařilo."); }
+    }catch(err){ console.error(err); showWarn("Uložení hodin se nepodařilo."); }
   }
 }
 
 async function bumpHours(jobId, dateISO, delta){
   const email = String(state.user?.email||"");
-  const { data: rows } = await state.sb.from("time_entry").select("*").eq("job_id",jobId).eq("user_email",email).eq("date",dateISO).limit(1);
+  const { data: rows } = await state.sb.from("time_entry").select("*")
+        .eq("job_id",jobId).eq("user_email",email).eq("date",dateISO).limit(1);
   const cur = rows?.[0];
   let hours = Math.max(0, Number(cur?.hours||0) + delta);
   hours = Math.round(hours*2)/2;
@@ -298,7 +313,7 @@ async function addClient(){
     await state.sb.from("clients").insert({ name });
     $("#newClientName").value="";
     await safeLoadAll(); renderAll();
-  }catch(err){ console.error(err); warn("Přidání klienta se nepodařilo."); }
+  }catch(err){ console.error(err); showWarn("Přidání klienta se nepodařilo."); }
 }
 
 async function addJob(){
@@ -310,7 +325,7 @@ async function addJob(){
     await state.sb.from("jobs").insert({ name, status, client_id:clientId });
     $("#newJobName").value="";
     await safeLoadAll(); renderAll();
-  }catch(err){ console.error(err); warn("Přidání zakázky se nepodařilo."); }
+  }catch(err){ console.error(err); showWarn("Přidání zakázky se nepodařilo."); }
 }
 
 // export
@@ -320,8 +335,6 @@ async function exportToExcel(){
     if (!XLSX?.utils) return alert("Chybí XLSX knihovna.");
 
     const st = state.weekStart, en = addDays(st,4);
-    const dates = [0,1,2,3,4].map(i=>toISO(addDays(st,i)));
-    const visibleJobs = state.jobs.filter(jobMatchesFilters);
 
     const rows = [];
     rows.push(["Výkaz práce"]);
@@ -329,18 +342,24 @@ async function exportToExcel(){
     rows.push([`Týden: ${st.toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit",year:"numeric"})} – ${en.toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit",year:"numeric"})}`]);
     rows.push([""]);
 
-    rows.push([
-      "Klient","Zakázka",
-      labelDay(st,0), labelDay(st,1), labelDay(st,2), labelDay(st,3), labelDay(st,4)
-    ]);
+    const header = ["Klient","Zakázka"];
+    for (let i=0;i<5;i++){
+      const d = addDays(st,i);
+      const wd = d.toLocaleDateString("cs-CZ",{weekday:"short"});
+      const dm = d.toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit"});
+      header.push(`${wd} ${dm}`);
+    }
+    rows.push(header);
 
     const useAll = $("#filterSumMode").value==="all";
+    const datesISO = [0,1,2,3,4].map(i=>toISO(addDays(st,i)));
+    const visible = state.jobs.filter(jobMatchesFilters);
 
-    for (const job of visibleJobs){
+    for (const job of visible){
       const perObj = (useAll ? state.allHours : state.myHours).get(String(job.id)) || {};
-      const per = dates.map(d=>Number(perObj[d]||0));
+      const per = datesISO.map(d=>Number(perObj[d]||0));
       const sum = per.reduce((a,b)=>a+b,0);
-      if (sum<=0) continue; // vynechat prázdné
+      if (sum<=0) continue; // vynechat prázdné řádky
 
       const clientName = state.clients.find(c=>String(c.id)===String(job.client_id))?.name || "";
       rows.push([clientName, job.name || "", ...per.map(v=>Math.round(v*2)/2)]);
@@ -354,6 +373,14 @@ async function exportToExcel(){
     XLSX.writeFile(wb, `vykaz_${toISO(st)}_${toISO(en)}_${who}.xlsx`);
   }catch(err){
     console.error(err);
-    warn("Export do Excelu se nepodařil.");
+    showWarn("Export do Excelu se nepodařil.");
   }
+}
+
+function statusClass(s){
+  if (!s) return "status-new";
+  const t = s.toLowerCase();
+  if (t.includes("hotovo")) return "status-done";
+  if (t.includes("prob"))   return "status-doing";
+  return "status-new";
 }

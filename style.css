@@ -213,17 +213,16 @@ button.pill-btn.jobDelete {
 }
 
 
-/* zruš předchozí grid pokus a vrať řádek na flex */
-.add-grid{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;     /* vertikální zarovnání */
-}
-
-/* anchor pro popover “Grafik” nesmí dělat mezeru */
+/* 1) Všude jinde necháme anchor normální */
 .menuAnchor{
   position: relative;
+  width: auto;
+  height: auto;
+  overflow: visible;
+}
+
+/* 2) Ale v přidávacím řádku ho „zmenšíme“, aby netlačil tlačítko */
+.addRow .menuAnchor{
   width: 0;
   height: 0;
   overflow: visible;
@@ -232,9 +231,16 @@ button.pill-btn.jobDelete {
   flex: 0 0 auto;
 }
 
-/* tlačítko “Přidat zakázku” drž vždy na pravém okraji řádku */
+/* 3) Rozložení přidávací řádky + tlačítka */
+.add-grid{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
 #addJobBtn{
-  margin-left: auto;       /* pošle ho doprava v aktuálním řádku */
+  margin-left: auto;
   align-self: center;
 }
+
 

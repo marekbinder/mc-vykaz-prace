@@ -1,81 +1,119 @@
-<!doctype html>
-<html lang="cs">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Výkaz práce</title>
-  <link rel="stylesheet" href="./style.css?v=12" />
-</head>
-<body>
-  <header class="siteHeader">
-    <div></div>
-    <h1>Výkaz práce</h1>
-    <div class="rightSlot" id="userBoxTopRight"></div>
-  </header>
+{\rtf1\ansi\ansicpg1250\cocoartf2865
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset128 HiraginoSans-W3;\f2\fnil\fcharset0 LucidaGrande;
+}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
 
-  <main id="app">
-    <section class="toolbar toolbar--grid3">
-      <div class="toolbarLeft"></div>
-      <div class="navGroup">
-        <button class="circle ghost" id="prevWeek" aria-label="Předchozí týden">◀</button>
-        <div class="pill dark navRange" id="weekRange">–</div>
-        <button class="circle ghost" id="nextWeek" aria-label="Další týden">▶</button>
-      </div>
-      <div class="toolbarRight">
-        <button class="pill-btn" id="exportXlsx">Export do Excelu</button>
-      </div>
-    </section>
-
-    <section class="filters filters--center">
-      <span class="label">Nastavení filtru:</span>
-      <select class="pill-select" id="filterClient"><option value="ALL">Všichni klienti</option></select>
-      <select class="pill-select" id="filterStatus"><option value="ALL">Všechny zakázky</option></select>
-      <select class="pill-select" id="totalsScope">
-        <option value="ME">Součty: Já</option>
-        <option value="ALL">Součty: Všichni</option>
-      </select>
-    </section>
-
-    <section class="addRow addRow--stretch">
-      <input class="pill-input" id="newClientName" placeholder="Název klienta" />
-      <button class="pill-btn" id="addClientBtn">Přidat klienta</button>
-
-      <select class="pill-select" id="newJobClient"></select>
-      <input class="pill-input jobName flexGrow" id="newJobName" placeholder="Název zakázky" />
-      <select class="pill-select statusSel" id="newJobStatus"></select>
-      <button class="pill-btn" id="addJobBtn">Přidat zakázku</button>
-    </section>
-
-    <section class="tableWrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Klient</th>
-            <th>Zakázka</th>
-            <th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th>
-            <th>Celkem</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-        <tfoot>
-          <tr id="sumRow">
-            <td></td><td></td>
-            <td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
-    </section>
-
-    <div id="err" class="err" style="display:none"></div>
-  </main>
-
-  <footer class="siteFooter">
-    <small>Marek Binder © 2025</small>
-  </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>
-  <script type="module" src="./app.js?v=12"></script>
-</body>
-</html>
+\f0\fs24 \cf0 <!doctype html>\
+<html lang="cs">\
+<head>\
+  <meta charset="utf-8" />\
+  <meta name="viewport" content="width=device-width, initial-scale=1" />\
+  <title>V\'fdkaz pr\'e1ce</title>\
+  <link rel="stylesheet" href="./style.css?v=13.1" />\
+</head>\
+<body>\
+  <header class="siteHeader">\
+    <div></div>\
+    <h1>V\'fdkaz pr\'e1ce</h1>\
+    <div class="rightSlot" id="userBoxTopRight"></div>\
+  </header>\
+\
+  <main id="app">\
+    <section class="toolbar toolbar--grid3">\
+      <div class="toolbarLeft"></div>\
+      <div class="navGroup">\
+        <button class="circle ghost" id="prevWeek" aria-label="P\uc0\u345 edchoz\'ed t\'fdden">
+\f1 \uc0\u9664 
+\f0 </button>\
+        <div class="pill dark navRange" id="weekRange">\'96</div>\
+        <button class="circle ghost" id="nextWeek" aria-label="Dal\'9a\'ed t\'fdden">
+\f2 \uc0\u9654 
+\f0 </button>\
+      </div>\
+      <div class="toolbarRight">\
+        <button class="pill-btn" id="exportXlsx">Export do Excelu</button>\
+      </div>\
+    </section>\
+\
+    <section class="filters filters--center">\
+      <span class="label">Nastaven\'ed filtru:</span>\
+      <select class="pill-select" id="filterClient"><option value="ALL">V\'9aichni klienti</option></select>\
+      <select class="pill-select" id="filterStatus"><option value="ALL">V\'9aechny zak\'e1zky</option></select>\
+      <select class="pill-select" id="totalsScope">\
+        <option value="ME">Sou\uc0\u269 ty: J\'e1</option>\
+        <option value="ALL">Sou\uc0\u269 ty: V\'9aichni</option>\
+      </select>\
+\
+      <!-- Filtr \'84Grafik\'93 -->\
+      <button class="pill-btn" id="assigneeFilterBtn" type="button">Grafik: V\'9aichni</button>\
+      <div class="menu" id="assigneeFilterMenu" hidden>\
+        <label><input type="checkbox" value="Viki"> Viki</label>\
+        <label><input type="checkbox" value="Standa"> Standa</label>\
+        <label><input type="checkbox" value="Marek"> Marek</label>\
+        <div class="menuRow">\
+          <button class="pill-btn small" id="assigneeFilterClear" type="button">Vymazat</button>\
+          <button class="pill-btn small" id="assigneeFilterClose" type="button">Zav\uc0\u345 \'edt</button>\
+        </div>\
+      </div>\
+    </section>\
+\
+    <section class="addRow addRow--stretch">\
+      <input class="pill-input" id="newClientName" placeholder="N\'e1zev klienta" />\
+      <button class="pill-btn" id="addClientBtn">P\uc0\u345 idat klienta</button>\
+\
+      <select class="pill-select" id="newJobClient"></select>\
+      <input class="pill-input jobName flexGrow" id="newJobName" placeholder="N\'e1zev zak\'e1zky" />\
+      <select class="pill-select statusSel" id="newJobStatus"></select>\
+\
+      <!-- \'84Grafik\'93 u nov\'e9 zak\'e1zky -->\
+      <button class="pill-btn" id="assigneesNewBtn" type="button">Grafik: nikdo</button>\
+      <div class="menu" id="assigneesNewMenu" hidden>\
+        <label><input type="checkbox" value="Viki"> Viki</label>\
+        <label><input type="checkbox" value="Standa"> Standa</label>\
+        <label><input type="checkbox" value="Marek"> Marek</label>\
+        <div class="menuRow">\
+          <button class="pill-btn small" id="assigneesNewClear" type="button">Vymazat</button>\
+          <button class="pill-btn small" id="assigneesNewClose" type="button">Zav\uc0\u345 \'edt</button>\
+        </div>\
+      </div>\
+\
+      <button class="pill-btn" id="addJobBtn">P\uc0\u345 idat zak\'e1zku</button>\
+    </section>\
+\
+    <section class="tableWrap">\
+      <table>\
+        <thead>\
+          <tr>\
+            <th>Klient</th>\
+            <th>Zak\'e1zka</th>\
+            <th>Po</th><th>\'dat</th><th>St</th><th>\uc0\u268 t</th><th>P\'e1</th>\
+            <th>Celkem</th>\
+          </tr>\
+        </thead>\
+        <tbody id="tbody"></tbody>\
+        <tfoot>\
+          <tr id="sumRow">\
+            <td></td><td></td>\
+            <td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td>\
+            <td></td>\
+          </tr>\
+        </tfoot>\
+      </table>\
+    </section>\
+\
+    <div id="err" class="err" style="display:none"></div>\
+  </main>\
+\
+  <footer class="siteFooter">\
+    <small>Frontend: GitHub Pages \'b7 Data: Supabase</small>\
+  </footer>\
+\
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>\
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>\
+  <script type="module" src="./app.js?v=13.1"></script>\
+</body>\
+</html>\
+}

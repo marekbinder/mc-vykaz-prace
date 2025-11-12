@@ -116,3 +116,37 @@ h1{font-size:42px;margin:0;font-weight:800}
 
 /* toast */
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#111;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:3000}
+
+
+/* === Koš bez podkladu + centrování na výšku ===================== */
+.pill-btn.jobDelete,
+button.jobDelete,
+button[title="Odstranit"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  width: 44px !important;
+  height: 44px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+}
+
+/* (pokud je uvnitř SVG ikona, ať je pěkně čitelná) */
+.pill-btn.jobDelete svg,
+button.jobDelete svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* pro jistotu zarovnání obsahu poslední buňky hlavičky (Celkem) vpravo */
+.jobsTable thead tr th:last-child,
+.tableHeader th:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}

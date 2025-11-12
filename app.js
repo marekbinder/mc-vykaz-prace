@@ -27,7 +27,7 @@ function formatNum(x){ return (x%1===0) ? String(x) : x.toFixed(1); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 function showErr(msg){ console.error(msg); const e=document.getElementById('err'); e.textContent=(msg?.message)||String(msg); e.style.display='block'; setTimeout(()=>e.style.display='none',5200); }
 function getDays(){ return [0,1,2,3,4].map(i=>fmtDate(addDays(state.weekStart,i))); }
-function setWeekRangeLabel(){ document.getElementById('weekRange').textContent = `${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`; }
+function setWeekRangeLabel(){ document.getElementById('weekRange').textContent = `${dayjs(state.weekStart).format('10. 11. 2025')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`.replace(/^10\. 11\. 2025/, dayjs(state.weekStart).format('D. M. YYYY')); } // jen ochrana proti cache
 
 // ==== SUPABASE INIT ====
 async function loadConfig(){
@@ -76,7 +76,6 @@ async function loadTotalsAll(jobIds){
   }
   const {data:rpc,error:rpcErr}=await state.sb.rpc('fn_job_totals');
   if(!rpcErr && rpc){ const m={}; for(const r of rpc){ m[r.job_id]=Number(r.sum_hours||0); } return m; }
-  // fallback
   const {data,error}=await state.sb.from('time_entry').select('job_id,hours').in('job_id',jobIds);
   if(error){ showErr(error); return {}; }
   const m={}; for(const r of (data||[])){ m[r.job_id]=(m[r.job_id]||0)+Number(r.hours||0); } return m;
@@ -126,11 +125,9 @@ function renderTable(){
 
     const del=document.createElement('button'); del.className='pill-btn jobDelete'; del.textContent='🗑'; del.title='Odstranit';
 
-    // inline grafik – VLASTNÍ WRAP s position:relative
-    const wrap=document.createElement('div'); wrap.className='menuAnchor assigneeWrap';
-    const assBtn=document.createElement('button'); assBtn.className='assigneePill'; assBtn.type='button';
-    const lbl=document.createElement('span'); lbl.textContent='Grafik: '+renderAssigneeLabel(j.assignees); assBtn.append(lbl);
-
+    // inline grafik – jen neutrální tlačítko „Grafik“
+    const wrap=document.createElement('div'); wrap.className='menuAnchor';
+    const assBtn=document.createElement('button'); assBtn.className='pill-btn assigneeIcon'; assBtn.type='button'; assBtn.textContent='Grafik';
     const menu=document.createElement('div'); menu.className='menu'; menu.hidden=true;
     ASSIGNEE_OPTIONS.forEach(opt=>{
       const L=document.createElement('label'); const I=document.createElement('input'); I.type='checkbox'; I.value=opt; L.append(I, document.createTextNode(' '+opt)); menu.append(L);
@@ -141,8 +138,8 @@ function renderTable(){
     row.append(clr,cls); menu.append(row);
 
     assBtn.addEventListener('click', ()=>{ setMenuChecked(menu, j.assignees); toggleMenu(menu); });
-    clr.addEventListener('click', async ()=>{ j.assignees=[]; setMenuChecked(menu,j.assignees); lbl.textContent='Grafik: '+renderAssigneeLabel(j.assignees); await state.sb.from('job').update({assignees:j.assignees}).eq('id', j.id); renderTable(); });
-    menu.addEventListener('change', async ()=>{ j.assignees=collectMenuChecked(menu); lbl.textContent='Grafik: '+renderAssigneeLabel(j.assignees); await state.sb.from('job').update({assignees:j.assignees}).eq('id', j.id); renderTable(); });
+    clr.addEventListener('click', async ()=>{ j.assignees=[]; setMenuChecked(menu,[]); await state.sb.from('job').update({assignees:j.assignees}).eq('id', j.id); renderTable(); });
+    menu.addEventListener('change', async ()=>{ j.assignees=collectMenuChecked(menu); await state.sb.from('job').update({assignees:j.assignees}).eq('id', j.id); renderTable(); });
     cls.addEventListener('click', ()=> menu.hidden=true);
 
     wrap.append(assBtn, menu);
@@ -159,8 +156,8 @@ function renderTable(){
       td.append(b); tr.append(td);
     }
 
-    // kumulativní celkem
-    const tdT=document.createElement('td'); tdT.className='totalCell'; tdT.textContent=formatNum(state.totalsAll[j.id]||0);
+    // kumulativní celkem – bez podbarvení, střed, stejná velikost
+    const tdT=document.createElement('td'); tdT.className='totalCell'; tdT.innerHTML = `<span class="totalVal">${formatNum(state.totalsAll[j.id]||0)}</span>`;
     tr.appendChild(tdT);
 
     document.getElementById('tbody').appendChild(tr);
@@ -178,7 +175,7 @@ function setMenuChecked(menu, values){ const set=new Set(values||[]); menu.query
 function collectMenuChecked(menu){ return [...menu.querySelectorAll('input[type="checkbox"]:checked')].map(i=>i.value); }
 document.addEventListener('click',(e)=>{
   document.querySelectorAll('.menu:not([hidden])').forEach(m=>{
-    const anchor=m.parentElement; // .menuAnchor
+    const anchor=m.parentElement;
     if(!anchor.contains(e.target)) m.hidden=true;
   });
 });
@@ -186,7 +183,7 @@ document.addEventListener('click',(e)=>{
 function updateRow(jobId){
   const days=getDays(); const tr=document.querySelector(`tr[data-job="${jobId}"]`); if(!tr) return;
   days.forEach((d,i)=>{ const val=cellValue(jobId,d); const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b) b.textContent=formatNum(val); });
-  tr.querySelector('.totalCell').textContent = formatNum(state.totalsAll[jobId]||0);
+  const totalCell=tr.querySelector('.totalCell .totalVal'); if(totalCell) totalCell.textContent=formatNum(state.totalsAll[jobId]||0);
   queueMicrotask(()=>updateSumRow());
 }
 function updateSumRow(visibleJobs){

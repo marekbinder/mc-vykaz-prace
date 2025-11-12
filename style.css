@@ -1,124 +1,162 @@
-/* =========================================
-   VÝKAZ PRÁCE – UI STABILIZAČNÍ STYLY
-   (bezpečné přepisy, nezasahují do logiky)
-   ========================================= */
+/* =================================================================== */
+/*  BASE – ponecháváme základní vzhled, bez „resetů“ layoutu           */
+/*  (Schválně sem nedáváme globální normalizace ani ničivé overrides)  */
+/* =================================================================== */
 
-/* Základní proměnné (pro jistotu, ať vše drží vizuálně jednotně) */
 :root{
-  --pill-radius: 9999px;
-  --pill-bg: #0C1520;
-  --pill-text: #ffffff;
-  --soft-1: #F5F7FA;
-  --soft-2: #EDEFF3;
-  --accent: #0C1520;
-  --muted: #96A0AE;
+  --bg: #0b1320;
+  --ink: #0d1220;
+  --ink-soft:#3b4355;
+  --ink-inv:#ffffff;
+  --pill:#f2f5f9;
+  --pill-ink:#1e2635;
+  --ok:#eaf8ed;
+  --ok-ink:#0c7a31;
+  --warn:#fff2c9;
+  --warn-ink:#5d4505;
+  --muted:#f4f6f9;
+  --dot:#edf1f6;
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.07);
+  --radius: 14px;
+  --radius-pill: 9999px;
+  --gap: 12px;
+  --h: 44px;
 }
 
-/* Reset tlačítek, aby se nikde "nezáhadně" nepřebarvovalo pozadí */
-button{
-  background: transparent;
-  border: 0;
-  outline: none;
-  cursor: pointer;
+/* Typografie – nic agresivního */
+html,body{
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
 }
 
-/* Obecné "pill" tlačítko, ať má pěkné zaoblení když ho komponenty používají */
+/* PILL prvky (input/select/button), jemný vzhled bez rozbití layoutu */
+.pill,
+.pill-input,
+.pill-select,
 .pill-btn{
-  display: inline-flex;
-  align-items: center;
-  gap: .6rem;
-  border-radius: var(--pill-radius);
-  padding: .66rem 1rem;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
+  height: var(--h);
+  min-height: var(--h);
+  border-radius: var(--radius-pill);
+  background: var(--pill);
+  color: var(--pill-ink);
+  border: 1px solid rgba(13,18,32,.06);
+  box-shadow: var(--shadow);
+  padding: 0 14px;
+  outline: none;
 }
 
-/* --- 1) KOŠ: bez podbarvení a vždy svisle na střed vedlejších prvků --- */
+.pill-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.5rem;
+  cursor:pointer;
+  user-select:none;
+  -webkit-user-select:none;
+  transition: transform .06s ease;
+}
+.pill-btn:active{ transform: translateY(1px); }
 
-/* Koš je button s title="Odstranit" nebo .jobDelete. Odstraníme pozadí, rám a vycentrujeme. */
+/* Hlavička tabulky */
+.tableHeader,
+.jobsHeaderRow{
+  background: var(--bg);
+  color: var(--ink-inv);
+}
+
+/* Bubliny s hodinami */
+.dot{
+  width:44px; height:44px; border-radius:50%;
+  background:var(--dot);
+  display:inline-flex; align-items:center; justify-content:center;
+  font-weight:600;
+  color:var(--ink);
+}
+
+/* Statusy */
+.badge-warn{
+  background: var(--warn);
+  color: var(--warn-ink);
+  border: 1px solid rgba(93,69,5,.12);
+}
+
+.badge-ok{
+  background: var(--ok);
+  color: var(--ok-ink);
+  border: 1px solid rgba(12,122,49,.12);
+}
+
+/* =================================================================== */
+/*  POŽADOVANÉ ÚPRAVY                                                   */
+/*  – koš bez podbarvení a vycentrovaný                                */
+/*  – zarovnání panelu filtrů na střed                                 */
+/*  – „Přidat zakázku“ vodorovně s hlavičkou „Celkem“                   */
+/* =================================================================== */
+
+/* Koš – bez pozadí a svisle vycentrovaný */
 button[title="Odstranit"],
 .pill-btn.jobDelete{
-  background: none !important;
+  background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
+  width: 44px !important;
+  height: 44px !important;
   display: inline-flex !important;
-  align-items: center !important;   /* svislé vystředění */
+  align-items: center !important;
   justify-content: center !important;
-  width: 44px;
-  height: 44px;                     /* stejná výška jako bubliny */
-  border-radius: 50%;
+  border-radius: 50% !important;
 }
 
-/* Ikona uvnitř koše (emoji/SVG) – zarovnání doprostřed */
-button[title="Odstranit"] > *,
-.pill-btn.jobDelete > *{
-  display: inline-block;
-  line-height: 1;
-  transform: translateY(0); /* jistota, že nesedí dolů */
-}
-
-/* --- 2) TABULKA – záhlaví s „Celkem“ a umístění Přidat zakázku --- */
-
-/* Přidáme pružné rozložení do poslední buňky hlavičky s „Celkem“,
-   kam budeme vkládat tlačítko Přidat zakázku. */
-.jobsHeaderRow th:last-child{
+/* Panel „Nastavení filtrů“ vystředit, ale neničit existující grid */
+.filtersBar,
+.filtersRow,
+.filters{
   display: flex;
-  justify-content: flex-end; /* tlačítko vpravo */
-  align-items: center;       /* svisle na střed */
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+  justify-content: center;   /* zarovnání na střed */
+}
+
+/* Hlavička tabulky – poslední th (sloupec Celkem) použijeme jako kotvu */
+.jobsHeaderRow th:last-child,
+.tableHeader th:last-child{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: .75rem;
 }
 
-/* Samotné tlačítko – necháme v hezkém „pill“ provedení */
-.jobsHeaderRow th:last-child > button{
-  border-radius: var(--pill-radius);
-  background: var(--pill-bg);
-  color: var(--pill-text);
-  padding: .75rem 1.1rem;
-  font-weight: 700;
-}
-
-/* Pro případ, že je tlačítko generováno jinde a přesouváme ho,
-   zajistíme, že vždy bude „staticky“ ve flow layoutu. */
+/* Tlačítko „Přidat zakázku“ zarovnat k „Celkem“ vpravo */
 #addJobBtn{
   position: static !important;
   margin-left: auto;
+  border-radius: var(--radius-pill);
+  padding: .72rem 1.1rem;
+  background: var(--ink);
+  color: var(--ink-inv);
+  border: none;
+  box-shadow: var(--shadow);
 }
 
-/* --- 3) Filtry – konzistentní rozteče a centrování --- */
-
-/* Kontejner s filtry (pokud existuje) centrovat; nezalézt do okrajů */
-.filters,
-.filters-row,
-.filtersBar{
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px 14px;
+/* Pro jistotu: když je tlačítko jinde, udrž řádné rozměry */
+button.pill-btn[data-role="add-job"]{
+  border-radius: var(--radius-pill);
 }
 
-/* Selecty a inputy v „pill“ stylu */
-.pill-select,
-.pill-input{
-  border-radius: var(--pill-radius);
-  background: #fff;
-  border: 1px solid var(--soft-2);
-  padding: .7rem 1rem;
+/* Buňky s názvem klienta/zakázky – nech širší, ale bez násilí */
+.jobCell input.pill-input,
+.clientCell .pill-input{
+  min-width: 280px;
 }
 
-/* Nadpis řádku s filtry */
-.filters-label{
-  font-weight: 800;
-  color: var(--accent);
+/* Menší utility – aby nic „neposkakovalo“ */
+.center{
+  display:flex; align-items:center; justify-content:center;
 }
-
-/* --- 4) Pojistky – nic se nikde „neztratí“ mimo viewport --- */
-.tableAnchor,
-.headerBar{
-  position: relative;
-  overflow: visible;
+.right{
+  display:flex; align-items:center; justify-content:flex-end; gap:.75rem;
 }
-
-/* Lehké vyhlazení textu (někdy Safari/Win) */
-body{-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: grayscale;}
+.no-bg{ background:transparent !important; }

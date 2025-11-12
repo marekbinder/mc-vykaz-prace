@@ -212,9 +212,8 @@ button.pill-btn.jobDelete {
   line-height: 36px;
 }
 
-/* A. stejné ohraničení jako tabulka (jen kdyby se občas rozcházela šířka) */
-.addRow,
-.tableWrap {
-  max-width: 1200px;      /* stejná šířka jako tabulkový wrapper */
-  margin: 0 auto;         /* centrování */
+/* B. přichycení tlačítka úplně doprava v gridu */
+#addJobBtn {
+  grid-column: 1 / -1;    /* tlačítko zabere celou šířku gridu (od 1. po poslední sloupec) */
+  justify-self: end;      /* a zarovná se na pravý okraj svého grid-area */
 }

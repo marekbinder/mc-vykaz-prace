@@ -146,3 +146,68 @@ h1{font-size:42px;margin:0;font-weight:800}
   margin-inline: auto;
   max-width: 1200px;     /* stejná šířka, jakou používáš pro tabulku */
 }
+
+
+/* Odstranění podkladu a zarovnání ikony koše */
+td .pill-btn.jobDelete,
+.jobCell .pill-btn.jobDelete,
+button.pill-btn.jobDelete {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+
+  display: inline-flex !important;
+  align-items: center !important;   /* srovná ikonku vertikálně */
+  justify-content: center !important;
+  height: 36px !important;          /* stejná výška jako ostatní pilly */
+  padding: 0 6px !important;        /* malé klikací pole */
+}
+
+
+/* “Široká síť” – použije se ta třída, kterou máš v projektu */
+.filters,
+.filtersRow,
+.filters-bar,
+.controls,
+.controls-row,
+#filters {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  align-items: center;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto 16px !important;
+}
+
+
+/* Zkusíme nejčastější názvy wrapperů; použije se ten, který existuje */
+.addJobBar,
+.addJobWrapper,
+.add-job-bar,
+.table-actions,
+.actions-row {
+  max-width: 1200px;
+  margin: 8px auto 0;      /* zarovná s tabulkou */
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center;
+}
+
+.addJobBar .addJobBtn,
+.addJobWrapper .addJobBtn,
+.add-job-bar .addJobBtn,
+.table-actions .addJobBtn,
+.actions-row .addJobBtn {
+  align-self: center;
+}
+
+
+/* sjednocení výšek pilů pro čistší grid */
+.pill-btn,
+.pill-input,
+.pill-select {
+  min-height: 36px;
+  line-height: 36px;
+}

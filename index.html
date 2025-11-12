@@ -1,134 +1,109 @@
 <!doctype html>
 <html lang="cs">
 <head>
-  <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width,initial-scale=1,maximum-scale=1"
-  />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Výkaz práce</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css"/>
 
-  <!-- Supabase JS v2 -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" defer></script>
-  <!-- SheetJS pro Excel -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <!-- knihovny -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <header class="app-header">
+  <header class="topbar">
     <h1>Výkaz práce</h1>
-    <div class="week-bar">
-      <button id="prevWeek" class="arrow" aria-label="Předchozí týden">‹</button>
-      <div id="weekLabel" class="week-label"></div>
-      <button id="nextWeek" class="arrow" aria-label="Následující týden">›</button>
-    </div>
-    <div class="user-bar">
-      <span id="userEmail" class="pill muted"></span>
-      <button id="logoutBtn" class="pill">Odhlásit</button>
-      <button id="exportBtn" class="pill outline">Export do Excelu</button>
-    </div>
+    <div id="userBoxTopRight" class="userbox"></div>
   </header>
 
-  <main>
+  <main id="app" class="wrap">
+    <!-- týden + export -->
+    <section class="weekbar">
+      <div class="weeknav">
+        <button id="prevWeek" class="navbtn" title="Předchozí týden">◀</button>
+        <div id="weekRange" class="weekpill">–</div>
+        <button id="nextWeek" class="navbtn" title="Další týden">▶</button>
+      </div>
+      <button id="exportXlsx" class="pill-btn export">Export do Excelu</button>
+    </section>
+
+    <!-- filtry -->
     <section class="filters">
-      <div class="filters-title">Nastavení filtru:</div>
+      <div class="filters-row">
+        <label class="lbl">Nastavení filtru:</label>
 
-      <div class="pill-select">
-        <select id="fltClients">
-          <option value="all">Všichni klienti</option>
-        </select>
-        <span class="chev">▾</span>
-      </div>
+        <select id="filterClient" class="pill-select"></select>
+        <select id="filterStatus" class="pill-select"></select>
 
-      <div class="pill-select">
-        <select id="fltJobs">
-          <option value="all">Všechny zakázky</option>
-          <option value="new">Nové</option>
-          <option value="open">Probíhá</option>
-          <option value="done">Hotovo</option>
+        <select id="totalsScope" class="pill-select">
+          <option value="ME">Součty: Já</option>
+          <option value="ALL">Součty: Všichni</option>
         </select>
-        <span class="chev">▾</span>
-      </div>
 
-      <div class="pill-select">
-        <select id="fltTotals">
-          <option value="mine">Součty: Já</option>
-          <option value="all">Součty: Všichni</option>
-        </select>
-        <span class="chev">▾</span>
-      </div>
-
-      <div class="pill-select">
-        <select id="fltAssignee">
-          <option value="all">Grafik: Všichni</option>
-          <option value="none">Grafik: nikdo</option>
-          <option value="Viki">Viki</option>
-          <option value="Standa">Standa</option>
-          <option value="Marek">Marek</option>
-        </select>
-        <span class="chev">▾</span>
+        <!-- filtr „Grafik“ s ukotveným menu -->
+        <div class="menuAnchor">
+          <button id="assigneeFilterBtn" class="pill-btn">Grafik: Všichni</button>
+          <div id="assigneeFilterMenu" class="menu" hidden>
+            <label><input type="checkbox" value="Viki"> Viki</label>
+            <label><input type="checkbox" value="Standa"> Standa</label>
+            <label><input type="checkbox" value="Marek"> Marek</label>
+            <div class="menuRow">
+              <button id="assigneeFilterClear" class="pill-btn small" type="button">Vymazat</button>
+              <button id="assigneeFilterClose" class="pill-btn small" type="button">Zavřít</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="add-bar">
-      <input id="newClientName" type="text" class="pill-input" placeholder="Název klienta" />
-      <button id="addClientBtn" class="pill outline">Přidat klienta</button>
+    <!-- přidání klienta/zakázky -->
+    <section class="addRow">
+      <div class="add-grid">
+        <input id="newClientName" class="pill-input" placeholder="Název klienta"/>
+        <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
 
-      <div class="pill-select">
-        <select id="newJobClient">
-          <option value="">— vyber klienta —</option>
-        </select>
-        <span class="chev">▾</span>
+        <select id="newJobClient" class="pill-select"></select>
+        <input id="newJobName" class="pill-input" placeholder="Název zakázky"/>
+        <select id="newJobStatus" class="pill-select"></select>
+
+        <div class="menuAnchor">
+          <button id="assigneesNewBtn" class="pill-btn">Grafik: nikdo</button>
+          <div id="assigneesNewMenu" class="menu" hidden>
+            <label><input type="checkbox" value="Viki"> Viki</label>
+            <label><input type="checkbox" value="Standa"> Standa</label>
+            <label><input type="checkbox" value="Marek"> Marek</label>
+            <div class="menuRow">
+              <button id="assigneesNewClear" class="pill-btn small" type="button">Vymazat</button>
+              <button id="assigneesNewClose" class="pill-btn small" type="button">Zavřít</button>
+            </div>
+          </div>
+        </div>
+
+        <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
       </div>
-
-      <input id="newJobName" type="text" class="pill-input grow" placeholder="Název zakázky" />
-
-      <div class="pill-select">
-        <select id="newJobStatus">
-          <option value="new">Nová</option>
-          <option value="open" selected>Nová</option>
-          <option value="open">Probíhá</option>
-          <option value="done">Hotovo</option>
-        </select>
-        <span class="chev">▾</span>
-      </div>
-
-      <div class="pill-select">
-        <select id="newJobAssignees" multiple>
-          <option value="Viki">Viki</option>
-          <option value="Standa">Standa</option>
-          <option value="Marek">Marek</option>
-        </select>
-        <span class="chev">▾</span>
-      </div>
-
-      <!-- Aby bylo zarovnání k „Celkem“, držíme button absolutně vpravo v rámci #tableWrap -->
-      <button id="addJobBtn" class="pill solid">Přidat zakázku</button>
     </section>
 
-    <section id="tableWrap">
+    <!-- tabulka -->
+    <section class="tableWrap">
       <table class="grid">
         <thead>
-          <tr>
-            <th class="th-left">Klient</th>
-            <th class="th-left">Zakázka</th>
-            <th>Po</th>
-            <th>Út</th>
-            <th>St</th>
-            <th>Čt</th>
-            <th>Pá</th>
-            <th class="th-right">Celkem</th>
+          <tr class="headpill">
+            <th>Klient</th>
+            <th>Zakázka</th>
+            <th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th>
+            <th>Celkem</th>
           </tr>
         </thead>
-        <tbody id="tableBody"></tbody>
+        <tbody id="tbody"></tbody>
         <tfoot>
-          <tr id="weekTotalsRow">
-            <td colspan="2" class="tfoot-label">Součet za den</td>
-            <td class="tfoot-chip" data-day="0">0</td>
-            <td class="tfoot-chip" data-day="1">0</td>
-            <td class="tfoot-chip" data-day="2">0</td>
-            <td class="tfoot-chip" data-day="3">0</td>
-            <td class="tfoot-chip" data-day="4">0</td>
+          <tr id="sumRow">
+            <td colspan="2" class="sumLabel">Součet za den</td>
+            <td class="sumCell"></td>
+            <td class="sumCell"></td>
+            <td class="sumCell"></td>
+            <td class="sumCell"></td>
+            <td class="sumCell"></td>
             <td></td>
           </tr>
         </tfoot>
@@ -136,19 +111,8 @@
     </section>
   </main>
 
-  <!-- Popover pro výběr grafiků (při inline editaci) -->
-  <div id="assigneePopover" class="assignee-popover hidden">
-    <div class="assignee-list">
-      <label><input type="checkbox" value="Viki" /> Viki</label>
-      <label><input type="checkbox" value="Standa" /> Standa</label>
-      <label><input type="checkbox" value="Marek" /> Marek</label>
-    </div>
-    <div class="assignee-actions">
-      <button id="assigneesClear" class="pill outline">Vymazat</button>
-      <button id="assigneesClose" class="pill">Zavřít</button>
-    </div>
-  </div>
+  <div id="err" class="toast" style="display:none"></div>
 
-  <script src="app.js" defer></script>
+  <script src="app.js"></script>
 </body>
 </html>

@@ -6,10 +6,16 @@
 }
 html,body{margin:0;padding:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:#0E1625}
 
-/* hlavička */
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 0}
+/* hlavička – nadpis na střed, user vpravo */
+.topbar{
+  position:relative;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:16px 16px 0;
+}
 h1{font-size:42px;margin:0;font-weight:800}
-.userbox{display:flex;gap:10px;align-items:center}
+.userbox{position:absolute; right:16px; top:12px; display:flex; gap:10px; align-items:center}
 
 /* obal */
 .wrap{max-width:1100px;margin:0 auto;padding:24px 16px 60px}
@@ -17,7 +23,10 @@ h1{font-size:42px;margin:0;font-weight:800}
 /* týden + export */
 .weekbar{position:relative;margin-bottom:10px}
 .weeknav{display:flex;gap:10px;justify-content:center;align-items:center}
-.navbtn{border:none;background:#ECEEF2;width:36px;height:36px;border-radius:12px;font-size:16px;cursor:pointer}
+.navbtn{
+  border:none;background:transparent;color:#0E1625;
+  width:36px;height:36px;border-radius:12px;font-size:18px;cursor:pointer
+}
 .weekpill{background:#0E1625;color:#fff;padding:10px 18px;border-radius:28px;font-weight:700;letter-spacing:.3px;min-width:260px;text-align:center}
 .pill-btn.export{position:absolute;right:0;top:0}
 
@@ -25,12 +34,19 @@ h1{font-size:42px;margin:0;font-weight:800}
 .filters .filters-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}
 .lbl{font-weight:700;color:#444}
 
-/* přidání */
-.add-grid{display:grid;grid-template-columns:240px 150px 160px 1fr 140px 160px auto;gap:10px;align-items:center}
-@media (max-width:1000px){.add-grid{grid-template-columns:1fr 1fr 1fr}}
+/* přidání – zarovnání tlačítka vpravo jako „Celkem“ */
+.add-grid{
+  display:grid;
+  grid-template-columns:240px 150px 160px 1fr 140px 160px auto;
+  gap:10px; align-items:center
+}
+#addJobBtn{justify-self:end}
 
 /* pills */
-.pill-input,.pill-select,.pill-btn{height:var(--pill-h);border:1px solid #E6E6EA;border-radius:var(--pill-r);padding:0 14px;background:#fff;line-height:var(--pill-h);white-space:nowrap}
+.pill-input,.pill-select,.pill-btn{
+  height:var(--pill-h);border:1px solid #E6E6EA;border-radius:var(--pill-r);
+  padding:0 14px;background:#fff;line-height:var(--pill-h);white-space:nowrap
+}
 .pill-input{min-width:180px;line-height:normal;padding:0 14px}
 .pill-select{appearance:none;background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%23666" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>') no-repeat right 12px center;background-size:10px 6px;padding-right:26px}
 .pill-btn{cursor:pointer}
@@ -40,7 +56,10 @@ h1{font-size:42px;margin:0;font-weight:800}
 /* menu (ukotvené k tlačítku) */
 .menuAnchor{position:relative;display:inline-block}
 .menu[hidden]{display:none!important}
-.menu{position:absolute;top:calc(100% + 8px);left:0;background:#fff;border:1px solid #E6E6EA;border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:2000;min-width:160px}
+.menu{
+  position:absolute;top:calc(100% + 8px);left:0;background:#fff;border:1px solid #E6E6EA;
+  border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:2000;min-width:160px
+}
 .menu label{display:flex;gap:8px;align-items:center;margin:6px 4px}
 .menuRow{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
 
@@ -54,14 +73,19 @@ h1{font-size:42px;margin:0;font-weight:800}
 .grid thead .headpill th:nth-child(2){text-align:left}
 .grid thead .headpill th:last-child{border-top-right-radius:22px;border-bottom-right-radius:22px}
 
+/* buňky */
 .grid tbody td{padding:6px 8px;border:none}
-.grid tbody tr td:first-child,.grid tbody tr td:nth-child(2){width:260px}
+.grid tbody tr td:first-child{width:180px}  /* menší „Klient“ */
+.grid tbody tr td:nth-child(2){width:auto}   /* „Zakázka“ může dýchat */
 
 /* bubliny s hodinami */
-.bubble{width:40px;height:40px;border-radius:40px;border:none;background:#ECEEF2;display:inline-flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer}
+.bubble{
+  width:40px;height:40px;border-radius:40px;border:none;background:#ECEEF2;
+  display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;cursor:pointer
+}
 .bubble:active{transform:translateY(1px)}
 
-/* sumy */
+/* sumy za den */
 .sumLabel{font-weight:700;color:#111;padding-left:8px}
 #sumRow .sumCell{height:40px;text-align:center}
 .sumBubble{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:40px;font-weight:700}
@@ -76,13 +100,19 @@ h1{font-size:42px;margin:0;font-weight:800}
 
 /* buňky zakázky */
 .jobCell{display:flex;gap:8px;align-items:center}
-.jobNameIn{min-width:200px}
-.clientSel{min-width:140px}
+.jobNameIn{min-width:220px}
+.clientSel{min-width:160px}
 .jobDelete{border:none;background:#ECEEF2;width:36px;height:36px;border-radius:10px;cursor:pointer}
 
-/* inline „Grafik“ */
-.assigneeWrap{position:relative;display:inline-block}
-.assigneePill{border:1px solid #E6E6EA;border-radius:var(--pill-r);height:var(--pill-h);line-height:var(--pill-h);padding:0 12px;background:#fff;cursor:pointer}
+/* inline „Grafik“ – ikonové tlačítko, žádné jméno na první pohled */
+.assigneeIcon{background:#ECEEF2;border:1px solid #E6E6EA}
+
+/* součet vpravo – střed + stejná velikost jako bubliny */
+.totalCell{text-align:center}
+.totalVal{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:40px;height:40px;font-weight:700;font-size:16px
+}
 
 /* toast */
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#111;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:3000}

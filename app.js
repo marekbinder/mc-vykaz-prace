@@ -1,8 +1,9 @@
-/* App – kompletní robustní verze
-   - Načte config.json (url/anon nebo supabaseUrl/supabaseAnonKey)
+/* App – robustní verze s autodetekcí schématu hodin
+   - Načítá config.json (url/anon nebo supabaseUrl/supabaseAnonKey)
    - Klik = +0.5h, Alt/Meta/Ctrl+klik = -0.5h (nezáporné)
    - Součty: Já / Všichni
-   - Export XLSX: autor = Marek/Viki/Standa (grafika@media-consult.cz), hlavička s datumy Po–Pá, vynechá 0h řádky
+   - Export XLSX: autor = Marek/Viki/Standa (grafika@media-consult.cz), hlavička Po–Pá, vynechá 0h řádky
+   - Autodetekce: tabulka time_entry/time_entries + sloupec date/work_date
 */
 
 const EMAIL_NAME_MAP = {
@@ -34,6 +35,8 @@ const state = {
   jobs:[],
   myHours:new Map(),   // jobId -> {date: hours}
   allHours:new Map(),  // jobId -> {date: hours}
+  hoursTable:"time_entry",   // autodetekce
+  hoursDateCol:"date",       // autodetekce
 };
 
 // init
@@ -102,7 +105,7 @@ function setWeekLabel(){
 async function safeLoadAll(){
   try { await loadClients(); } catch(e){ console.error(e); showWarn("Chyba při načítání klientů."); }
   try { await loadJobs(); }    catch(e){ console.error(e); showWarn("Chyba při načítání zakázek."); }
-  try { await loadHours(); }   catch(e){ console.error(e); showWarn("Chyba při načítání hodin."); }
+  try { await loadHours(); }   catch(e){ console.error(e); showWarn(`Chyba při načítání hodin${e?.message?`: ${e.message}`:"."}`); }
   try { fillFilterSources(); } catch(e){ console.error(e); }
 }
 
@@ -124,24 +127,57 @@ async function loadJobs(){
   });
 }
 
+/* === AUTODETEKCE SCHÉMATU HODIN === */
 async function loadHours(){
   state.myHours.clear(); state.allHours.clear();
 
   const st = state.weekStart, en = addDays(st,4);
-  const { data: rows, error } = await state.sb.from("time_entry")
-      .select("job_id,date,hours,user_email")
-      .gte("date", toISO(st)).lte("date", toISO(en));
-  if (error) throw error;
+
+  const candidates = [
+    { table:"time_entry",    dateCol:"date" },
+    { table:"time_entry",    dateCol:"work_date" },
+    { table:"time_entries",  dateCol:"date" },
+    { table:"time_entries",  dateCol:"work_date" },
+  ];
+
+  let rows=null, chosen=null, lastErr=null;
+
+  for (const c of candidates){
+    try{
+      const { data, error } = await state.sb
+        .from(c.table)
+        .select(`job_id, ${c.dateCol}, hours, user_email`)
+        .gte(c.dateCol, toISO(st))
+        .lte(c.dateCol, toISO(en));
+
+      if (error) { lastErr = error; continue; }
+      rows   = data || [];
+      chosen = c;
+      break;
+    }catch(e){ lastErr=e; }
+  }
+
+  if (!chosen) {
+    throw lastErr || new Error("Nepodařilo se načíst tabulku hodin (neznámé schéma).");
+  }
+
+  // zapamatujeme funkční kombinaci pro další operace (klikání atd.)
+  state.hoursTable   = chosen.table;
+  state.hoursDateCol = chosen.dateCol;
 
   const me = (state.user?.email||"").toLowerCase();
-  for (const r of (rows||[])){
-    const key = String(r.job_id);
-    if (!state.allHours.has(key)) state.allHours.set(key, {});
-    state.allHours.get(key)[r.date] = (state.allHours.get(key)[r.date]||0) + Number(r.hours||0);
+
+  for (const r of rows){
+    const jobId = String(r.job_id);
+    const dISO  = r[ state.hoursDateCol ];
+    const h     = Number(r.hours||0);
+
+    if (!state.allHours.has(jobId)) state.allHours.set(jobId, {});
+    state.allHours.get(jobId)[dISO] = (state.allHours.get(jobId)[dISO]||0) + h;
 
     if (String(r.user_email||"").toLowerCase() === me){
-      if (!state.myHours.has(key)) state.myHours.set(key,{});
-      state.myHours.get(key)[r.date] = (state.myHours.get(key)[r.date]||0) + Number(r.hours||0);
+      if (!state.myHours.has(jobId)) state.myHours.set(jobId,{});
+      state.myHours.get(jobId)[dISO] = (state.myHours.get(jobId)[dISO]||0) + h;
     }
   }
 }
@@ -268,7 +304,7 @@ async function onTableClick(e){
     const id = Number(del.dataset.del);
     if (confirm("Opravdu odstranit zakázku?")){
       try{
-        await state.sb.from("time_entry").delete().eq("job_id",id);
+        await state.sb.from(state.hoursTable).delete().eq("job_id",id);
         await state.sb.from("jobs").delete().eq("id",id);
         await safeLoadAll(); renderAll();
       }catch(err){ console.error(err); showWarn("Odstranění se nepodařilo."); }
@@ -290,18 +326,21 @@ async function onTableClick(e){
 
 async function bumpHours(jobId, dateISO, delta){
   const email = String(state.user?.email||"");
-  const { data: rows } = await state.sb.from("time_entry").select("*")
-        .eq("job_id",jobId).eq("user_email",email).eq("date",dateISO).limit(1);
+
+  // najdeme případný existující záznam pro daný den
+  const { data: rows } = await state.sb.from(state.hoursTable).select("*")
+        .eq("job_id",jobId).eq(state.hoursDateCol,dateISO).eq("user_email",email).limit(1);
   const cur = rows?.[0];
+
   let hours = Math.max(0, Number(cur?.hours||0) + delta);
   hours = Math.round(hours*2)/2;
 
   if (!cur && hours>0){
-    await state.sb.from("time_entry").insert({ job_id:jobId, user_email:email, date:dateISO, hours });
+    await state.sb.from(state.hoursTable).insert({ job_id:jobId, user_email:email, [state.hoursDateCol]:dateISO, hours });
   } else if (cur && hours>0){
-    await state.sb.from("time_entry").update({ hours }).eq("id",cur.id);
+    await state.sb.from(state.hoursTable).update({ hours }).eq("id",cur.id);
   } else if (cur && hours<=0){
-    await state.sb.from("time_entry").delete().eq("id",cur.id);
+    await state.sb.from(state.hoursTable).delete().eq("id",cur.id);
   }
 }
 

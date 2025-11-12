@@ -1,81 +1,87 @@
-/* ======================================================
-   VÝKAZ PRÁCE – UI PATCH
-   - přesun a zarovnání "Přidat zakázku"
-   - srovnání koše (bez podbarvení, na střed)
-   - žádná změna obchodní logiky
-   ====================================================== */
+/* ===========================================================================
+   UI PATCH – zarovnání a stabilizace UI prvků
+   - Přesun „Přidat zakázku“ do posledního th (sloupec Celkem) a zarovnání vpravo
+   - Koš: bez podbarvení + svislé centrování
+   - Zachováno maximálně neinvazivně (MutationObserver)
+   =========================================================================== */
 
-/**
- * Najde tlačítko „Přidat zakázku“ podle textu (bez ohledu na diakritiku)
- * a přesune ho do posledního <th> hlavičky tabulky s „Celkem“.
- * Zároveň doplní značkovací třídu .jobsHeaderRow pro CSS.
- */
-(function moveAddButtonToHeader(){
-  // 1) najdi tlačítko dle textu
-  const normalize = s => (s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'');
-  const addBtn = [...document.querySelectorAll('button')]
-    .find(b => normalize(b.textContent.trim()) === normalize('Přidat zakázku'));
+(function(){
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'');
 
-  if(!addBtn){
-    // nic neděláme – UI bude fungovat dál
-    return;
+  function findAddBtn(){
+    // Hledej podle textu (Přidat zakázku) – jistota i když se mění šablona
+    const btn = [...document.querySelectorAll('button')]
+      .find(b => norm(b.textContent.trim()) === norm('Přidat zakázku'));
+    return btn || null;
   }
 
-  // 2) najdi řádek tabulky v záhlaví (thead > tr)
-  const headRow =
-    document.querySelector('.jobsTable thead tr') ||
-    document.querySelector('table thead tr');
+  function anchorHeader(){
+    const head =
+      document.querySelector('.jobsTable thead tr') ||
+      document.querySelector('table thead tr') ||
+      document.querySelector('.jobsHeaderRow') ||
+      document.querySelector('.tableHeader thead tr');
 
-  if(!headRow){
-    // když tabulka ještě není v DOM (lazy render), zkus po krátké chvilce znovu
-    setTimeout(moveAddButtonToHeader, 150);
-    return;
+    if (!head) return null;
+    head.classList.add('jobsHeaderRow'); // pro CSS
+    const lastTh = head.querySelector('th:last-child');
+    return lastTh || null;
   }
 
-  // 3) označ řádek pro naše CSS
-  headRow.classList.add('jobsHeaderRow');
+  function moveAddButton(){
+    const btn = findAddBtn();
+    const lastTh = anchorHeader();
+    if (!btn || !lastTh) return;
 
-  // 4) vezmi poslední <th> (celkem) a vlož tam tlačítko
-  const lastTh = headRow.querySelector('th:last-child');
-  if(lastTh && !lastTh.contains(addBtn)){
-    addBtn.id = 'addJobBtn';               // pro jistotu jednotný selektor
-    addBtn.style.position = 'static';      // žádné absolute
-    addBtn.style.marginLeft = 'auto';      // držet vpravo v buňce
-    lastTh.appendChild(addBtn);
+    // Přidej ID i datový atribut (abychom ho věděli stylovat i bez ID)
+    if (!btn.id) btn.id = 'addJobBtn';
+    btn.setAttribute('data-role', 'add-job');
+
+    // Když už je správně umístěn, nic nedělej
+    if (lastTh.contains(btn)) return;
+
+    // Zruš absolutní pozicování, pokud ho má
+    btn.style.position = 'static';
+    btn.style.marginLeft = 'auto';
+
+    lastTh.appendChild(btn);
+  }
+
+  function fixTrashButtons(){
+    const apply = (b)=>{
+      b.style.background = 'transparent';
+      b.style.border = 'none';
+      b.style.boxShadow = 'none';
+      b.style.padding = '0';
+      b.style.width = '44px';
+      b.style.height = '44px';
+      b.style.display = 'inline-flex';
+      b.style.alignItems = 'center';
+      b.style.justifyContent = 'center';
+      b.style.borderRadius = '50%';
+    };
+    [...document.querySelectorAll('button[title="Odstranit"], .pill-btn.jobDelete')].forEach(apply);
+  }
+
+  // Úvodní průchod po načtení
+  function initOnce(){
+    moveAddButton();
+    fixTrashButtons();
+  }
+
+  // Sleduj změny DOMu (UI se překresluje při přepínání týdnů/filtrů)
+  const mo = new MutationObserver(() => {
+    moveAddButton();
+    fixTrashButtons();
+  });
+
+  function startObserver(){
+    mo.observe(document.body, { childList:true, subtree:true });
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => { initOnce(); startObserver(); });
+  } else {
+    initOnce(); startObserver();
   }
 })();
-
-/**
- * Zarovná a „odbarví“ koš (Odstranit) – zůstává jen ikona bez podkladu.
- * Děláme to i JSem, kdyby CSS nestačilo (některé knihovny dopisují inline styly).
- */
-(function normalizeTrashButton(){
-  const apply = (btn)=>{
-    btn.style.background = 'transparent';
-    btn.style.border = 'none';
-    btn.style.boxShadow = 'none';
-    btn.style.padding = '0';
-    btn.style.width = '44px';
-    btn.style.height = '44px';
-    btn.style.display = 'inline-flex';
-    btn.style.alignItems = 'center';
-    btn.style.justifyContent = 'center';
-  };
-
-  const run = ()=>{
-    const trashBtns = [
-      ...document.querySelectorAll('button[title="Odstranit"]'),
-      ...document.querySelectorAll('.pill-btn.jobDelete')
-    ];
-    trashBtns.forEach(apply);
-  };
-
-  // první průchod
-  run();
-
-  // kdyby UI přerenderovalo řádky (po filtrování atd.)
-  const mo = new MutationObserver(run);
-  mo.observe(document.body, { childList:true, subtree:true });
-})();
-
-/* KONEC – UI PATCH */

@@ -356,3 +356,26 @@ function showLogin(){
 
 // ==== BOOT ====
 init().then(render).catch(showErr);
+
+
+// Zarovnání "Přidat zakázku" k pravému okraji tabulky – bez úprav HTML
+(function () {
+  // 1) Najdi obal tabulky a dej mu kotevní třídu
+  //   - zkusíme nejčastější obaly; necháváme to bezpečné (když některý neexistuje, přeskočí se)
+  const tableWrap =
+    document.querySelector('.jobsTableWrap') ||
+    document.querySelector('.tableWrap') ||
+    document.querySelector('.table-section') ||
+    document.querySelector('.table') ||
+    document.querySelector('.jobsTable')?.parentElement;
+
+  if (tableWrap) tableWrap.classList.add('tableAnchor');
+
+  // 2) Najdi tlačítko "Přidat zakázku" a dej mu stabilní ID
+  const addBtn =
+    [...document.querySelectorAll('button')].find(
+      (b) => b.textContent.trim().toLowerCase() === 'přidat zakázku'
+    ) || null;
+
+  if (addBtn && !addBtn.id) addBtn.id = 'addJobBtn';
+})();

@@ -235,34 +235,67 @@ async function deleteJob(jobId){
   state.jobs=await loadJobs(); await refreshTotals(); renderTable();
 }
 
-// export do excelu (vynechá řádky bez hodin v týdnu)
-async function exportExcel(){
-  const daysISO=getDays(); const daysTxt=daysISO.map(d=>dayjs(d).format('D. M. YYYY'));
-  const visible=state.jobs
-    .filter(j=> (state.filterClient==='ALL'||String(j.client_id)===String(state.filterClient)) )
-    .filter(j=> (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
-    .filter(j=> jobPassesAssigneeFilter(j));
-  const withHours=visible.filter(j=> daysISO.some(d=> cellValue(j.id,d) > 0 ));
+// export do excelu (vynechá řádky bez hodin v týdnu) — BEZ "Celkem"
+async function exportExcel() {
+  const daysISO = getDays();
+  const daysTxt = daysISO.map(d => dayjs(d).format('D. M. YYYY'));
 
-  const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('Výkaz');
-  const user=state.session?.user?.email||''; const range=`${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`;
-  ws.addRow([`Uživatel: ${user}`]); ws.addRow([`Týden: ${range}`]); ws.addRow([]);
-  ws.addRow(['Klient','Zakázka',...daysTxt]).font={bold:true};
+  const visible = state.jobs
+    .filter(j => (state.filterClient === 'ALL' || String(j.client_id) === String(state.filterClient)))
+    .filter(j => (state.filterStatus === 'ALL' || String(j.status_id) === String(state.filterStatus)))
+    .filter(j => jobPassesAssigneeFilter(j));
 
-  for(const j of withHours){
-    const vals=daysISO.map(d=>cellValue(j.id,d));
+  const withHours = visible.filter(j => daysISO.some(d => cellValue(j.id, d) > 0));
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Výkaz');
+
+  // jméno do záhlaví + do názvu souboru
+  const userEmail = (state.session?.user?.email || '').trim();
+  const userName = nameFromEmail(userEmail);
+
+  const start = dayjs(state.weekStart);
+  const end = dayjs(addDays(state.weekStart, 4));
+  const rangeTxt = `${start.format('D. M. YYYY')} – ${end.format('D. M. YYYY')}`;
+
+  ws.addRow([`Uživatel: ${userName || userEmail || '—'}`]);
+  ws.addRow([`Týden: ${rangeTxt}`]);
+  ws.addRow([]);
+
+  // hlavička bez "Celkem"
+  const header = ['Klient', 'Zakázka', ...daysTxt];
+  const hdrRow = ws.addRow(header);
+  hdrRow.font = { bold: true };
+
+  // řádky
+  for (const j of withHours) {
+    const vals = daysISO.map(d => cellValue(j.id, d));
     ws.addRow([j.client, j.name, ...vals]);
   }
-  const sums=daysISO.map(d=> withHours.reduce((a,j)=>a+cellValue(j.id,d),0));
-  ws.addRow(['Součet za den','',...sums]);
 
-  ws.columns.forEach((c,i)=> c.width=i<2?28:14);
-  const buf=await wb.xlsx.writeBuffer();
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
-  a.download=`vykaz-${dayjs(state.weekStart).format('YYYY-MM-DD')}.xlsx`;
-  a.click();
+  // šířky sloupců
+  ws.columns = header.map((_, i) => ({ width: i < 2 ? 28 : 12 }));
+
+  // uložení
+  const fileName = `Vykaz_prace_${(userName || userEmail || 'Uzivatel')
+    .replace(/[^\p{L}\p{N}_-]+/gu, '_')}_${start.format('YYYY-MM-DD')}_${end.format('YYYY-MM-DD')}.xlsx`;
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+
+  if (window.saveAs) {
+    saveAs(blob, fileName);
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2500);
+  }
 }
+
 
 // ==== REFRESH ====
 async function refreshTotals(){ const ids=state.jobs.map(j=>j.id); state.totalsAll=await loadTotalsAll(ids); }

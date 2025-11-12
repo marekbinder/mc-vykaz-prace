@@ -213,48 +213,28 @@ button.pill-btn.jobDelete {
 }
 
 
-/* The row with "přidání klienta/zakázky" */
+/* zruš předchozí grid pokus a vrať řádek na flex */
 .add-grid{
-  display: grid;
-  grid-template-columns: repeat(6, minmax(220px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 16px;
-  align-items: center;        /* vertical alignment */
+  align-items: center;     /* vertikální zarovnání */
 }
 
-/* The invisible anchor for the assignee popover should not push the button to a new line */
+/* anchor pro popover “Grafik” nesmí dělat mezeru */
 .menuAnchor{
   position: relative;
-  width: 0;                   /* do not occupy layout width */
-  height: 0;                  /* and no height either */
-  overflow: visible;          /* allow its absolutely positioned popup to show */
+  width: 0;
+  height: 0;
+  overflow: visible;
   margin: 0;
   padding: 0;
+  flex: 0 0 auto;
 }
 
-/* Put the add button into the last column, aligned to the right and centered vertically */
+/* tlačítko “Přidat zakázku” drž vždy na pravém okraji řádku */
 #addJobBtn{
-  grid-column: 6 / 7;         /* last column of the 6-column grid */
-  justify-self: end;          /* right-align within the cell */
-  align-self: center;         /* perfect vertical alignment */
-  height: 48px;               /* match your pill height, if needed */
-  line-height: 48px;          /* (optional) ensure text is vertically centered */
-}
-
-/* Ensure pills share the same height so everything lines up cleanly */
-.pill-input,
-.pill-select,
-.pill-btn{
-  height: 48px;
-}
-
-/* Responsive tweak: on narrower screens, stack into two columns and keep the button on the right */
-@media (max-width: 1100px){
-  .add-grid{
-    grid-template-columns: repeat(2, minmax(220px, 1fr));
-  }
-  #addJobBtn{
-    grid-column: 2 / 3;
-    justify-self: end;
-  }
+  margin-left: auto;       /* pošle ho doprava v aktuálním řádku */
+  align-self: center;
 }
 

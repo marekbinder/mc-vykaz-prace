@@ -6,7 +6,7 @@
   <title>Výkaz práce</title>
   <link rel="stylesheet" href="style.css"/>
 
-  <!-- Knihovny -->
+  <!-- knihovny -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -18,15 +18,17 @@
   </header>
 
   <main id="app" class="wrap">
-    <!-- Navigace týdne -->
-    <section class="weeknav">
-      <button id="prevWeek" class="navbtn" title="Předchozí týden">◀</button>
-      <div id="weekRange" class="weekpill">–</div>
-      <button id="nextWeek" class="navbtn" title="Další týden">▶</button>
-      <button id="exportXlsx" class="pill-btn right">Export do Excelu</button>
+    <!-- týden + export -->
+    <section class="weekbar">
+      <div class="weeknav">
+        <button id="prevWeek" class="navbtn" title="Předchozí týden">◀</button>
+        <div id="weekRange" class="weekpill">–</div>
+        <button id="nextWeek" class="navbtn" title="Další týden">▶</button>
+      </div>
+      <button id="exportXlsx" class="pill-btn export">Export do Excelu</button>
     </section>
 
-    <!-- Filtry -->
+    <!-- filtry -->
     <section class="filters">
       <div class="filters-row">
         <label class="lbl">Nastavení filtru:</label>
@@ -39,21 +41,23 @@
           <option value="ALL">Součty: Všichni</option>
         </select>
 
-        <!-- Filtr grafik -->
-        <button id="assigneeFilterBtn" class="pill-btn">Grafik: Všichni</button>
-        <div id="assigneeFilterMenu" class="menu" hidden>
-          <label><input type="checkbox" value="Viki"> Viki</label>
-          <label><input type="checkbox" value="Standa"> Standa</label>
-          <label><input type="checkbox" value="Marek"> Marek</label>
-          <div class="menuRow">
-            <button id="assigneeFilterClear" class="pill-btn small" type="button">Vymazat</button>
-            <button id="assigneeFilterClose" class="pill-btn small" type="button">Zavřít</button>
+        <!-- filtr „Grafik“ s ukotveným menu -->
+        <div class="menuAnchor">
+          <button id="assigneeFilterBtn" class="pill-btn">Grafik: Všichni</button>
+          <div id="assigneeFilterMenu" class="menu" hidden>
+            <label><input type="checkbox" value="Viki"> Viki</label>
+            <label><input type="checkbox" value="Standa"> Standa</label>
+            <label><input type="checkbox" value="Marek"> Marek</label>
+            <div class="menuRow">
+              <button id="assigneeFilterClear" class="pill-btn small" type="button">Vymazat</button>
+              <button id="assigneeFilterClose" class="pill-btn small" type="button">Zavřít</button>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Přidání klienta / zakázky -->
+    <!-- přidání klienta/zakázky -->
     <section class="addRow">
       <div class="add-grid">
         <input id="newClientName" class="pill-input" placeholder="Název klienta"/>
@@ -63,14 +67,16 @@
         <input id="newJobName" class="pill-input" placeholder="Název zakázky"/>
         <select id="newJobStatus" class="pill-select"></select>
 
-        <button id="assigneesNewBtn" class="pill-btn">Grafik: nikdo</button>
-        <div id="assigneesNewMenu" class="menu" hidden>
-          <label><input type="checkbox" value="Viki"> Viki</label>
-          <label><input type="checkbox" value="Standa"> Standa</label>
-          <label><input type="checkbox" value="Marek"> Marek</label>
-          <div class="menuRow">
-            <button id="assigneesNewClear" class="pill-btn small" type="button">Vymazat</button>
-            <button id="assigneesNewClose" class="pill-btn small" type="button">Zavřít</button>
+        <div class="menuAnchor">
+          <button id="assigneesNewBtn" class="pill-btn">Grafik: nikdo</button>
+          <div id="assigneesNewMenu" class="menu" hidden>
+            <label><input type="checkbox" value="Viki"> Viki</label>
+            <label><input type="checkbox" value="Standa"> Standa</label>
+            <label><input type="checkbox" value="Marek"> Marek</label>
+            <div class="menuRow">
+              <button id="assigneesNewClear" class="pill-btn small" type="button">Vymazat</button>
+              <button id="assigneesNewClose" class="pill-btn small" type="button">Zavřít</button>
+            </div>
           </div>
         </div>
 
@@ -78,11 +84,11 @@
       </div>
     </section>
 
-    <!-- Tabulka -->
+    <!-- tabulka -->
     <section class="tableWrap">
       <table class="grid">
         <thead>
-          <tr>
+          <tr class="headpill">
             <th>Klient</th>
             <th>Zakázka</th>
             <th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th>

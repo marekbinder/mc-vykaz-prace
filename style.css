@@ -116,38 +116,3 @@ h1{font-size:42px;margin:0;font-weight:800}
 
 /* toast */
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#111;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:3000}
-
-
-/* === Koš: bez podbarvení, přesně na střed === */
-button[title="Odstranit"],
-.pill-btn.jobDelete {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-
-  width: 40px;
-  height: 40px;
-
-  display: inline-flex;
-  align-items: center;      /* vertikální střed */
-  justify-content: center;  /* horizontální střed */
-  cursor: pointer;
-}
-
-button[title="Odstranit"] svg,
-button[title="Odstranit"] img,
-.pill-btn.jobDelete svg,
-.pill-btn.jobDelete img {
-  display: block;
-  width: 20px;
-  height: 20px;
-  pointer-events: none;
-}
-
-/* pokud buňka s košem používá flex, ať je obsah vycentrován */
-.jobCell, .actionsCell, td.actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}

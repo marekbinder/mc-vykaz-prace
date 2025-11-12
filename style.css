@@ -212,25 +212,9 @@ button.pill-btn.jobDelete {
   line-height: 36px;
 }
 
-
-/* 1) Najdi wrapper, který obsahuje tabulku i tlačítko (doplnil jsem běžné názvy) */
-.jobsSection,
-.jobsWrap,
-.tableWrap,
-.tableContainer,
-.tableShell {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-/* 2) V tomtéž wrapperu pošli tlačítko doprava */
-.jobsSection .addJobBtn,
-.jobsWrap .addJobBtn,
-.tableWrap .addJobBtn,
-.tableContainer .addJobBtn,
-.tableShell .addJobBtn {
-  align-self: flex-end !important; /* → doprava */
-  display: inline-flex !important; /* pro jistotu */
+/* A. stejné ohraničení jako tabulka (jen kdyby se občas rozcházela šířka) */
+.addRow,
+.tableWrap {
+  max-width: 1200px;      /* stejná šířka jako tabulkový wrapper */
+  margin: 0 auto;         /* centrování */
 }

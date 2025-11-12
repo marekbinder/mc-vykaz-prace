@@ -209,3 +209,110 @@ button[data-role="add-job"],
 button[aria-label="Přidat zakázku"] {
   transform: translateY(-2px);
 }
+
+/* -------------------------------------------------
+   KONFIG: šířka hlavního kontejneru (stejná jako tabulka)
+   Pokud používáš jinou hodnotu, uprav číslo níže.
+------------------------------------------------- */
+:root { --container-max: 1200px; }
+
+/* ============== 1) KOŠ – bez podbarvení + svislé vystředění ============== */
+
+/* Vypneme pozadí na nejběžnějších selektorech */
+.btn-trash,
+.trash,
+.delete,
+.delete-btn,
+button[aria-label*="Smazat"],
+button[aria-label*="smazat"],
+button[aria-label*="Delete"],
+button[title*="Smazat"],
+button[title*="Delete"],
+button[data-action="delete"],
+button[data-icon="trash"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: none !important;
+
+  display: inline-flex;
+  align-items: center;           /* svislé vystředění ikony */
+  justify-content: center;
+  padding: 8px;                  /* pohodlné klikací místo */
+  line-height: 1;
+  border-radius: 8px;            /* decentní focus bez kolečka */
+  cursor: pointer;
+}
+
+/* Když je koš uvnitř „chipu“/„pill“ s šedým pozadím, zrušíme ho i tam */
+.chip:has(> .btn-trash),
+.pill:has(> .btn-trash),
+.chip:has(> .trash),
+.pill:has(> .trash),
+.chip:has(> [data-action="delete"]),
+.pill:has(> [data-action="delete"]) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Pojistky na pseudo-elementy, pokud šedé kolečko dělá ::before/::after */
+.btn-trash::before,
+.btn-trash::after,
+.trash::before,
+.trash::after,
+.delete::before,
+.delete::after,
+button[aria-label*="Smazat"]::before,
+button[aria-label*="Smazat"]::after,
+button[aria-label*="Delete"]::before,
+button[aria-label*="Delete"]::after {
+  background: transparent !important;
+  box-shadow: none !important;
+  content: none !important;
+}
+
+/* Akční buňka v řádku – ať vše sedí na střed */
+.row-actions,
+.cell-actions,
+.task-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ============== 2) „Přidat zakázku“ zarovnat ke kontejneru ============== */
+
+/* Tip: pokud má tlačítko ID/role/aria, zachytíme jej těmito selektory */
+#addJobBtn,
+button[data-role="add-job"],
+button[aria-label="Přidat zakázku"],
+button[title="Přidat zakázku"] {
+  position: relative;
+  /* hack: přitáhneme ho k pravému okraji stejného „containeru“ jako tabulka */
+  right: calc((100vw - var(--container-max)) / 2);
+}
+
+/* Když je viewport užší než container, hack vypneme */
+@media (max-width: 1240px) {
+  #addJobBtn,
+  button[data-role="add-job"],
+  button[aria-label="Přidat zakázku"],
+  button[title="Přidat zakázku"] {
+    right: 0;
+  }
+}
+
+/* Pro případ, že je tlačítko uvnitř flex řádku – pusť ho k pravému kraji */
+.add-job-right #addJobBtn,
+.add-job-right button[data-role="add-job"],
+.add-job-right button[aria-label="Přidat zakázku"],
+.add-job-right button[title="Přidat zakázku"] {
+  margin-left: auto;
+}
+
+/* Hlavička tabulky (pokud máš wrapper) – sjednocení šířky s containerem */
+.table-head, .table-header, .table__head {
+  max-width: var(--container-max);
+  margin: 0 auto;
+}

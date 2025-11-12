@@ -270,4 +270,48 @@ button.pill-btn.jobDelete {
   padding: 0;
 }
 
+/* === Přidání zakázky — jeden řádek, nic se nezalamuje === */
+.addRow .add-grid{
+  display: grid;
+  /* Sloupce odpovídají pořadí prvků:
+     [Název klienta] [Přidat klienta] [Klient] [Název zakázky] [Status] [Grafik] [Přidat zakázku] */
+  grid-template-columns: 
+    320px           /* Název klienta (input) */
+    max-content     /* Přidat klienta (button) */
+    180px           /* Klient (select) */
+    360px           /* Název zakázky (input) */
+    180px           /* Status (select) */
+    max-content     /* Grafik (anchor/„pill“) -> aby se nezalamoval */
+    max-content;    /* Přidat zakázku (button) */
+  gap: 16px;
+  align-items: center;
+  justify-content: center; /* držíme celou řadu pěkně uprostřed */
+}
+
+/* „Grafik“ v přidávacím řádku je renderovaný do anchoru, ať se netváří jako blok s vlastním odsazením */
+.addRow .menuAnchor{
+  margin: 0;
+  padding: 0;
+  width: auto;
+  height: auto;
+  align-self: center;
+  justify-self: start;    /* ať drží u předchozího prvku */
+  white-space: nowrap;   /* krátký text „Grafik: nikdo“ se neprotáhne na další řádek */
+}
+
+/* Pro jistotu srovnáme i vnitřní „pills“ v add-row, aby nic netlačilo okolí */
+.addRow .pill-select,
+.addRow .pill-input,
+.addRow .pill-btn{
+  margin: 0;
+  align-self: center;
+}
+
+/* Lehké zúžení sloupců u menších šířek, aby se to stále vešlo do jedné řady */
+@media (max-width: 1600px){
+  .addRow .add-grid{
+    grid-template-columns:
+      280px max-content 160px 320px 160px max-content max-content;
+  }
+}
 

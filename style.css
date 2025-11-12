@@ -1,371 +1,124 @@
-/* ==== základ ==== */
-*{box-sizing:border-box}
+/* =========================================
+   VÝKAZ PRÁCE – UI STABILIZAČNÍ STYLY
+   (bezpečné přepisy, nezasahují do logiky)
+   ========================================= */
+
+/* Základní proměnné (pro jistotu, ať vše drží vizuálně jednotně) */
 :root{
-  --pill-h: 44px;
-  --pill-r: 9999px;
-}
-html,body{margin:0;padding:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:#0E1625}
-
-/* hlavička – nadpis na střed, user vpravo */
-.topbar{
-  position:relative;
-  display:flex;
-  justify-content:center;
-  align-items:flex-start;
-  padding:16px 16px 0;
-}
-h1{font-size:42px;margin:0;font-weight:800}
-.userbox{position:absolute; right:16px; top:12px; display:flex; gap:10px; align-items:center}
-
-/* obal */
-.wrap{max-width:1100px;margin:0 auto;padding:24px 16px 60px}
-
-/* týden + export */
-.weekbar{position:relative;margin-bottom:10px}
-.weeknav{display:flex;gap:10px;justify-content:center;align-items:center}
-.navbtn{
-  border:none;background:transparent;color:#0E1625;
-  width:36px;height:36px;border-radius:12px;font-size:18px;cursor:pointer
-}
-.weekpill{background:#0E1625;color:#fff;padding:10px 18px;border-radius:28px;font-weight:700;letter-spacing:.3px;min-width:260px;text-align:center}
-.pill-btn.export{position:absolute;right:0;top:0}
-
-/* filtry */
-.filters .filters-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}
-.lbl{font-weight:700;color:#444}
-
-/* přidání – zarovnání tlačítka vpravo jako „Celkem“ */
-.add-grid{
-  display:grid;
-  grid-template-columns:240px 150px 160px 1fr 140px 160px auto;
-  gap:10px; align-items:center
-}
-#addJobBtn{justify-self:end}
-
-/* pills */
-.pill-input,.pill-select,.pill-btn{
-  height:var(--pill-h);border:1px solid #E6E6EA;border-radius:var(--pill-r);
-  padding:0 14px;background:#fff;line-height:var(--pill-h);white-space:nowrap
-}
-.pill-input{min-width:180px;line-height:normal;padding:0 14px}
-.pill-select{appearance:none;background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%23666" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>') no-repeat right 12px center;background-size:10px 6px;padding-right:26px}
-.pill-btn{cursor:pointer}
-.pill-btn.accent{background:#0E1625;color:#fff;border-color:#0E1625}
-.pill-btn.small{height:32px;line-height:32px;border-radius:12px}
-
-/* menu (ukotvené k tlačítku) */
-.menuAnchor{position:relative;display:inline-block}
-.menu[hidden]{display:none!important}
-.menu{
-  position:absolute;top:calc(100% + 8px);left:0;background:#fff;border:1px solid #E6E6EA;
-  border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:2000;min-width:160px
-}
-.menu label{display:flex;gap:8px;align-items:center;margin:6px 4px}
-.menuRow{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
-
-/* tabulka */
-.tableWrap{margin-top:10px}
-.grid{width:100%;border-collapse:separate;border-spacing:0 10px}
-.grid thead .headpill th{
-  background:#0E1625;color:#fff;border:none;padding:12px 14px;text-align:center
-}
-.grid thead .headpill th:first-child{border-top-left-radius:22px;border-bottom-left-radius:22px;text-align:left}
-.grid thead .headpill th:nth-child(2){text-align:left}
-.grid thead .headpill th:last-child{border-top-right-radius:22px;border-bottom-right-radius:22px}
-
-/* buňky */
-.grid tbody td{padding:6px 8px;border:none}
-.grid tbody tr td:first-child{width:180px}  /* menší „Klient“ */
-.grid tbody tr td:nth-child(2){width:auto}   /* „Zakázka“ může dýchat */
-
-/* bubliny s hodinami */
-.bubble{
-  width:40px;height:40px;border-radius:40px;border:none;background:#ECEEF2;
-  display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;cursor:pointer
-}
-.bubble:active{transform:translateY(1px)}
-
-/* sumy za den */
-.sumLabel{font-weight:700;color:#111;padding-left:8px}
-#sumRow .sumCell{height:40px;text-align:center}
-.sumBubble{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:40px;font-weight:700}
-.sumRed{background:#F44336;color:#fff}
-.sumOrange{background:#FFA726;color:#fff}
-.sumGreen{background:#4CAF50;color:#fff}
-
-/* statusy */
-.statusSel.is-nova{background:#E6F0FF}
-.statusSel.is-probiha{background:#FDEFB4}
-.statusSel.is-hotovo{background:#D7F5E3}
-
-/* buňky zakázky */
-.jobCell{display:flex;gap:8px;align-items:center}
-.jobNameIn{min-width:220px}
-.clientSel{min-width:160px}
-.jobDelete{border:none;background:#ECEEF2;width:36px;height:36px;border-radius:10px;cursor:pointer}
-
-/* inline „Grafik“ – ikonové tlačítko, žádné jméno na první pohled */
-.assigneeIcon{background:#ECEEF2;border:1px solid #E6E6EA}
-
-/* součet vpravo – střed + stejná velikost jako bubliny */
-.totalCell{text-align:center}
-.totalVal{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:40px;height:40px;font-weight:700;font-size:16px
+  --pill-radius: 9999px;
+  --pill-bg: #0C1520;
+  --pill-text: #ffffff;
+  --soft-1: #F5F7FA;
+  --soft-2: #EDEFF3;
+  --accent: #0C1520;
+  --muted: #96A0AE;
 }
 
-/* toast */
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#111;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:3000}
-
-
-/* === 1) Vycentrování „Nastavení filtrů“ ===
-   Funguje i bez změn HTML: vezmeme řádek, kde je text „Nastavení filtrů:“ a jeho sousední pill prvky. */
-.filters-row,
-[aria-label="Nastavení filtrů"],
-/* fallback: hlavní wrapper se selektory – pokud máš jinou třídu, oba řádky zůstanou neškodné */
-.controls, .filters, .filters-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;       /* >>> vycentrování <<< */
-  gap: 12px;
-  margin: 16px auto 20px auto;   /* příjemné svislé mezery */
-  max-width: 1200px;
-}
-
-/* malé vyladění pilulek ve filtrech, aby opravdu vypadaly „na střed“ */
-.filters-row > * {
-  margin: 6px 0;
-}
-
-/* === 2) „Přidat zakázku“ zarovnat k pravému okraji tabulky (ke sloupci Celkem) ===
-   Přidáme toolbar nad tabulku jako dva sloupce: [cokoliv | Přidat zakázku] */
-.table-toolbar {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 12px;
-  max-width: 1200px;
-  margin: 10px auto 6px auto;
-}
-
-/* Pokud „Přidat zakázku“ není v toolbaru, vynutíme mu to zarovnání i samostatně. */
-button, .btn, .pill {
-  /* nic neměníme globálně, jen případné fallbacky níže */
-}
-#addJobBtn,
-button[data-role="add-job"],
-button[aria-label="Přidat zakázku"] {
-  justify-self: end;             /* v gridu .table-toolbar */
-}
-
-/* Když tlačítko není v .table-toolbar, posuneme ho stejně doprava v rámci řádku nad tabulkou */
-.add-job-right,
-#addJobBtn,
-button[data-role="add-job"],
-button[aria-label="Přidat zakázku"] {
-  margin-left: auto;             /* ve flex kontejnerech se tak přimáčkne vpravo */
-}
-
-/* Zajistíme, aby hlavička tabulky a „Přidat zakázku“ vizuálně lícovaly */
-.table-head, .table-header, .table__head {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-/* === 3) Koš bez podbarvení + svislé vystředění === */
-.btn-trash,
-button[aria-label="Smazat zakázku"],
-button[data-icon="trash"],
-button[data-action="delete"] {
-  background: transparent !important; /* odstraní šedé kolečko/podklad */
-  box-shadow: none !important;
-  border: 0 !important;
-  padding: 8px;                         /* klikací plocha zůstane příjemná */
-  display: inline-flex;
-  align-items: center;                   /* >>> svislé vystředění ikony <<< */
-  justify-content: center;
-  line-height: 1;
-}
-
-/* buňky s akcemi (stav / grafik / koš) – nechť se prvky drží hezky ve středu na řádku */
-.cell-actions, .task-actions, .row-actions {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;                   /* >>> svislé vystředění všeho v řádku <<< */
-}
-
-/* pro jistotu i běžné buňky s prvky uvnitř */
-td, th {
-  vertical-align: middle;
-}
-td .pill, td .btn, td button {
-  vertical-align: middle;
-}
-
-/* Volitelné: lehké přiblížení „Přidat zakázku“ k hlavičce tabulky vypadá opticky lépe */
-#addJobBtn,
-button[data-role="add-job"],
-button[aria-label="Přidat zakázku"] {
-  transform: translateY(-2px);
-}
-
-/* -------------------------------------------------
-   KONFIG: šířka hlavního kontejneru (stejná jako tabulka)
-   Pokud používáš jinou hodnotu, uprav číslo níže.
-------------------------------------------------- */
-:root { --container-max: 1200px; }
-
-/* ============== 1) KOŠ – bez podbarvení + svislé vystředění ============== */
-
-/* Vypneme pozadí na nejběžnějších selektorech */
-.btn-trash,
-.trash,
-.delete,
-.delete-btn,
-button[aria-label*="Smazat"],
-button[aria-label*="smazat"],
-button[aria-label*="Delete"],
-button[title*="Smazat"],
-button[title*="Delete"],
-button[data-action="delete"],
-button[data-icon="trash"] {
-  background: transparent !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-  border: 0 !important;
-  outline: none !important;
-
-  display: inline-flex;
-  align-items: center;           /* svislé vystředění ikony */
-  justify-content: center;
-  padding: 8px;                  /* pohodlné klikací místo */
-  line-height: 1;
-  border-radius: 8px;            /* decentní focus bez kolečka */
+/* Reset tlačítek, aby se nikde "nezáhadně" nepřebarvovalo pozadí */
+button{
+  background: transparent;
+  border: 0;
+  outline: none;
   cursor: pointer;
 }
 
-/* Když je koš uvnitř „chipu“/„pill“ s šedým pozadím, zrušíme ho i tam */
-.chip:has(> .btn-trash),
-.pill:has(> .btn-trash),
-.chip:has(> .trash),
-.pill:has(> .trash),
-.chip:has(> [data-action="delete"]),
-.pill:has(> [data-action="delete"]) {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-/* Pojistky na pseudo-elementy, pokud šedé kolečko dělá ::before/::after */
-.btn-trash::before,
-.btn-trash::after,
-.trash::before,
-.trash::after,
-.delete::before,
-.delete::after,
-button[aria-label*="Smazat"]::before,
-button[aria-label*="Smazat"]::after,
-button[aria-label*="Delete"]::before,
-button[aria-label*="Delete"]::after {
-  background: transparent !important;
-  box-shadow: none !important;
-  content: none !important;
-}
-
-/* Akční buňka v řádku – ať vše sedí na střed */
-.row-actions,
-.cell-actions,
-.task-actions {
+/* Obecné "pill" tlačítko, ať má pěkné zaoblení když ho komponenty používají */
+.pill-btn{
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: .6rem;
+  border-radius: var(--pill-radius);
+  padding: .66rem 1rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-/* ============== 2) „Přidat zakázku“ zarovnat ke kontejneru ============== */
+/* --- 1) KOŠ: bez podbarvení a vždy svisle na střed vedlejších prvků --- */
 
-/* Tip: pokud má tlačítko ID/role/aria, zachytíme jej těmito selektory */
-#addJobBtn,
-button[data-role="add-job"],
-button[aria-label="Přidat zakázku"],
-button[title="Přidat zakázku"] {
-  position: relative;
-  /* hack: přitáhneme ho k pravému okraji stejného „containeru“ jako tabulka */
-  right: calc((100vw - var(--container-max)) / 2);
+/* Koš je button s title="Odstranit" nebo .jobDelete. Odstraníme pozadí, rám a vycentrujeme. */
+button[title="Odstranit"],
+.pill-btn.jobDelete{
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;   /* svislé vystředění */
+  justify-content: center !important;
+  width: 44px;
+  height: 44px;                     /* stejná výška jako bubliny */
+  border-radius: 50%;
 }
 
-/* Když je viewport užší než container, hack vypneme */
-@media (max-width: 1240px) {
-  #addJobBtn,
-  button[data-role="add-job"],
-  button[aria-label="Přidat zakázku"],
-  button[title="Přidat zakázku"] {
-    right: 0;
-  }
+/* Ikona uvnitř koše (emoji/SVG) – zarovnání doprostřed */
+button[title="Odstranit"] > *,
+.pill-btn.jobDelete > *{
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(0); /* jistota, že nesedí dolů */
 }
 
-/* Pro případ, že je tlačítko uvnitř flex řádku – pusť ho k pravému kraji */
-.add-job-right #addJobBtn,
-.add-job-right button[data-role="add-job"],
-.add-job-right button[aria-label="Přidat zakázku"],
-.add-job-right button[title="Přidat zakázku"] {
+/* --- 2) TABULKA – záhlaví s „Celkem“ a umístění Přidat zakázku --- */
+
+/* Přidáme pružné rozložení do poslední buňky hlavičky s „Celkem“,
+   kam budeme vkládat tlačítko Přidat zakázku. */
+.jobsHeaderRow th:last-child{
+  display: flex;
+  justify-content: flex-end; /* tlačítko vpravo */
+  align-items: center;       /* svisle na střed */
+  gap: .75rem;
+}
+
+/* Samotné tlačítko – necháme v hezkém „pill“ provedení */
+.jobsHeaderRow th:last-child > button{
+  border-radius: var(--pill-radius);
+  background: var(--pill-bg);
+  color: var(--pill-text);
+  padding: .75rem 1.1rem;
+  font-weight: 700;
+}
+
+/* Pro případ, že je tlačítko generováno jinde a přesouváme ho,
+   zajistíme, že vždy bude „staticky“ ve flow layoutu. */
+#addJobBtn{
+  position: static !important;
   margin-left: auto;
 }
 
-/* Hlavička tabulky (pokud máš wrapper) – sjednocení šířky s containerem */
-.table-head, .table-header, .table__head {
-  max-width: var(--container-max);
-  margin: 0 auto;
-}
+/* --- 3) Filtry – konzistentní rozteče a centrování --- */
 
-
-/* === Trash button (Odstranit) – bez podbarvení, svisle zarovnaný === */
-.pill-btn.jobDelete,
-button.pill-btn.jobDelete[title="Odstranit"] {
-  background: none !important;
-  box-shadow: none !important;
-  border: none !important;
-  outline: none !important;
-
-  display: inline-flex;          /* stejné svislé zarovnání jako sousední “Grafik” */
-  align-items: center;
+/* Kontejner s filtry (pokud existuje) centrovat; nezalézt do okrajů */
+.filters,
+.filters-row,
+.filtersBar{
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-
-  width: 40px;                   /* stejně vysoké jako bubliny kolem */
-  height: 40px;
-  padding: 0;
-  margin-left: 6px;
-  border-radius: 50%;
-  line-height: 1;
-  font-size: 18px;               /* velikost emoji 🗑️ */
-  color: #0f172a;                /* tmavá – stejné jako text */
-  cursor: pointer;
+  gap: 10px 14px;
 }
 
-.pill-btn.jobDelete:hover,
-button.pill-btn.jobDelete[title="Odstranit"]:hover {
-  background: #eef2f6;           /* jemný hover, žádný outline */
+/* Selecty a inputy v „pill“ stylu */
+.pill-select,
+.pill-input{
+  border-radius: var(--pill-radius);
+  background: #fff;
+  border: 1px solid var(--soft-2);
+  padding: .7rem 1rem;
 }
 
+/* Nadpis řádku s filtry */
+.filters-label{
+  font-weight: 800;
+  color: var(--accent);
+}
 
-/* Obal tabulky – kotevní bod (pokud už nějaký máš, nevadí) */
-.tableAnchor {
+/* --- 4) Pojistky – nic se nikde „neztratí“ mimo viewport --- */
+.tableAnchor,
+.headerBar{
   position: relative;
+  overflow: visible;
 }
 
-/* Tlačítko Přidat zakázku – zarovnej na pravý okraj tabulky a svisle na střed headeru */
-#addJobBtn {
-  position: absolute;
-  right: 0;              /* přesně k pravému okraji tabulky (sloupec Celkem) */
-  top: -56px;            /* výška nad tabulkou – dolaď, podle font-size headeru */
-  transform: translateY(-4px); /* jemné doladění na střed */
-}
-
-/* Stejný pill styl, jen pro jistotu (ponecháš-li svůj původní, tenhle nevadí) */
-#addJobBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  height: 44px;
-  padding: 0 18px;
-  border-radius: 9999px;
-}
+/* Lehké vyhlazení textu (někdy Safari/Win) */
+body{-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: grayscale;}

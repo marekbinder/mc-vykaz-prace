@@ -116,3 +116,96 @@ h1{font-size:42px;margin:0;font-weight:800}
 
 /* toast */
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#111;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:3000}
+
+
+/* === 1) Vycentrování „Nastavení filtrů“ ===
+   Funguje i bez změn HTML: vezmeme řádek, kde je text „Nastavení filtrů:“ a jeho sousední pill prvky. */
+.filters-row,
+[aria-label="Nastavení filtrů"],
+/* fallback: hlavní wrapper se selektory – pokud máš jinou třídu, oba řádky zůstanou neškodné */
+.controls, .filters, .filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;       /* >>> vycentrování <<< */
+  gap: 12px;
+  margin: 16px auto 20px auto;   /* příjemné svislé mezery */
+  max-width: 1200px;
+}
+
+/* malé vyladění pilulek ve filtrech, aby opravdu vypadaly „na střed“ */
+.filters-row > * {
+  margin: 6px 0;
+}
+
+/* === 2) „Přidat zakázku“ zarovnat k pravému okraji tabulky (ke sloupci Celkem) ===
+   Přidáme toolbar nad tabulku jako dva sloupce: [cokoliv | Přidat zakázku] */
+.table-toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 10px auto 6px auto;
+}
+
+/* Pokud „Přidat zakázku“ není v toolbaru, vynutíme mu to zarovnání i samostatně. */
+button, .btn, .pill {
+  /* nic neměníme globálně, jen případné fallbacky níže */
+}
+#addJobBtn,
+button[data-role="add-job"],
+button[aria-label="Přidat zakázku"] {
+  justify-self: end;             /* v gridu .table-toolbar */
+}
+
+/* Když tlačítko není v .table-toolbar, posuneme ho stejně doprava v rámci řádku nad tabulkou */
+.add-job-right,
+#addJobBtn,
+button[data-role="add-job"],
+button[aria-label="Přidat zakázku"] {
+  margin-left: auto;             /* ve flex kontejnerech se tak přimáčkne vpravo */
+}
+
+/* Zajistíme, aby hlavička tabulky a „Přidat zakázku“ vizuálně lícovaly */
+.table-head, .table-header, .table__head {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* === 3) Koš bez podbarvení + svislé vystředění === */
+.btn-trash,
+button[aria-label="Smazat zakázku"],
+button[data-icon="trash"],
+button[data-action="delete"] {
+  background: transparent !important; /* odstraní šedé kolečko/podklad */
+  box-shadow: none !important;
+  border: 0 !important;
+  padding: 8px;                         /* klikací plocha zůstane příjemná */
+  display: inline-flex;
+  align-items: center;                   /* >>> svislé vystředění ikony <<< */
+  justify-content: center;
+  line-height: 1;
+}
+
+/* buňky s akcemi (stav / grafik / koš) – nechť se prvky drží hezky ve středu na řádku */
+.cell-actions, .task-actions, .row-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;                   /* >>> svislé vystředění všeho v řádku <<< */
+}
+
+/* pro jistotu i běžné buňky s prvky uvnitř */
+td, th {
+  vertical-align: middle;
+}
+td .pill, td .btn, td button {
+  vertical-align: middle;
+}
+
+/* Volitelné: lehké přiblížení „Přidat zakázku“ k hlavičce tabulky vypadá opticky lépe */
+#addJobBtn,
+button[data-role="add-job"],
+button[aria-label="Přidat zakázku"] {
+  transform: translateY(-2px);
+}

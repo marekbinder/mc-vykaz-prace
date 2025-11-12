@@ -244,3 +244,30 @@ button.pill-btn.jobDelete {
 }
 
 
+/* — ŘÁDEK FILTRŮ — */
+.filters{
+  display: flex;          /* sjednoceně přes flex */
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;    /* VERTIKÁLNÍ ZAROVNÁNÍ NA STŘED */
+  justify-content: center;/* centrování celé řady pod datumem */
+}
+
+/* Všechny „pills“ ve filtrech bez vlastních offsetů */
+.filters .pill-select,
+.filters .pill-input,
+.filters .pill-btn{
+  margin: 0;
+  align-self: center;     /* pro jistotu, kdyby si něco neslo vlastní zarovnání */
+}
+
+/* Pokud má filtr „Grafik: …“ uvnitř anchor pro menu, ať nedělá odsazení */
+.filters .menuAnchor{
+  width: auto;
+  height: auto;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+}
+
+

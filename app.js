@@ -2,7 +2,7 @@
 
 const EMAIL_NAME_MAP = {
   "binder.marek@gmail.com": "Marek",
-  "mac@media-consult.cz": "Viki",
+  "grafika@media-consult.cz": "Viki",
   "stanislav.hron@icloud.com": "Standa",
 };
 

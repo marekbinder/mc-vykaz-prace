@@ -316,3 +316,56 @@ button[title="Přidat zakázku"] {
   max-width: var(--container-max);
   margin: 0 auto;
 }
+
+
+/* === Trash button (Odstranit) – bez podbarvení, svisle zarovnaný === */
+.pill-btn.jobDelete,
+button.pill-btn.jobDelete[title="Odstranit"] {
+  background: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
+
+  display: inline-flex;          /* stejné svislé zarovnání jako sousední “Grafik” */
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;                   /* stejně vysoké jako bubliny kolem */
+  height: 40px;
+  padding: 0;
+  margin-left: 6px;
+  border-radius: 50%;
+  line-height: 1;
+  font-size: 18px;               /* velikost emoji 🗑️ */
+  color: #0f172a;                /* tmavá – stejné jako text */
+  cursor: pointer;
+}
+
+.pill-btn.jobDelete:hover,
+button.pill-btn.jobDelete[title="Odstranit"]:hover {
+  background: #eef2f6;           /* jemný hover, žádný outline */
+}
+
+
+/* Obal tabulky – kotevní bod (pokud už nějaký máš, nevadí) */
+.tableAnchor {
+  position: relative;
+}
+
+/* Tlačítko Přidat zakázku – zarovnej na pravý okraj tabulky a svisle na střed headeru */
+#addJobBtn {
+  position: absolute;
+  right: 0;              /* přesně k pravému okraji tabulky (sloupec Celkem) */
+  top: -56px;            /* výška nad tabulkou – dolaď, podle font-size headeru */
+  transform: translateY(-4px); /* jemné doladění na střed */
+}
+
+/* Stejný pill styl, jen pro jistotu (ponecháš-li svůj původní, tenhle nevadí) */
+#addJobBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 9999px;
+}

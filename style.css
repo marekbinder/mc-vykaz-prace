@@ -1,72 +1,64 @@
-{\rtf1\ansi\ansicpg1250\cocoartf2865
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
-
-\f0\fs24 \cf0 :root\{\
-  --h:36px; --r:999px; --line:#e5e7eb; --muted:#6b7280; --fg:#0f172a; --bg:#fff;\
-  --pill:#111827; --pill-fg:#fff;\
-  --st-new:#dbeafe; --st-pro:#fde68a; --st-done:#bbf7d0;\
-  --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;\
-\}\
-*\{box-sizing:border-box\}\
-body\{margin:0;font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell;background:var(--bg);color:var(--fg)\}\
-.siteHeader,.siteFooter\{max-width:1100px;margin:0 auto;padding:18px 20px;position:relative\}\
-.siteHeader\{display:grid;grid-template-columns:1fr auto 1fr;align-items:center\}\
-.siteHeader h1\{margin:0;font-size:34px;text-align:center;letter-spacing:.3px\}\
-.rightSlot\{position:absolute;right:20px;top:10px;display:flex;gap:8px\}\
-\
-.pill\{height:var(--h);border-radius:var(--r);display:inline-flex;align-items:center;gap:8px;padding:0 14px;border:1px solid var(--line);background:#f3f4f6;font-weight:700\}\
-.pill.dark\{background:var(--pill);color:var(--pill-fg);border:0\}\
-.pill-btn,.pill-input,.pill-select\{height:var(--h);border-radius:var(--r);border:1px solid var(--line);background:#fff;padding:0 14px\}\
-.pill-btn.small\{height:30px;padding:0 10px\}\
-.pill-select\{-webkit-appearance:none;-moz-appearance:none;appearance:none;padding:0 38px 0 14px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");background-repeat:no-repeat;background-position:right 12px center;background-size:12px\}\
-.pill-input:focus,.pill-select:focus,.pill-btn:focus\{box-shadow:0 0 0 4px rgba(59,130,246,.15);outline:none\}\
-\
-.toolbar--grid3\{max-width:1100px;margin:8px auto 18px;padding:0 20px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;column-gap:10px\}\
-.navGroup\{display:flex;gap:10px;justify-content:center;align-items:center\}\
-.toolbarRight\{justify-self:end\}\
-.circle\{width:var(--h);height:var(--h);border-radius:var(--r);display:inline-flex;justify-content:center;align-items:center;border:none;background:transparent;font-weight:800;cursor:pointer\}\
-.circle.ghost:hover\{background:#f3f4f6;border:1px solid var(--line)\}\
-\
-.filters\{max-width:1100px;margin:6px auto 18px;padding:0 20px;display:flex;gap:10px;align-items:center;justify-content:center;color:var(--muted);position:relative\}\
-.addRow\{max-width:1100px;margin:0 auto 18px;padding:0 20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;position:relative\}\
-.addRow--stretch\{max-width:1100px\}\
-.flexGrow\{flex:1;min-width:320px\}\
-\
-.menu\{position:absolute;z-index:10;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.08);padding:10px;display:flex;flex-direction:column;gap:6px;min-width:220px\}\
-.menu label\{display:flex;align-items:center;gap:8px\}\
-.menuRow\{display:flex;gap:8px;justify-content:flex-end;margin-top:6px\}\
-\
-.tableWrap\{max-width:1100px;margin:0 auto 6px;padding:0 20px\}\
-table\{width:100%;border-collapse:separate;border-spacing:0\}\
-thead th\{background:#0f0f10;color:#fff;padding:12px 14px;text-align:left\}\
-thead tr th:first-child\{border-top-left-radius:999px;border-bottom-left-radius:999px\}\
-thead tr th:last-child\{border-top-right-radius:999px;border-bottom-right-radius:999px\}\
-tbody td,tfoot td\{padding:10px 10px\}\
-.clientSel\{min-width:140px\}\
-.jobCell\{display:flex;align-items:center;gap:10px;flex-wrap:wrap\}\
-.jobNameIn\{min-width:220px\}\
-.jobDelete\{margin-left:auto;border:none;background:transparent;cursor:pointer;font-size:18px;line-height:1\}\
-\
-.bubble\{display:inline-flex;justify-content:center;align-items:center;min-width:var(--h);height:var(--h);border-radius:var(--r);background:#e5e7eb;color:#111827;font-weight:800;border:1px solid var(--line)\}\
-.totalCell\{font-weight:800;text-align:center\}\
-\
-.sumBubble\{display:inline-flex;justify-content:center;align-items:center;min-width:var(--h);height:var(--h);border-radius:var(--r);font-weight:800;color:#fff\}\
-.sumRed\{background:#ef4444\}.sumOrange\{background:#f59e0b\}.sumGreen\{background:#22c55e\}\
-\
-/* status pill \'96 centrov\'e1n\'ed + barvy */\
-.statusSel\{ text-align:center; text-align-last:center; padding-top:0; padding-bottom:0; line-height:calc(var(--h) - 2px); \}\
-.statusSel::-ms-value\{ line-height: var(--h); \}\
-.statusSel.is-nova\{background:var(--st-new);border-color:transparent\}\
-.statusSel.is-probiha\{background:var(--st-pro);border-color:transparent\}\
-.statusSel.is-hotovo\{background:var(--st-done);border-color:transparent\}\
-\
-.assigneePill\{height:var(--h);border-radius:var(--r);display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;padding:0 12px\}\
-.assigneeMenu\{left:auto;right:20px;transform:none;\}\
-\
-.badge\{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;padding:0 10px;height:var(--h);border-radius:var(--r);font-size:13px;color:#6b7280\}\
-.err\{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:12px;padding:10px 14px;max-width:90%;box-shadow:0 6px 20px rgba(0,0,0,.12)\}\
+:root{
+  --h:36px; --r:999px; --line:#e5e7eb; --muted:#6b7280; --fg:#0f172a; --bg:#fff;
+  --pill:#111827; --pill-fg:#fff;
+  --st-new:#dbeafe; --st-pro:#fde68a; --st-done:#bbf7d0;
+  --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;
 }
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell;background:var(--bg);color:var(--fg)}
+.siteHeader,.siteFooter{max-width:1100px;margin:0 auto;padding:18px 20px;position:relative}
+.siteHeader{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+.siteHeader h1{margin:0;font-size:34px;text-align:center;letter-spacing:.3px}
+.rightSlot{position:absolute;right:20px;top:10px;display:flex;gap:8px}
+
+.pill{height:var(--h);border-radius:var(--r);display:inline-flex;align-items:center;gap:8px;padding:0 14px;border:1px solid var(--line);background:#f3f4f6;font-weight:700}
+.pill.dark{background:var(--pill);color:var(--pill-fg);border:0}
+.pill-btn,.pill-input,.pill-select{height:var(--h);border-radius:var(--r);border:1px solid var(--line);background:#fff;padding:0 14px}
+.pill-btn.small{height:30px;padding:0 10px}
+.pill-select{-webkit-appearance:none;-moz-appearance:none;appearance:none;padding:0 38px 0 14px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");background-repeat:no-repeat;background-position:right 12px center;background-size:12px}
+.pill-input:focus,.pill-select:focus,.pill-btn:focus{box-shadow:0 0 0 4px rgba(59,130,246,.15);outline:none}
+
+.toolbar--grid3{max-width:1100px;margin:8px auto 18px;padding:0 20px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;column-gap:10px}
+.navGroup{display:flex;gap:10px;justify-content:center;align-items:center}
+.toolbarRight{justify-self:end}
+.circle{width:var(--h);height:var(--h);border-radius:var(--r);display:inline-flex;justify-content:center;align-items:center;border:none;background:transparent;font-weight:800;cursor:pointer}
+.circle.ghost:hover{background:#f3f4f6;border:1px solid var(--line)}
+
+.filters{max-width:1100px;margin:6px auto 18px;padding:0 20px;display:flex;gap:10px;align-items:center;justify-content:center;color:var(--muted);position:relative}
+.addRow{max-width:1100px;margin:0 auto 18px;padding:0 20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;position:relative}
+.addRow--stretch{max-width:1100px}
+.flexGrow{flex:1;min-width:320px}
+
+.menu{position:absolute;z-index:10;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.08);padding:10px;display:flex;flex-direction:column;gap:6px;min-width:220px}
+.menu label{display:flex;align-items:center;gap:8px}
+.menuRow{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+
+.tableWrap{max-width:1100px;margin:0 auto 6px;padding:0 20px}
+table{width:100%;border-collapse:separate;border-spacing:0}
+thead th{background:#0f0f10;color:#fff;padding:12px 14px;text-align:left}
+thead tr th:first-child{border-top-left-radius:999px;border-bottom-left-radius:999px}
+thead tr th:last-child{border-top-right-radius:999px;border-bottom-right-radius:999px}
+tbody td,tfoot td{padding:10px 10px}
+.clientSel{min-width:140px}
+.jobCell{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.jobNameIn{min-width:220px}
+.jobDelete{margin-left:auto;border:none;background:transparent;cursor:pointer;font-size:18px;line-height:1}
+
+.bubble{display:inline-flex;justify-content:center;align-items:center;min-width:var(--h);height:var(--h);border-radius:var(--r);background:#e5e7eb;color:#111827;font-weight:800;border:1px solid var(--line)}
+.totalCell{font-weight:800;text-align:center}
+
+.sumBubble{display:inline-flex;justify-content:center;align-items:center;min-width:var(--h);height:var(--h);border-radius:var(--r);font-weight:800;color:#fff}
+.sumRed{background:#ef4444}.sumOrange{background:#f59e0b}.sumGreen{background:#22c55e}
+
+/* status pill – centrování + barvy */
+.statusSel{ text-align:center; text-align-last:center; padding-top:0; padding-bottom:0; line-height:calc(var(--h) - 2px); }
+.statusSel::-ms-value{ line-height: var(--h); }
+.statusSel.is-nova{background:var(--st-new);border-color:transparent}
+.statusSel.is-probiha{background:var(--st-pro);border-color:transparent}
+.statusSel.is-hotovo{background:var(--st-done);border-color:transparent}
+
+.assigneePill{height:var(--h);border-radius:var(--r);display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;padding:0 12px}
+.assigneeMenu{left:auto;right:20px;transform:none;}
+
+.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;padding:0 10px;height:var(--h);border-radius:var(--r);font-size:13px;color:#6b7280}
+.err{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:12px;padding:10px 14px;max-width:90%;box-shadow:0 6px 20px rgba(0,0,0,.12)}

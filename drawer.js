@@ -1,20 +1,19 @@
-/* ===== Drawer v2 – robustní init, injekce „+“ a tvrdé skrytí user boxu ===== */
+/* ===== Drawer v2.1 – default hidden, robustní open/close, schování user boxu ===== */
 (function () {
   const READY = () => /complete|interactive/.test(document.readyState);
 
-  /* Tvrdá style injekce (pro případ, že se CSS nenačte dřív) */
+  // jistota schování boxu s e-mailem
   (function ensureStyle() {
     if (!document.getElementById('drawerHardStyle')) {
       const st = document.createElement('style');
       st.id = 'drawerHardStyle';
       st.textContent = `
-        #userBoxTopRight { display:none !important; visibility:hidden !important; pointer-events:none !important; }
+        #userBoxTopRight{display:none!important;visibility:hidden!important;pointer-events:none!important}
       `;
       document.head.appendChild(st);
     }
   })();
 
-  /* Opakovaně schovávej e-mail/odhlásit, kdyby app re-renderovala */
   const hideTopRightBox = () => {
     const box = document.getElementById('userBoxTopRight');
     if (box) {
@@ -26,7 +25,6 @@
     }
   };
 
-  /* Injekce a udržování tlačítka „+“ */
   const injectPlus = () => {
     let btn = document.getElementById('openDrawerBtn');
     if (!btn) {
@@ -37,17 +35,19 @@
       btn.textContent = '+';
       document.body.appendChild(btn);
     }
-    // jistota pozice i po reflow
+    // Jistota pozice (kdyby kdokoli přepsal styl)
     btn.style.cssText += ';position:fixed;top:16px;right:16px;z-index:2147483647;';
     return btn;
   };
 
-  /* Vytvoření panelu a obsahu */
   const ensureDrawer = () => {
+    // pro jistotu odstraníme staré instance (kdyby vznikly duplicity)
+    document.querySelectorAll('.drawer').forEach((d, i) => { if (i > 0) d.remove(); });
+
     let drawer = document.querySelector('.drawer');
     if (!drawer) {
       drawer = document.createElement('aside');
-      drawer.className = 'drawer';
+      drawer.className = 'drawer';              // <- defaultně skrytý (viz CSS)
       drawer.innerHTML = `
         <div class="drawer__scrim" aria-hidden="true"></div>
         <div class="drawer__panel" role="dialog" aria-modal="true" aria-label="Nástroje">
@@ -58,7 +58,11 @@
           <div class="drawer__body"></div>
         </div>`;
       document.body.appendChild(drawer);
+    } else {
+      // kdyby náhodou dorazil už otevřený: zavřít
+      drawer.classList.remove('open');
     }
+
     const body = drawer.querySelector('.drawer__body');
 
     const ensureSection = (sel, html) => {
@@ -89,7 +93,7 @@
       </div>
     `);
 
-    // copy helper (bez chyb, když zdroj není)
+    // zkusíme nakopírovat options do selectů (pokud existují zdroje)
     const copyOptions = (fromSel, toSel) => {
       const from = document.querySelector(fromSel);
       const to   = drawer.querySelector(toSel);
@@ -98,19 +102,21 @@
         to.value = from.value;
       }
     };
-
-    // pokud máš zdrojové selecty, nastav jim data-source atributy
+    // TIP: přidej data-source na původní selecty v app (client/status/assignee)
     copyOptions('[data-source="client-list"]',   '#jobClientSel');
     copyOptions('[data-source="status-list"]',   '#jobStatusSel');
     copyOptions('[data-source="assignee-list"]', '#jobAssigneeSel');
 
-    // selecty vždy klikatelné
+    // selecty vždy klikatelně nad scrimem
     drawer.querySelectorAll('select').forEach(s => {
       s.disabled = false;
       s.style.pointerEvents = 'auto';
       s.style.position = 'relative';
       s.style.zIndex = 1004;
     });
+
+    // jistota – po vytvoření je opravdu skrytý
+    drawer.classList.remove('open');
 
     return drawer;
   };
@@ -122,35 +128,41 @@
 
     const open = () => {
       drawer.classList.add('open');
-      requestAnimationFrame(() => { try { panel.focus({ preventScroll: true }); } catch(_){} });
+      requestAnimationFrame(() => { try { panel.focus({ preventScroll:true }); } catch(_){} });
     };
     const close = () => drawer.classList.remove('open');
 
     plusBtn.addEventListener('click', open);
     scrim .addEventListener('click', close);
     closeBtn.addEventListener('click', close);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && drawer.classList.contains('open')) close(); });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && drawer.classList.contains('open')) close();
+    });
   };
 
   const boot = () => {
-    hideTopRightBox();                    // okamžitě pryč
-    const plus = injectPlus();            // ať je vždy
-    const drawer = ensureDrawer();        // panel + obsah
+    hideTopRightBox();
+
+    const plus = injectPlus();
+    const drawer = ensureDrawer();
     wireOpenClose(drawer, plus);
 
-    // opakované pojistky (kdyby app něco překreslovala)
+    // udržuj stav, kdyby app re-renderovala
     let n = 0;
     const keep = setInterval(() => {
       injectPlus();
       hideTopRightBox();
+      drawer.classList.remove('open');  // <- kdyby ho někdo po loadu „otevřel“
       if (++n > 30) clearInterval(keep);
     }, 300);
 
     const mo = new MutationObserver(() => {
       hideTopRightBox();
       injectPlus();
+      drawer.classList.remove('open');  // <- jistota
     });
-    mo.observe(document.documentElement, { childList: true, subtree: true });
+    mo.observe(document.documentElement, { childList:true, subtree:true });
   };
 
   if (READY()) boot();

@@ -272,22 +272,49 @@ function resolveDisplayName(email) {
   return email.split('@')[0];
 }
 
-// export do excelu (vynechá řádky bez hodin v týdnu) — s prázdným řádkem a tučným součtem, bez "Celkem"
+// export do excelu (vynechá řádky bez hodin v týdnu) — bez "Celkem",
+// s prázdným řádkem a tučným součtem na konci + jméno v hlavičce i názvu souboru
 async function exportExcel() {
-  // --- helper: vezme jméno z tvé mapy/funkce, jinak z části před '@' ---
-  function resolveDisplayName(email) {
-    if (!email || typeof email !== 'string') return 'Neznámý';
-    // 1) tvoje připravená funkce (pokud existuje)
-    if (typeof nameFromEmail === 'function') {
-      const n = nameFromEmail(email);
-      if (n && typeof n === 'string' && n.trim()) return n.trim();
+  // --- Bezpečné určení zobrazovaného jména ---
+  function resolveDisplayName(rawEmail) {
+    const email = (rawEmail || '').trim();
+    if (!email) return 'Neznámý';
+
+    // 1) zkus tvoji funkci (lokální/globalThis/window – podle bundleru)
+    const fnCandidates = [
+      (typeof nameFromEmail !== 'undefined' && nameFromEmail) || null,
+      (typeof globalThis !== 'undefined' && globalThis.nameFromEmail) || null,
+      (typeof window !== 'undefined' && window.nameFromEmail) || null,
+    ].filter(f => typeof f === 'function');
+
+    for (const fn of fnCandidates) {
+      try {
+        const n = fn(email);
+        if (n && typeof n === 'string' && n.trim()) return n.trim();
+      } catch (_) {}
     }
-    // 2) tvoje mapa (pokud je dostupná)
-    if (typeof USER_NAME_BY_EMAIL === 'object' && USER_NAME_BY_EMAIL) {
-      const key = email.toLowerCase().trim();
-      if (USER_NAME_BY_EMAIL[key]) return USER_NAME_BY_EMAIL[key];
+
+    // 2) zkus tvoji mapu (lokální/globalThis/window)
+    const mapCandidates = [
+      (typeof USER_NAME_BY_EMAIL !== 'undefined' && USER_NAME_BY_EMAIL) || null,
+      (typeof globalThis !== 'undefined' && globalThis.USER_NAME_BY_EMAIL) || null,
+      (typeof window !== 'undefined' && window.USER_NAME_BY_EMAIL) || null,
+    ].filter(m => m && typeof m === 'object');
+
+    const key = email.toLowerCase();
+    for (const m of mapCandidates) {
+      if (m[key]) return m[key];
     }
-    // 3) fallback
+
+    // 3) poslední záchrana – interní fallback, aby to VŽDY zobrazilo jméno
+    const FALLBACK = {
+      'binder.marek@gmail.com': 'Marek',
+      'grafika@media-consult.cz': 'Viki',
+      'stanislav.hron@icloud.com': 'Standa',
+    };
+    if (FALLBACK[key]) return FALLBACK[key];
+
+    // 4) úplný fallback: část před @
     return email.split('@')[0];
   }
 
@@ -300,7 +327,7 @@ async function exportExcel() {
     .filter(j => (state.filterStatus === 'ALL' || String(j.status_id) === String(state.filterStatus)))
     .filter(j => jobPassesAssigneeFilter(j));
 
-  // jen joby, které mají v týdnu nějaké hodiny
+  // jen joby s hodinami v týdnu
   const withHours = visible.filter(j => daysISO.some(d => (cellValue(j.id, d) || 0) > 0));
 
   // jméno uživatele
@@ -329,7 +356,7 @@ async function exportExcel() {
   for (const j of withHours) {
     const vals = daysISO.map(d => cellValue(j.id, d) || 0);
     const row = ws.addRow([j.client, j.name, ...vals]);
-    // volitelně formát hodin
+    // číselný formát hodin
     for (let i = 0; i < vals.length; i++) {
       row.getCell(3 + i).numFmt = '0.##';
     }
@@ -344,11 +371,11 @@ async function exportExcel() {
     sumRow.getCell(3 + i).numFmt = '0.##';
   }
 
-  // rozumné šířky sloupců
+  // šířky sloupců
   ws.columns = [
     { width: 28 }, // Klient
     { width: 36 }, // Zakázka
-    ...daysISO.map(() => ({ width: 12 })), // jednotlivé dny
+    ...daysISO.map(() => ({ width: 12 })),
   ];
 
   // název souboru: Vykaz_{Jmeno}_{DD-MM-YYYY}–{DD-MM-YYYY}.xlsx

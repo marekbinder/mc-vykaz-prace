@@ -113,25 +113,20 @@
 
   <div id="err" class="toast" style="display:none"></div>
 
-  <script src="app.js"></script>
-  <script src="drawer.js"></script>
-
-  <!-- === FAB + DRAWER (Nástroje) ==================================== -->
-<button id="toolsFab" title="Nástroje">+</button>
+ <!-- === FAB + DRAWER (Nástroje) ==================================== -->
+<button id="toolsFab" data-open-drawer title="Nástroje">+</button>
 <div id="toolsBackdrop" aria-hidden="true"></div>
 
 <aside id="toolsDrawer" aria-hidden="true" role="dialog" aria-label="Nástroje">
   <div class="toolsHead">
     <div class="toolsTitle">Nástroje</div>
-    <button id="toolsClose" aria-label="Zavřít"></button>
+    <button id="toolsClose" data-close-drawer aria-label="Zavřít"></button>
   </div>
 
   <div class="toolsBody">
     <!-- Přidání zakázky -->
     <div class="toolsSection">
       <h3>Přidání zakázky</h3>
-
-      <!-- zachováváme STEJNÁ ID, která tvé app.js už používá -->
       <select id="newJobClient" class="pill-select"></select>
       <input  id="newJobName"   class="pill-input"  placeholder="Název zakázky" />
       <select id="newJobStatus" class="pill-select">
@@ -139,12 +134,6 @@
         <option value="RUN">Probíhá</option>
         <option value="DONE">Hotovo</option>
       </select>
-
-      <!-- pokud tvé app.js pole nepotřebuje, ignoruje ho; ponecháme tu jen pro budoucno
-      <select id="newJobAssignee" class="pill-select">
-        <option value="NONE">Grafik: nikdo</option>
-      </select> -->
-
       <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
     </div>
 
@@ -163,6 +152,9 @@
   </div>
 </aside>
 <!-- ================================================================ -->
-  
+
+<!-- Scripts (order matters: app.js first, then drawer.js) -->
+<script src="app.js" defer></script>
+<script src="drawer.js" defer></script>
 </body>
 </html>

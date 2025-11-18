@@ -18,19 +18,6 @@ const state = {
   newJobAssignees: []
 };
 
-// --- Jména do exportu (email -> zobrazované jméno) ---
-const USER_NAME_BY_EMAIL = {
-  'binder.marek@gmail.com': 'Marek',
-  'grafika@media-consult.cz': 'Viki',
-  'stanislav.hron@icloud.com': 'Standa',
-};
-
-// Vrátí hezké jméno k e-mailu (fallback: část před @)
-function nameFromEmail(email) {
-  if (!email || typeof email !== 'string') return '';
-  const key = email.toLowerCase().trim();
-  return USER_NAME_BY_EMAIL[key] || key.split('@')[0];
-}
 
 
 // ==== HELPERY ====

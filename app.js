@@ -78,6 +78,7 @@ async function ensureProfile(){
 }
 async function loadClients(){ const {data,error}=await state.sb.from('client').select('id,name').order('name'); if(error) showErr(error); return data||[]; }
 async function loadStatuses(){ const {data,error}=await state.sb.from('job_status').select('id,label').order('id'); if(error) showErr(error); return data||[]; }
+// Načtení jobů bez relací + hodin zvlášť
 async function loadJobs() {
   // 1) joby bez relací
   const { data: jobs, error: jErr } = await state.sb
@@ -87,38 +88,14 @@ async function loadJobs() {
 
   if (jErr) { showErr(jErr); return []; }
 
-  const ids = (jobs || []).map(j => j.id);
-  let hoursByJob = {};
-  if (ids.length) {
-    // 2) hodiny zvlášť přes IN(...)
-    const { data: rows, error: hErr } = await state.sb
-      .from('job_hour')
-      .select('job_id,date,hours')
-      .in('job_id', ids);
+  // 2) hodiny zvlášť
+  const ids = jobs.map(j => j.id);
+  const hoursMap = await fetchJobHoursByJobIds(ids);
 
-    if (hErr) showErr(hErr);
-    (rows || []).forEach(r => {
-      (hoursByJob[r.job_id] ||= []).push({ date: r.date, hours: r.hours });
-    });
-  }
+  // 3) spojit s názvem klienta z již načtených state.clients
+  const merged = attachHoursAndClient(jobs, hoursMap, state.clients);
 
-  // 3) mapování klientů z již načteného state.clients (není třeba relace)
-  const clientMap = new Map((state.clients || []).map(c => [String(c.id), c.name]));
-
-  // 4) výsledná struktura pro UI
-  return (jobs || []).map(j => ({
-    id: j.id,
-    name: j.name,
-    status_id: j.status_id,
-    client_id: j.client_id,
-    client: clientMap.get(String(j.client_id)) || '',
-    assignees: Array.isArray(j.assignees) ? j.assignees : [],
-    hours: hoursByJob[j.id] || []
-  }));
-}
-function cellValue(jobId, dayISO){
-  const j = state.jobs.find(x=>x.id===jobId); if(!j) return 0;
-  const h = j.hours?.find(r=>r.date===dayISO); return h ? (h.hours||0) : 0;
+  return merged;
 }
 
 /* ====== UI: TABULKA & FILTRY ====== */

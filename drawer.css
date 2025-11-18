@@ -1,10 +1,10 @@
-/* ===== Drawer (postranní panel) – kompletní ===== */
+/* ===== Drawer – kompletní ===== */
 
 .drawer {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  pointer-events: none;           /* defaultně neinteraktivní */
+  pointer-events: none;
 }
 
 .drawer__scrim {
@@ -28,7 +28,7 @@
   box-shadow: -24px 0 40px rgb(0 0 0 / 18%), -8px 0 24px rgb(0 0 0 / 12%);
   display: flex;
   flex-direction: column;
-  z-index: 1002;                  /* panel je NAD scrimem */
+  z-index: 1002;             /* panel nad scrimem */
   pointer-events: auto;
 }
 
@@ -69,10 +69,8 @@
   flex: 1 1 auto;
 }
 
-.drawer__section {
-  margin-bottom: 28px;
-}
-
+/* Sekce + formuláře */
+.drawer__section { margin-bottom: 28px; }
 .drawer__section h3 {
   font-size: 14px;
   letter-spacing: .02em;
@@ -86,12 +84,7 @@
   grid-template-columns: 1fr;
   gap: 12px;
 }
-
-.form-stack .control {
-  position: relative;
-  z-index: 0;                     /* stacking context pro selecty */
-}
-
+.form-stack .control { position: relative; z-index: 1003; }
 .form-stack select,
 .form-stack input {
   width: 100%;
@@ -104,11 +97,8 @@
   color: #0b1523;
   outline: none;
 }
-
 .form-stack select:focus,
-.form-stack input:focus {
-  border-color: #0b1523;
-}
+.form-stack input:focus { border-color: #0b1523; }
 
 .btn-primary {
   display: inline-flex;
@@ -130,16 +120,15 @@
 .drawer.open .drawer__scrim { opacity: 1; pointer-events: auto; }
 .drawer.open .drawer__panel { transform: translateX(0); }
 
-/* Selecty vždy nad scrimem i na iOS */
-.drawer .control { position: relative; z-index: 1003; }
+/* Selecty musí být vždy klikatelně nad scrimem (i na iOS) */
 .drawer select { position: relative; z-index: 1004; }
 
-/* ===== Plovoucí „+“ tlačítko (vpravo nahoře) ===== */
+/* ===== Plovoucí „+“ (spouštěč) – extrémní z-index, aby šel vždy stisknout ===== */
 #openDrawerBtn {
   position: fixed;
   top: 16px;
   right: 16px;
-  z-index: 1100;
+  z-index: 2147483647; /* > vše */
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -155,4 +144,4 @@
 }
 #openDrawerBtn:focus { outline: 3px solid rgba(11,21,35,.25); }
 
-/* ŽÁDNÝ skrytý gradient/stín v zavřeném stavu – nic dalšího netřeba */
+/* ŽÁDNÝ gradient/stín v zavřeném stavu – scrim je prostě neviditelný */

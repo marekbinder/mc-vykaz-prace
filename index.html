@@ -115,5 +115,54 @@
 
   <script src="app.js"></script>
   <script src="drawer.js"></script>
+
+  <!-- === FAB + DRAWER (Nástroje) ==================================== -->
+<button id="toolsFab" title="Nástroje">+</button>
+<div id="toolsBackdrop" aria-hidden="true"></div>
+
+<aside id="toolsDrawer" aria-hidden="true" role="dialog" aria-label="Nástroje">
+  <div class="toolsHead">
+    <div class="toolsTitle">Nástroje</div>
+    <button id="toolsClose" aria-label="Zavřít"></button>
+  </div>
+
+  <div class="toolsBody">
+    <!-- Přidání zakázky -->
+    <div class="toolsSection">
+      <h3>Přidání zakázky</h3>
+
+      <!-- zachováváme STEJNÁ ID, která tvé app.js už používá -->
+      <select id="newJobClient" class="pill-select"></select>
+      <input  id="newJobName"   class="pill-input"  placeholder="Název zakázky" />
+      <select id="newJobStatus" class="pill-select">
+        <option value="NEW">Nová</option>
+        <option value="RUN">Probíhá</option>
+        <option value="DONE">Hotovo</option>
+      </select>
+
+      <!-- pokud tvé app.js pole nepotřebuje, ignoruje ho; ponecháme tu jen pro budoucno
+      <select id="newJobAssignee" class="pill-select">
+        <option value="NONE">Grafik: nikdo</option>
+      </select> -->
+
+      <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
+    </div>
+
+    <!-- Přidání klienta -->
+    <div class="toolsSection">
+      <h3>Přidání klienta</h3>
+      <input  id="newClientName" class="pill-input" placeholder="Název klienta" />
+      <button id="addClientBtn"  class="pill-btn">Přidat klienta</button>
+    </div>
+
+    <!-- Odhlášení -->
+    <div class="toolsSection">
+      <h3>Účet</h3>
+      <button id="logoutBtn" class="pill-btn">Odhlásit</button>
+    </div>
+  </div>
+</aside>
+<!-- ================================================================ -->
+  
 </body>
 </html>

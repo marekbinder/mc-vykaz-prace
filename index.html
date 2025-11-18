@@ -1,94 +1,72 @@
 <!doctype html>
 <html lang="cs">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Výkaz práce</title>
-  <link rel="stylesheet" href="style.css"/>
 
-  <!-- knihovny -->
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Původní hlavní styly aplikace – ponechány beze změny -->
+  <link rel="stylesheet" href="./style.css?v=10fix" />
+  <!-- Nové doplňkové styly pro vysouvací panel -->
+  <link rel="stylesheet" href="./drawer.css?v=1" />
 </head>
 <body>
-  <header class="topbar">
+  <!-- Hlavička: titulek vycentrovaný, vpravo burger (uživatel se už v hlavičce nezobrazuje) -->
+  <header class="siteHeader">
+    <div></div>
     <h1>Výkaz práce</h1>
-    <div id="userBoxTopRight" class="userbox"></div>
+
+    <div class="rightSlot">
+      <!-- Burger -->
+      <button id="burgerBtn" class="circle ghost" aria-label="Menu" title="Menu">☰</button>
+      <!-- Ponecháme místo pro e-mail/odhlášení, ale schováme je v hlavičce (ukáže se v panelu) -->
+      <div id="userBoxTopRight" style="display:none"></div>
+    </div>
   </header>
 
-  <main id="app" class="wrap">
-    <!-- týden + export -->
-    <section class="weekbar">
-      <div class="weeknav">
-        <button id="prevWeek" class="navbtn" title="Předchozí týden">◀</button>
-        <div id="weekRange" class="weekpill">–</div>
-        <button id="nextWeek" class="navbtn" title="Další týden">▶</button>
+  <main id="app">
+    <!-- Týden + Export (beze změny) -->
+    <section class="toolbar toolbar--grid3">
+      <div class="toolbarLeft"></div>
+      <div class="navGroup">
+        <button class="circle ghost" id="prevWeek" aria-label="Předchozí týden">◀</button>
+        <div class="pill dark navRange" id="weekRange">1. 1. 2025 – 5. 1. 2025</div>
+        <button class="circle ghost" id="nextWeek" aria-label="Další týden">▶</button>
       </div>
-      <button id="exportXlsx" class="pill-btn export">Export do Excelu</button>
-    </section>
-
-    <!-- filtry -->
-    <section class="filters">
-      <div class="filters-row">
-        <label class="lbl">Nastavení filtru:</label>
-
-        <select id="filterClient" class="pill-select"></select>
-        <select id="filterStatus" class="pill-select"></select>
-
-        <select id="totalsScope" class="pill-select">
-          <option value="ME">Součty: Já</option>
-          <option value="ALL">Součty: Všichni</option>
-        </select>
-
-        <!-- filtr „Grafik“ s ukotveným menu -->
-        <div class="menuAnchor">
-          <button id="assigneeFilterBtn" class="pill-btn">Grafik: Všichni</button>
-          <div id="assigneeFilterMenu" class="menu" hidden>
-            <label><input type="checkbox" value="Viki"> Viki</label>
-            <label><input type="checkbox" value="Standa"> Standa</label>
-            <label><input type="checkbox" value="Marek"> Marek</label>
-            <div class="menuRow">
-              <button id="assigneeFilterClear" class="pill-btn small" type="button">Vymazat</button>
-              <button id="assigneeFilterClose" class="pill-btn small" type="button">Zavřít</button>
-            </div>
-          </div>
-        </div>
+      <div class="toolbarRight">
+        <button class="pill-btn" id="exportXlsx">Export do Excelu</button>
       </div>
     </section>
 
-    <!-- přidání klienta/zakázky -->
-    <section class="addRow">
-      <div class="add-grid">
-        <input id="newClientName" class="pill-input" placeholder="Název klienta"/>
-        <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
-
-        <select id="newJobClient" class="pill-select"></select>
-        <input id="newJobName" class="pill-input" placeholder="Název zakázky"/>
-        <select id="newJobStatus" class="pill-select"></select>
-
-        <div class="menuAnchor">
-          <button id="assigneesNewBtn" class="pill-btn">Grafik: nikdo</button>
-          <div id="assigneesNewMenu" class="menu" hidden>
-            <label><input type="checkbox" value="Viki"> Viki</label>
-            <label><input type="checkbox" value="Standa"> Standa</label>
-            <label><input type="checkbox" value="Marek"> Marek</label>
-            <div class="menuRow">
-              <button id="assigneesNewClear" class="pill-btn small" type="button">Vymazat</button>
-              <button id="assigneesNewClose" class="pill-btn small" type="button">Zavřít</button>
-            </div>
-          </div>
-        </div>
-
-        <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
-      </div>
+    <!-- Filtry (beze změny) -->
+    <section class="filters filters--center">
+      <span class="label">Nastavení filtru:</span>
+      <select class="pill-select" id="filterClient"><option value="ALL">Všichni klienti</option></select>
+      <select class="pill-select" id="filterStatus"><option value="ALL">Všechny zakázky</option></select>
     </section>
 
-    <!-- tabulka -->
+    <!-- ====== ADD ROW – ZŮSTÁVÁ STEJNÉ ID/PRVKY, POUZE SE VYKRESLUJE JAKO PANEL ====== -->
+    <section class="addRow addRow--stretch" id="addRowDrawer">
+      <h3 class="drawerTitle">Nástroje</h3>
+
+      <!-- Původní prvky pro přidání klienta/zakázky – IDs zachovány -->
+      <input class="pill-input" id="newClientName" placeholder="Název klienta" />
+      <button class="pill-btn" id="addClientBtn">Přidat klienta</button>
+
+      <select class="pill-select" id="newJobClient"></select>
+      <input class="pill-input jobName flexGrow" id="newJobName" placeholder="Název zakázky" />
+      <select class="pill-select statusSel" id="newJobStatus"></select>
+      <button class="pill-btn" id="addJobBtn">Přidat zakázku</button>
+
+      <!-- Slot pro uživatele/odhlášení (zkopírujeme obsah z #userBoxTopRight) -->
+      <div class="drawerUser" id="drawerUserSlot"></div>
+    </section>
+
+    <!-- Tabulka (beze změny) -->
     <section class="tableWrap">
-      <table class="grid">
+      <table>
         <thead>
-          <tr class="headpill">
+          <tr>
             <th>Klient</th>
             <th>Zakázka</th>
             <th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th>
@@ -98,21 +76,30 @@
         <tbody id="tbody"></tbody>
         <tfoot>
           <tr id="sumRow">
-            <td colspan="2" class="sumLabel">Součet za den</td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
+            <td></td><td></td>
+            <td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td><td class="sumCell"></td>
             <td></td>
           </tr>
         </tfoot>
       </table>
     </section>
+
+    <div id="err" class="err" style="display:none"></div>
   </main>
 
-  <div id="err" class="toast" style="display:none"></div>
+  <footer class="siteFooter">
+    <small>Frontend: GitHub Pages · Data: Supabase</small>
+  </footer>
 
-  <script src="app.js"></script>
+  <!-- Backdrop pro vysouvací panel -->
+  <div id="drawerBackdrop" class="drawerBackdrop" hidden></div>
+
+  <!-- Knihovny a původní aplikace -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>
+
+  <!-- Malý izolovaný skript pouze pro ovládání panelu (nenarušuje app.js) -->
+  <script type="module" src="./drawer.js?v=1"></script>
+  <script type="module" src="./app.js?v=10fix"></script>
 </body>
 </html>

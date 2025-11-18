@@ -357,6 +357,24 @@ section.addRow,
 }
 #toolsBackdrop.show { opacity: 1; pointer-events: auto; }
 
+/* drawer */
+#toolsDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(420px, 92vw);
+  background: #fff;
+  box-shadow: -14px 0 30px rgba(0,0,0,.25);
+  transform: translateX(100%);
+  transition: transform .22s ease;
+  z-index: 1101;
+  display: flex;
+  flex-direction: column;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  will-change: transform;
+}
 
 /* hlavička */
 .toolsHead {
@@ -385,95 +403,5 @@ section.addRow,
   margin: 8px 0;
 }
 
-/* ===== Drawer – přídavek (umístit na konec style.css) =================== */
-
-/* Plovoucí tlačítko + */
-.fab {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
-  border: 0;
-  font: inherit;
-  font-weight: 700;
-  background: #0b1323;
-  color: #fff;
-  box-shadow: 0 6px 18px rgba(0,0,0,.25);
-  cursor: pointer;
-  z-index: 1100;
-}
-
-/* Poloprůhledné pozadí */
-#drawerOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.35);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s ease;
-  z-index: 1000;       /* POD panelem */
-}
-#drawerOverlay.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Samotný panel */
-#toolsDrawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: 420px;
-  max-width: 92vw;
-  background: #fff;
-  transform: translateX(100%);
-  transition: transform .25s ease;
-  box-shadow: -10px 0 28px rgba(0,0,0,.18);
-  z-index: 1010;       /* NAD overlayem */
-  display: flex;
-  flex-direction: column;
-}
-#toolsDrawer.open {
-  transform: translateX(0);
-}
-
-.drawer-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 18px;
-  border-bottom: 1px solid rgba(0,0,0,.06);
-}
-.drawer-head h3 { margin: 0; font-size: 18px; }
-.icon-btn {
-  border: 0; background: transparent; font-size: 28px; line-height: 1; cursor: pointer;
-}
-
-.drawer-sec {
-  padding: 16px 18px;
-  border-bottom: 1px solid rgba(0,0,0,.06);
-}
-.drawer-sec h4 { margin: 0 0 10px; font-size: 14px; opacity: .7; }
-
-/* Pomocné UI – navazuje na tvoje "pill" styly */
-.pill-input, .pill-select, .pill-btn {
-  width: 100%;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,.08);
-  padding: 12px 14px;
-  font: inherit;
-}
-.pill-select { appearance: none; background: #fff; }
-.pill-btn { border: 0; background: #e9eef6; cursor: pointer; }
-.pill-btn.accent { background: #0b1323; color: #fff; }
-
-/* Přístupnost: vizuálně skryté labely */
-.sr-only {
-  position: absolute !important;
-  height: 1px; width: 1px;
-  overflow: hidden; clip: rect(1px, 1px, 1px, 1px);
-  white-space: nowrap;
-}
+/* stav otevření */
+#toolsDrawer.open { transform: translateX(0); }

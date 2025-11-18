@@ -1,113 +1,141 @@
-// drawer.js – sidebar “Nástroje” + hydratace selectů v přidání zakázky
-(function () {
-  const onReady = (fn) => {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', fn, { once: true });
-    } else fn();
-  };
+/* drawer.js — kompletní verze */
 
-  onReady(() => {
-    const qs  = (s, r = document) => r.querySelector(s);
-    const drawer   = qs('#toolsDrawer');
-    const backdrop = qs('#toolsBackdrop');
-    const fab      = qs('#toolsFab');
-    const closeBtn = qs('#toolsClose');
-    const mainLike = qs('main, #app, .wrap, body');   // pro inert
+/* Helpers */
+const $ = (sel, root = document) => root.querySelector(sel);
+const on = (el, ev, fn, opts) => el && el.addEventListener(ev, fn, opts);
 
-    if (!drawer || !backdrop || !fab) {
-      console.warn('[drawer] Chybí DOM prvky (drawer/backdrop/fab).');
-      return;
-    }
+/* DOM */
+const drawer    = $('#toolsDrawer');
+const overlay   = $('#drawerOverlay');
+const openBtn   = $('#openDrawerBtn');   // kulaté + vpravo nahoře
+const closeBtn  = $('#drawerCloseBtn');  // křížek v hlavičce panelu
 
-    // zdroje (filtry na hlavní stránce) → cíle (selecty v panelu)
-    const SRC_CLIENT = '#filterClient';
-    const SRC_STATUS = '#filterStatus';
-    const DST_CLIENT = '#newJobClient';
-    const DST_STATUS = '#newJobStatus';
+/* Ovládací prvky uvnitř panelu */
+const selNewJobClient = $('#newJobClient');   // select klientů
+const selNewJobStatus = $('#newJobStatus');   // select statusu
+const inpNewJobName   = $('#newJobName');     // input názvu
+const btnAddJob       = $('#addJobBtn');
 
-    function copyOptions(srcSel, dstSel, { skip = [] } = {}) {
-      const src = qs(srcSel);
-      const dst = qs(dstSel);
-      if (!src || !dst) return;
+const inpNewClientName = $('#newClientName');
+const btnAddClient     = $('#addClientBtn');
 
-      // pokud už cíl má data, nepřepisujeme
-      if (dst.options && dst.options.length) return;
+/* Zdroj pro naplnění klientů – přebereme hotové options z horního filtru */
+const filterClient = $('#filterClient'); // existuje na stránce, plní ho app.js
 
-      const opts = Array.from(src.options || []);
-      const frag = document.createDocumentFragment();
-      opts.forEach(o => {
-        const v = String(o.value ?? '');
-        if (skip.includes(v)) return;
-        const n = document.createElement('option');
-        n.value = v;
-        n.textContent = o.textContent || v;
-        frag.appendChild(n);
-      });
-      if (frag.childNodes.length) {
-        dst.innerHTML = '';
-        dst.appendChild(frag);
-      }
-    }
+/* Stav */
+let isOpen = false;
 
-    function hydrate() {
-      copyOptions(SRC_CLIENT, DST_CLIENT, { skip: ['ALL'] });
-      copyOptions(SRC_STATUS, DST_STATUS, { skip: ['ALL'] });
+/* ---------- Populate ---------- */
 
-      // jistota: povolíme selecty (kdyby někde zůstaly disabled)
-      const c = qs(DST_CLIENT);
-      const s = qs(DST_STATUS);
-      if (c) c.disabled = false;
-      if (s) s.disabled = false;
-    }
+/** Naplní <select> #newJobClient z horního filtru #filterClient (ignoruje ALL) */
+function populateClientsIntoDrawer() {
+  if (!selNewJobClient) return;
+  if (!filterClient || !filterClient.options || filterClient.options.length === 0) return;
 
-    function open() {
-      hydrate();
+  const opts = [];
+  for (const opt of filterClient.options) {
+    if (opt.value === 'ALL') continue;
+    opts.push(`<option value="${opt.value}">${opt.textContent}</option>`);
+  }
+  selNewJobClient.innerHTML = opts.join('') || '<option disabled>— žádní klienti —</option>';
+}
 
-      drawer.classList.add('open');
-      backdrop.classList.add('show');
+/** Volitelné: doplnění statusů, pokud nejsou v HTML napevno */
+function ensureJobStatuses() {
+  if (!selNewJobStatus) return;
+  if (selNewJobStatus.options.length > 0) return; // už je naplněno
+  const statuses = [
+    { value: 'NEW',    label: 'Nová' },
+    { value: 'RUN',    label: 'Probíhá' },
+    { value: 'DONE',   label: 'Hotovo' }
+  ];
+  selNewJobStatus.innerHTML = statuses.map(s => `<option value="${s.value}">${s.label}</option>`).join('');
+}
 
-      // ARIA / fokus / “zbytek stránky”
-      drawer.removeAttribute('aria-hidden');
-      if (mainLike) mainLike.setAttribute('inert', '');
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
+/* ---------- Drawer toggle ---------- */
 
-      // focus na první ovládací prvek
-      const first = qs(DST_CLIENT) || qs('#toolsClose');
-      if (first) setTimeout(() => first.focus(), 15);
-    }
+function openDrawer() {
+  if (!drawer || !overlay) return;
 
-    function close() {
-      drawer.classList.remove('open');
-      backdrop.classList.remove('show');
+  // Naplníme klienty vždy při otevření (kdyby se mezitím změnili nahoře)
+  populateClientsIntoDrawer();
+  ensureJobStatuses();
 
-      // vrátit ARIA/inert/scroll
-      drawer.setAttribute('aria-hidden', 'true');
-      if (mainLike) mainLike.removeAttribute('inert');
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-      fab?.focus();
-    }
+  // Viditelnost
+  drawer.classList.add('open');
+  overlay.classList.add('open');
 
-    // ovládání
-    fab.addEventListener('click', open);
-    closeBtn?.addEventListener('click', close);
-    backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) close();
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && drawer.classList.contains('open')) close();
-    });
+  // Správné ARIA
+  drawer.removeAttribute('aria-hidden');
+  overlay.setAttribute('aria-hidden', 'false');
 
-    // Pokud se filtry naplní až později, rehydruj selecty
-    [SRC_CLIENT, SRC_STATUS].forEach(sel => {
-      const el = qs(sel);
-      if (!el) return;
-      const mo = new MutationObserver(hydrate);
-      mo.observe(el, { childList: true });
-    });
+  // Zabraň scrollu pozadí
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
 
-    // Exponujeme pro rychlý test
-    window.toolsDrawer = { open, close };
-  });
-})();
+  isOpen = true;
+
+  // Fokus do prvního pole (bezpečné)
+  if (selNewJobClient) selNewJobClient.focus();
+}
+
+function closeDrawer() {
+  if (!drawer || !overlay) return;
+
+  drawer.classList.remove('open');
+  overlay.classList.remove('open');
+
+  // ARIA zpět
+  drawer.setAttribute('aria-hidden', 'true');
+  overlay.setAttribute('aria-hidden', 'true');
+
+  // Obnov scroll pozadí
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
+
+  isOpen = false;
+}
+
+/* ---------- Actions uvnitř panelu (drátování jen, logiku přidání má app.js) ---------- */
+
+on(btnAddJob, 'click', (e) => {
+  e.preventDefault();
+  // necháváme na app.js – tady jen sanity kontrola vstupů
+  if (!selNewJobClient?.value || !inpNewJobName?.value) {
+    showToast('Vyplňte klienta a název zakázky.');
+    return;
+  }
+  // Pokud app.js poslouchá #addJobBtn, necháme akci proběhnout normálně
+});
+
+on(btnAddClient, 'click', (e) => {
+  e.preventDefault();
+  if (!inpNewClientName?.value) {
+    showToast('Zadejte název klienta.');
+    return;
+  }
+  // Přenecháno app.js (listener na #addClientBtn)
+});
+
+/* ---------- Eventy otevření / zavření ---------- */
+
+on(openBtn,  'click', (e) => { e.preventDefault(); openDrawer(); });
+on(closeBtn, 'click', (e) => { e.preventDefault(); closeDrawer(); });
+on(overlay,  'click', () => { if (isOpen) closeDrawer(); });
+on(document, 'keydown', (e) => {
+  if (e.key === 'Escape' && isOpen) closeDrawer();
+});
+
+/* ---------- Pomocné ---------- */
+function showToast(txt) {
+  try {
+    const toast = $('#err');
+    if (!toast) return;
+    toast.textContent = txt;
+    toast.style.display = 'block';
+    setTimeout(() => (toast.style.display = 'none'), 2200);
+  } catch (_) {}
+}
+
+/* ---------- Expose pro self-check ---------- */
+window.toolsDrawer = { open: openDrawer, close: closeDrawer, populateClientsIntoDrawer };

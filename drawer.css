@@ -1,110 +1,83 @@
-/* === Drawer (pravý postranní panel) === */
-#drawer {
+/* ===== FAB + BACKDROP + DRAWER ===== */
+
+/* skryj staré prvky z horní lišty (už jsou v menu) */
+#userBoxTopRight,
+section.addRow { display: none !important; }
+
+/* FAB (+) vpravo nahoře */
+#toolsFab{
+  position: fixed;
+  right: 24px;
+  top: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #0b1625;
+  color: #fff;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 44px;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+  z-index: 1100;
+  border: none;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+#toolsFab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
+
+/* backdrop */
+#toolsBackdrop{
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  background: rgba(10,14,20,.45);
+  opacity: 0;
   pointer-events: none;
+  transition: opacity .2s ease;
+  z-index: 1098;
 }
+#toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
 
-#drawer.open {
-  pointer-events: auto;
-}
-
-.drawer__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0);         /* žádný viditelný stín, jak sis přál */
-  transition: background .2s ease;
-}
-
-#drawer.open .drawer__backdrop {
-  background: rgba(0,0,0,0.18);      /* velmi jemné stmavení při otevření (klidně 0,0,0,0) */
-}
-
-.drawer__sheet {
-  position: absolute;
+/* samotný panel */
+#toolsDrawer{
+  position: fixed;
   top: 0;
   right: 0;
-  height: 100%;
-  width: min(92vw, 480px);
-  max-width: 480px;
+  height: 100vh;
+  width: min(420px, 92vw);
   background: #fff;
-  border-radius: 16px 0 0 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  box-shadow: -14px 0 30px rgba(0,0,0,.25);
   transform: translateX(100%);
-  transition: transform .25s ease;
+  transition: transform .22s ease;
+  z-index: 1101;                 /* nad backdropem */
   display: flex;
   flex-direction: column;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  will-change: transform;
+  /* a11y – ve výchozím stavu mimo čtení, JS přepne na false */
+  aria-hidden: true;
 }
 
-#drawer.open .drawer__sheet {
-  transform: translateX(0);
-}
+/* stav „otevřeno“ */
+#toolsDrawer.open{ transform: translateX(0); }
 
-.drawer__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 20px;
-  border-bottom: 1px solid rgba(0,0,0,.06);
+/* hlavička panelu */
+.toolsHead{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 18px 10px 18px; border-bottom:1px solid rgba(0,0,0,.06);
 }
+.toolsTitle{ font-size:20px; font-weight:800; color:#0b1625; }
+#toolsClose{
+  width:36px; height:36px; border-radius:10px;
+  border:1px solid rgba(0,0,0,.08); background:#fff; cursor:pointer;
+}
+#toolsClose::after{ content:'✕'; font-size:16px; }
 
-.drawer__title {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.drawer__close {
-  inline-size: 36px;
-  block-size: 36px;
-  border-radius: 50%;
-  border: 0;
-  background: #0e1623;
-  color: #fff;
-  font-size: 20px;
-  line-height: 1;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-
-.drawer__body {
-  padding: 18px 20px 24px 20px;
-  overflow: auto;
-  flex: 1;
-  display: grid;
-  gap: 22px;
-}
-
-.drawer__section h3 {
-  font-size: 15px;
-  font-weight: 700;
-  margin: 0 0 10px;
-}
-
-.form-row {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.form-row > input,
-.form-row > select {
-  appearance: none;
-  height: 44px;
-  border: 1px solid rgba(0,0,0,.12);
-  border-radius: 12px;
-  padding: 0 14px;
-  font-size: 14px;
-}
-
-.btn-primary {
-  height: 48px;
-  border-radius: 14px;
-  border: 0;
-  background: #0e1623;
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-}
+/* tělo panelu – použijeme existující „pill“ styly layoutu */
+.toolsBody{ padding:16px 18px 24px 18px; overflow:auto; }
+.toolsSection{ margin-bottom:24px; }
+.toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
+.toolsBody .pill-input,
+.toolsBody .pill-select,
+.toolsBody .pill-btn{ width:100%; margin:8px 0; }

@@ -1,36 +1,17 @@
-/* === Utility Drawer (off-canvas) ========================================
-   Co dělá:
-   - vytvoří FIXED burger „Další“ v pravém horním rohu (mimo layout),
-   - robustně skryje v horní části prvky s e-mailem a tlačítko „Odhlásit“,
-   - přesune „Přidat klienta“ a „Přidat zakázku“ do postranního panelu,
-   - v panelu ukáže e-mail + umožní odhlášení.
-======================================================================== */
+/* === Utility Drawer (off-canvas) =========================================
+   - FIXED burger v pravém horním rohu (mimo layout),
+   - přesun "Přidat klienta" + "Přidat zakázku" do panelu (i když DOM vznikne později),
+   - průběžně skrývá e-mail a "Odhlásit" v horní části,
+   - v panelu ukáže e-mail a fungující Odhlásit.
+============================================================================ */
 
 (function () {
   const $  = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  /* Snažíme se skrýt e-mail/chip a „Odhlásit“ v horní části stránky,
-     i kdyby se změnilo rozvržení. */
-  function hideTopAccountPieces() {
-    const nodes = $$('body *');
-    const isEmail = (t) => /.+@.+\..+/.test(t);
-    const isLogout = (t) => /odhl/i.test(t);
+  /* ---------- helpery ---------- */
 
-    nodes.forEach(n => {
-      const t = (n.textContent || '').trim();
-      if (!t) return;
-      const rect = n.getBoundingClientRect();
-      // bereme jen horní pás (abychom neodstřelili něco v obsahu)
-      if (rect.top > 160) return;
-
-      if (isEmail(t) || isLogout(t)) {
-        n.style.display = 'none';
-      }
-    });
-  }
-
-  function createFixedBurger() {
+  function ensureFixedBurger() {
     let btn = $('#utilOpen');
     if (!btn) {
       btn = document.createElement('button');
@@ -38,13 +19,14 @@
       btn.type      = 'button';
       btn.className = 'pill-btn util-trigger fixed';
       btn.title     = 'Další';
-      btn.textContent = '☰ Další';
-      document.body.appendChild(btn); // FIXED – nezasahuje do layoutu hlavičky
+      btn.setAttribute('aria-expanded', 'false');
+      btn.textContent = '☰';
+      document.body.appendChild(btn);
     }
     return btn;
   }
 
-  function buildDrawerIfMissing() {
+  function buildDrawer() {
     let drawer   = $('#utilityDrawer');
     let backdrop = $('#drawerBackdrop');
 
@@ -63,7 +45,7 @@
 
     drawer.innerHTML = `
       <header class="drawer-head">
-        <strong>Další nastavení</strong>
+        <strong>Další</strong>
         <button id="utilClose" class="icon-btn" aria-label="Zavřít">✕</button>
       </header>
 
@@ -103,7 +85,6 @@
     opener?.setAttribute('aria-expanded', 'true');
     setTimeout(() => drawer.focus(), 0);
   }
-
   function closeDrawer(drawer, backdrop, opener) {
     drawer.classList.remove('open');
     drawer.setAttribute('aria-hidden', 'true');
@@ -112,20 +93,25 @@
     opener?.focus?.();
   }
 
-  function moveAddClientToDrawer() {
+  /* ---------- přesuny do panelu ---------- */
+
+  function moveAddClient() {
     const holder = $('#drawerAddClient');
-    if (!holder) return;
+    if (!holder) return false;
 
     const input = $('#newClientName');
     const btn   = $('#addClientBtn');
 
-    if (input) holder.appendChild(input);
-    if (btn)   holder.appendChild(btn);
+    let moved = false;
+    if (input && !holder.contains(input)) { holder.appendChild(input); moved = true; }
+    if (btn   && !holder.contains(btn))   { holder.appendChild(btn);   moved = true; }
+
+    return moved;
   }
 
-  function moveAddJobToDrawer() {
+  function moveAddJob() {
     const holder = $('#drawerAddJob');
-    if (!holder) return;
+    if (!holder) return false;
 
     const jobClient = $('#newJobClient');
     const jobName   = $('#newJobName');
@@ -134,14 +120,40 @@
 
     let moved = false;
     [jobClient, jobName, jobStat, addBtn].forEach(el => {
-      if (el) { holder.appendChild(el); moved = true; }
+      if (el && !holder.contains(el)) { holder.appendChild(el); moved = true; }
     });
 
+    // fallback: existuje textové tlačítko „Přidat zakázku“ jinde?
     if (!moved) {
-      const headBtn = $$('button').find(b => (b.textContent || '').trim().toLowerCase() === 'přidat zakázku');
-      if (headBtn) holder.appendChild(headBtn);
+      const anyBtn = $$('button').find(
+        b => (b.textContent || '').trim().toLowerCase() === 'přidat zakázku'
+      );
+      if (anyBtn && !holder.contains(anyBtn)) { holder.appendChild(anyBtn); moved = true; }
     }
+
+    return moved;
   }
+
+  // přesun i když DOM vznikne později
+  function observeForAddControls() {
+    const tryMove = () => { moveAddClient(); moveAddJob(); };
+
+    // 1) pokus hned
+    tryMove();
+
+    // 2) interval párkrát po sobě (rychlé buildy)
+    let tries = 0;
+    const t = setInterval(() => {
+      tryMove();
+      if (++tries > 10) clearInterval(t);
+    }, 250);
+
+    // 3) MutationObserver (když to dojde opravdu pozdě)
+    const mo = new MutationObserver(() => tryMove());
+    mo.observe(document.body, { childList: true, subtree: true });
+  }
+
+  /* ---------- účet v panelu ---------- */
 
   function wireAccount(drawer) {
     const userLbl = $('#drawerUser', drawer);
@@ -159,39 +171,64 @@
         } else if (window.supabase?.auth?.signOut) {
           await window.supabase.auth.signOut();
         }
-      } catch (e) {
-        console.error(e);
       } finally {
         location.reload();
       }
     });
   }
 
-  window.addEventListener('DOMContentLoaded', () => {
-    // 1) Skryj původní email/odhlášení v horní části
+  /* ---------- skrytí horního e-mailu a „Odhlásit“ ---------- */
+
+  function hideTopAccountPieces() {
+    const nodes = $$('body *');
+    const isEmail = (t) => /.+@.+\..+/.test(t);
+    const isLogout = (t) => /odhl/i.test(t);
+
+    nodes.forEach(n => {
+      const t = (n.textContent || '').trim();
+      if (!t) return;
+      const rect = n.getBoundingClientRect();
+      // cíleně jen horní pás stránky
+      if (rect.top > 160) return;
+
+      if (isEmail(t) || isLogout(t)) {
+        n.style.display = 'none';
+      }
+    });
+  }
+
+  function observeTopAccount() {
     hideTopAccountPieces();
+    const mo = new MutationObserver(() => hideTopAccountPieces());
+    mo.observe(document.body, { childList: true, subtree: true });
+  }
 
-    // 2) Vytvoř a umísti FIXED burger vpravo nahoře
-    const openBtn = createFixedBurger();
+  /* ---------- init ---------- */
 
-    // 3) Vytvoř drawer/backdrop
-    const { drawer, backdrop } = buildDrawerIfMissing();
+  window.addEventListener('DOMContentLoaded', () => {
+    // burger
+    const openBtn = ensureFixedBurger();
 
-    // 4) Přesuny do panelu
-    moveAddClientToDrawer();
-    moveAddJobToDrawer();
+    // drawer/backdrop
+    const { drawer, backdrop } = buildDrawer();
 
-    // 5) Účet v panelu
+    // účet
     wireAccount(drawer);
 
-    // 6) Ovládání panelu
+    // přesuny (i později vzniklé DOM)
+    observeForAddControls();
+
+    // skrýt viditelný e-mail a Odhlásit nahoře
+    observeTopAccount();
+
+    // ovládání
     const closeBtn = $('#utilClose', drawer);
     const open  = () => openDrawer(drawer, backdrop, openBtn);
     const close = () => closeDrawer(drawer, backdrop, openBtn);
 
-    openBtn?.addEventListener('click', open);
-    closeBtn?.addEventListener('click', close);
-    backdrop?.addEventListener('click', close);
+    openBtn.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    backdrop.addEventListener('click', close);
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && drawer.classList.contains('open')) close();
     });

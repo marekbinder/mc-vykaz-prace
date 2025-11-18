@@ -1,70 +1,93 @@
-/* ===== Přídavné styly pro pravý vysouvací panel (burger) ===== */
-
-/* Burger: fixně vpravo nahoře, aby nic nepřekrývalo */
-.burger-fixed {
+/* ====== burger ====== */
+.x-burger{
   position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 1003;
-  min-width: 40px;
-  min-height: 40px;
-  line-height: 1;
-  font-size: 18px;
+  top: 16px;
+  right: 16px;
+  z-index: 1100;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  background: #0d1522;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
 }
-
-/* E-mail/odhlášení v hlavičce schováme – bude v panelu */
-#userBoxTopRight {
-  display: none !important;
+.x-burger span{
+  display:block;
+  width:18px;
+  height:2px;
+  background:#fff;
+  border-radius:2px;
 }
+.x-burger span:nth-child(2){ width: 12px; }
 
-/* Výchozí stav – „řádek přidání“ neschováváme z DOM, jen vizuálně */
-#addRowDrawer {
-  display: none;
+/* ====== scrim ====== */
+.x-scrim{
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.35);
+  backdrop-filter: saturate(110%) blur(2px);
+  z-index: 1090;
 }
+.x-scrim[hidden]{ display:none; }
 
-/* Při otevřeném panelu: */
-body.drawer-open #addRowDrawer {
-  display: grid;
+/* ====== drawer ====== */
+.x-drawer{
   position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: 380px;
+  top: 0; right: 0; bottom: 0;
+  width: min(420px, 92vw);
   background: #fff;
-  z-index: 1002;
-  padding: 24px;
-  box-sizing: border-box;
-  box-shadow: -16px 0 40px rgba(0,0,0,0.18);
-  overflow: auto;
+  z-index: 1101;
+  transform: translateX(100%);
+  transition: transform .24s ease;
+  box-shadow: -24px 0 48px rgba(0,0,0,.08), -6px 0 18px rgba(0,0,0,.12);
+  display: flex; flex-direction: column;
+}
+.x-drawer[aria-hidden="false"]{ transform: translateX(0); }
 
-  grid-template-columns: 1fr;
-  grid-auto-rows: minmax(40px, auto);
-  gap: 12px;
+.x-drawer__head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 16px 18px; border-bottom: 1px solid #eef1f5;
+}
+.x-drawer__title{
+  font-weight: 700; font-size: 16px;
+}
+.x-drawer__close{
+  width:36px;height:36px;border:0;border-radius:10px;
+  background:#0d1522;color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
 }
 
-#addRowDrawer .drawerTitle {
-  margin: 0 0 6px 0;
-  font-weight: 700;
-  font-size: 18px;
+/* obsah */
+.x-drawer__body{
+  padding: 16px 18px 24px; overflow:auto; flex:1;
+  display:flex;flex-direction:column;gap:20px;
 }
 
-#addRowDrawer .drawerUser {
-  margin-top: 8px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(0,0,0,0.08);
+/* boxy uvnitř draweru */
+.x-block{
+  border:1px solid #eef1f5; border-radius:14px;
+  padding:14px; background:#fff;
+}
+.x-block__title{ font-weight:600; margin-bottom:10px; }
+
+/* reset: vyhlazení, ať se to netluče s původními styly */
+.x-drawer input[type="text"],
+.x-drawer select,
+.x-drawer button{ font: inherit; }
+
+/* tlačítko přidat zakázku v pravém dolním rohu */
+.x-primary{
+  position: sticky; bottom: 12px; margin-top: 16px;
+  align-self: flex-end;
+  background:#0d1522; color:#fff; border:0; border-radius:28px;
+  padding:10px 18px; cursor:pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
 }
 
-/* Backdrop */
-.drawerBackdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1001;
-  background: rgba(0,0,0,0.35);
-  backdrop-filter: blur(2px);
-}
-
-@media (max-width: 480px) {
-  body.drawer-open #addRowDrawer {
-    width: min(92vw, 420px);
-  }
-}
+/* prevence overlaye přes obsah při chybě */
+body.x-noScroll{ overflow:hidden; }

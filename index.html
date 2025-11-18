@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Výkaz práce</title>
   <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="drawer.css" />
 
   <!-- knihovny -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
@@ -137,6 +138,48 @@
   </aside>
 
   <div id="err" class="toast" style="display:none"></div>
+
+  <!-- === Plus FAB (pokud tvé tlačítko už existuje, jen mu přidej data-open-drawer) === -->
+<!--
+<button id="plusFab" class="fab-plus" data-open-drawer aria-label="Otevřít nástroje">+</button>
+-->
+
+<!-- === Drawer / postranní nástroje === -->
+<div id="drawer" aria-hidden="true">
+  <div class="drawer__sheet" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+    <div class="drawer__header">
+      <h2 id="drawerTitle" class="drawer__title">Nástroje</h2>
+      <button class="drawer__close" data-close-drawer aria-label="Zavřít">×</button>
+    </div>
+
+    <div class="drawer__body">
+      <section class="drawer__section" aria-labelledby="secJob">
+        <h3 id="secJob">Přidání zakázky</h3>
+
+        <div class="form-row">
+          <select id="newJobClient"></select>
+          <input id="newJobName" type="text" placeholder="Název zakázky" />
+          <select id="newJobStatus"></select>
+          <select id="newJobAssignee"></select>
+        </div>
+
+        <button id="addJobBtn" class="btn-primary">Přidat zakázku</button>
+      </section>
+
+      <section class="drawer__section" aria-labelledby="secClient">
+        <h3 id="secClient">Přidání klienta</h3>
+
+        <div class="form-row">
+          <input id="newClientName" type="text" placeholder="Název klienta" />
+        </div>
+
+        <button id="addClientBtn" class="btn-primary">Přidat klienta</button>
+      </section>
+    </div>
+  </div>
+
+  <div class="drawer__backdrop" data-close-drawer></div>
+</div>
 
   <script src="app.js"></script>
   <script src="drawer.js" defer></script>

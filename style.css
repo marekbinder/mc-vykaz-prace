@@ -358,22 +358,51 @@ section.addRow,
 #toolsBackdrop.show { opacity: 1; pointer-events: auto; }
 
 /* drawer */
+/* Overlay */
+#drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+  z-index: 999; /* pod panelem */
+}
+
+#drawerOverlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Panel */
 #toolsDrawer {
   position: fixed;
   top: 0;
   right: 0;
-  height: 100vh;
-  width: min(420px, 92vw);
+  height: 100%;
+  width: 420px;
+  max-width: 92vw;
   background: #fff;
-  box-shadow: -14px 0 30px rgba(0,0,0,.25);
   transform: translateX(100%);
-  transition: transform .22s ease;
-  z-index: 1101;
-  display: flex;
-  flex-direction: column;
-  border-top-left-radius: 12px;
-  border-bottom-left-radius: 12px;
-  will-change: transform;
+  transition: transform .25s ease;
+  z-index: 1000; /* nad overlayem */
+  box-shadow: -8px 0 24px rgba(0,0,0,.18);
+}
+
+#toolsDrawer.open {
+  transform: translateX(0);
+}
+
+/* Volitelně: tlačítko + */
+#openDrawerBtn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
 }
 
 /* hlavička */
@@ -403,5 +432,3 @@ section.addRow,
   margin: 8px 0;
 }
 
-/* stav otevření */
-#toolsDrawer.open { transform: translateX(0); }

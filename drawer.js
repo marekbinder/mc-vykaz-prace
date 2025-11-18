@@ -1,193 +1,106 @@
-/* Drawer plugin – bezpečný doplněk, který:
-   - přidá burger vpravo nahoře
-   - udělá scrim + drawer
-   - najde „řádek přidání klienta/zakázky“ na hlavní stránce a přesune ho do draweru
-   - hlavní app logiky (týden, Supabase, export) se NEDOTÝKÁ
-*/
-(function(){
-  const S = (sel,root=document)=>root.querySelector(sel);
-  const SA= (sel,root=document)=>root.querySelectorAll(sel);
+/* drawer.js – build a right-side tools drawer
+ * Bez zásahu do index.html: vše si vytvoříme sami a z UI
+ * přesuneme existující prvky (ponechají si své listenery z app.js).
+ */
+(() => {
+  const qs  = (s, r=document) => r.querySelector(s);
+  const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
 
-  // Počkej na DOM
-  document.addEventListener('DOMContentLoaded', () => {
-    // označ HTML kvůli případným CSS (kdyby bylo potřeba)
-    document.documentElement.classList.add('js');
+  // ==== 1) Vytvoříme tlačítko, overlay a samotný drawer
+  const toggleBtn = document.createElement('button');
+  toggleBtn.id = 'drawerToggle';
+  toggleBtn.className = 'drawer-toggle';
+  toggleBtn.type = 'button';
+  toggleBtn.setAttribute('aria-label', 'Otevřít nástroje');
+  toggleBtn.textContent = '+'; // kulaté + v rohu
+  document.body.appendChild(toggleBtn);
 
-    // 1) Vytvoř burger, scrim a drawer
-    const burger = document.createElement('button');
-    burger.className = 'x-burger';
-    burger.type = 'button';
-    burger.setAttribute('aria-label','Nástroje');
-    burger.innerHTML = '<span></span><span></span><span></span>';
+  const overlay = document.createElement('div');
+  overlay.id = 'drawerOverlay';
+  overlay.className = 'drawer-overlay';
+  document.body.appendChild(overlay);
 
-    const scrim = document.createElement('div');
-    scrim.className = 'x-scrim';
-    scrim.hidden = true;
+  const drawer = document.createElement('aside');
+  drawer.id = 'drawer';
+  drawer.className = 'drawer';
+  drawer.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(drawer);
 
-    const drawer = document.createElement('aside');
-    drawer.className = 'x-drawer';
-    drawer.setAttribute('aria-hidden','true');
+  // ==== 2) Hlavička draweru
+  const header = document.createElement('div');
+  header.className = 'drawer-header';
+  header.innerHTML = `<h2>Nástroje</h2>`;
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'drawer-close';
+  closeBtn.type = 'button';
+  closeBtn.setAttribute('aria-label', 'Zavřít panel');
+  closeBtn.textContent = '×';
+  header.appendChild(closeBtn);
+  drawer.appendChild(header);
 
-    drawer.innerHTML = `
-      <div class="x-drawer__head">
-        <div class="x-drawer__title">Nástroje</div>
-        <button class="x-drawer__close" type="button" aria-label="Zavřít">✕</button>
-      </div>
-      <div class="x-drawer__body" id="xDrawerBody">
-        <!-- sem přesuneme přidávací řádek -->
-      </div>
-    `;
+  // Helper pro sekce (titulek + wrap)
+  const makeSection = (title) => {
+    const sec = document.createElement('section');
+    sec.className = 'tool-section';
+    const h3 = document.createElement('h3');
+    h3.textContent = title;
+    const wrap = document.createElement('div');
+    wrap.className = 'tool-wrap'; // svislé řazení
+    sec.appendChild(h3);
+    sec.appendChild(wrap);
+    drawer.appendChild(sec);
+    return wrap;
+  };
 
-    document.body.appendChild(burger);
-    document.body.appendChild(scrim);
-    document.body.appendChild(drawer);
+  // ==== 3) Přesun existujících prvků do dvou sekcí
+  // Na stránce je původní „addRow“ – kompletně schováme.
+  const addRow = qs('#addRow');
+  if (addRow) addRow.style.display = 'none';
 
-    const body = S('#xDrawerBody', drawer);
-    const closeBtn = S('.x-drawer__close', drawer);
+  // IDs starých prvků (už mají listenery z app.js):
+  //  - klient:     #newClientName  + #addClientBtn
+  //  - zakázka:    #newJobClient, #newJobName, #newJobStatus, #addJobBtn
+  const newClientName = qs('#newClientName');
+  const addClientBtn  = qs('#addClientBtn');
 
-    // 2) Najdi „přidávací“ řádek v existující app a přesuň do draweru
-    // Cíleně hledáme vstup „Název klienta“ a tlačítko „Přidat klienta“,
-    // případně wrapper, kde to obvykle bývá.
-    // Hledáme bezpečně a nic nerozbíjíme, když to nenajdeme – jen zobrazíme prázdný panel.
-    let addRow = null;
+  const newJobClient  = qs('#newJobClient');
+  const newJobName    = qs('#newJobName');
+  const newJobStatus  = qs('#newJobStatus');
+  const addJobBtn     = qs('#addJobBtn');
 
-    // Kandidáti wrapperů v app – použijeme první, co obsahuje input + button
-    const candidates = [
-      '.addRow',              // časté pojmenování
-      '.add-row',
-      'section.addRow',
-      'section.add-row'
-    ];
+  // Sekce 1 – Přidání zakázky
+  const jobWrap = makeSection('Přidání zakázky');
+  if (newJobClient)  jobWrap.appendChild(newJobClient);
+  if (newJobName)    jobWrap.appendChild(newJobName);
+  if (newJobStatus)  jobWrap.appendChild(newJobStatus);
+  if (addJobBtn)     jobWrap.appendChild(addJobBtn);
 
-    for (const sel of candidates) {
-      const el = S(sel);
-      if (el && (S('input', el) || S('select', el)) && S('button', el)) {
-        addRow = el;
-        break;
-      }
-    }
+  // Sekce 2 – Přidání klienta
+  const clientWrap = makeSection('Přidání klienta');
+  if (newClientName) clientWrap.appendChild(newClientName);
+  if (addClientBtn)  clientWrap.appendChild(addClientBtn);
 
-    // Nenašli jsme wrapper? Zkusíme poskládat z částí (inputy + tlačítko)
-    if (!addRow) {
-      const block = document.createElement('div');
-      block.className = 'x-block';
-      const parts = [];
+  // ==== 4) Ovládání open/close
+  const open = () => {
+    drawer.classList.add('open');
+    overlay.classList.add('show');
+    drawer.setAttribute('aria-hidden', 'false');
+    // fokus do 1. prvku v panelu
+    const focusable = qsa('input,select,button', drawer).find(el => !el.disabled);
+    if (focusable) focusable.focus();
+  };
 
-      const nameInput = SA('input, select');
-      const btns      = SA('button');
+  const close = () => {
+    drawer.classList.remove('open');
+    overlay.classList.remove('show');
+    drawer.setAttribute('aria-hidden', 'true');
+    toggleBtn.focus();
+  };
 
-      // rozumné minimum: 1 input/select + 1 button
-      const firstInput = Array.from(nameInput).find(el=>{
-        const ph = (el.getAttribute('placeholder')||'').toLowerCase();
-        return ph.includes('klient') || ph.includes('zakázk') || ph.includes('název');
-      });
-      const addBtn = Array.from(btns).find(el=>{
-        const t = (el.textContent||'').toLowerCase();
-        return t.includes('přidat') && (t.includes('klient') || t.includes('zakázk'));
-      });
-
-      if (firstInput && addBtn) {
-        // vezmeme jejich rodiče – ať se přenesou i styly „pill“
-        const inWrap = firstInput.closest('.pill-input, .pill-select, div') || firstInput;
-        const btnWrap= addBtn.closest('div') || addBtn;
-
-        const header = document.createElement('div');
-        header.className = 'x-block__title';
-        header.textContent = 'Přidání klienta/zakázky';
-        block.appendChild(header);
-
-        block.appendChild(inWrap.cloneNode(true));
-        // zkusit dohledat i další selecty stejné řady (klient, status, grafik)
-        const siblingSelects = Array.from(SA('select')).filter(s=>{
-          const ph = (s.getAttribute('placeholder')||'') + (s.getAttribute('name')||'');
-          return ph.toLowerCase().includes('klient') ||
-                 ph.toLowerCase().includes('status') ||
-                 ph.toLowerCase().includes('grafik');
-        }).slice(0,3);
-        siblingSelects.forEach(s=>{
-          block.appendChild((s.closest('.pill-select, div')||s).cloneNode(true));
-        });
-
-        block.appendChild(btnWrap.cloneNode(true));
-
-        body.appendChild(block);
-      }
-    } else {
-      // Přesuneme wrapper 1:1 (DOM move), takže na hlavní stránce zmizí.
-      const box = document.createElement('div');
-      box.className = 'x-block';
-      const title = document.createElement('div');
-      title.className = 'x-block__title';
-      title.textContent = 'Přidání klienta/zakázky';
-      box.appendChild(title);
-      box.appendChild(addRow);
-      body.appendChild(box);
-    }
-
-    // 3) Případně účet/odhlášení – když ho v app najdeme, přesuneme taky
-    const logoutBtn = Array.from(SA('button, a')).find(el=>{
-      const t=(el.textContent||'').toLowerCase();
-      return t.trim()==='odhlásit' || t.includes('logout');
-    });
-    const emailEl = Array.from(SA('div, span')).find(el=>{
-      const t=(el.textContent||'').trim();
-      return /@.+\./.test(t);
-    });
-
-    if (logoutBtn || emailEl) {
-      const acc = document.createElement('div');
-      acc.className = 'x-block';
-      const title = document.createElement('div');
-      title.className = 'x-block__title';
-      title.textContent = 'Účet';
-      acc.appendChild(title);
-
-      if (emailEl) acc.appendChild(emailEl);
-      if (logoutBtn) acc.appendChild(logoutBtn);
-
-      body.appendChild(acc);
-    }
-
-    // Doplňkové tlačítko dole – když by primární „Přidat zakázku“ nebylo součástí wrapperu
-    const addBtnCandidates = Array.from(SA('button')).filter(b=>{
-      const t=(b.textContent||'').toLowerCase();
-      return t.includes('přidat') && (t.includes('zakázk')||t.includes('klient'));
-    });
-    if (!addBtnCandidates.some(b => body.contains(b))) {
-      const fallback = document.createElement('button');
-      fallback.className = 'x-primary';
-      fallback.type='button';
-      fallback.textContent='Přidat zakázku';
-      fallback.addEventListener('click', ()=> {
-        // najít primární „přidat“ v app a kliknout na něj
-        const btn = Array.from(SA('button')).find(b=>{
-          const t=(b.textContent||'').toLowerCase();
-          return t.includes('přidat') && (t.includes('zakázk')||t.includes('klient'));
-        });
-        if (btn) btn.click();
-      });
-      body.appendChild(fallback);
-    }
-
-    // 4) Otevření/zavření
-    const open = () => {
-      scrim.hidden = false;
-      drawer.setAttribute('aria-hidden','false');
-      document.body.classList.add('x-noScroll');
-    };
-    const close = () => {
-      scrim.hidden = true;
-      drawer.setAttribute('aria-hidden','true');
-      document.body.classList.remove('x-noScroll');
-    };
-
-    burger.addEventListener('click', open);
-    closeBtn.addEventListener('click', close);
-    scrim.addEventListener('click', close);
-
-    // Esc = zavřít
-    document.addEventListener('keydown', (e)=>{
-      if (e.key==='Escape' && drawer.getAttribute('aria-hidden')==='false') close();
-    });
+  toggleBtn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', close);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && drawer.classList.contains('open')) close();
   });
 })();

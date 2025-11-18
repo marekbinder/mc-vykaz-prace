@@ -1,15 +1,13 @@
-/* ===== Drawer v2.1 – default hidden, robustní open/close, schování user boxu ===== */
+/* ===== Drawer v2.2 – populate selectů + fix re-render ===== */
 (function () {
   const READY = () => /complete|interactive/.test(document.readyState);
 
-  // jistota schování boxu s e-mailem
+  // trvale schovat e-mail/odhlášení v topbar
   (function ensureStyle() {
     if (!document.getElementById('drawerHardStyle')) {
       const st = document.createElement('style');
       st.id = 'drawerHardStyle';
-      st.textContent = `
-        #userBoxTopRight{display:none!important;visibility:hidden!important;pointer-events:none!important}
-      `;
+      st.textContent = `#userBoxTopRight{display:none!important;visibility:hidden!important;pointer-events:none!important}`;
       document.head.appendChild(st);
     }
   })();
@@ -17,13 +15,42 @@
   const hideTopRightBox = () => {
     const box = document.getElementById('userBoxTopRight');
     if (box) {
-      box.style.display = 'none';
-      box.style.visibility = 'hidden';
-      box.style.pointerEvents = 'none';
-      box.style.position = 'absolute';
-      box.style.width = '0'; box.style.height = '0'; box.style.overflow = 'hidden';
+      Object.assign(box.style, {
+        display:'none', visibility:'hidden', pointerEvents:'none',
+        position:'absolute', width:'0', height:'0', overflow:'hidden'
+      });
     }
   };
+
+  /* ---------- helpers ---------- */
+
+  const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
+
+  const textArrayFromSelect = (sel) => {
+    const s = document.querySelector(sel);
+    if (!s || !s.options?.length) return [];
+    return Array.from(s.options).map(o => (o.text || '').trim()).filter(Boolean);
+  };
+
+  // posbírej texty z buněk první/ druhé/… kolony – fallback
+  const uniqueTextsInColumn = (colIndex = 1) => {
+    // najdeme řádky v tabulce (mívají 1. sloupec Klient, 2. Zakázka, 3. Stav…)
+    const rows = Array.from(document.querySelectorAll('main .tableWrap tr, main tr')).filter(r => r.cells && r.cells.length >= colIndex);
+    const texts = rows.map(r => (r.cells[colIndex-1]?.innerText || '').trim()).filter(Boolean);
+    return uniq(texts);
+  };
+
+  const fillSelect = (select, values) => {
+    if (!select) return;
+    const current = select.value;
+    const html = values.map(v => `<option value="${v}">${v}</option>`).join('');
+    if (html) {
+      select.innerHTML = html;
+      if (values.includes(current)) select.value = current;
+    }
+  };
+
+  /* ---------- UI scaffold ---------- */
 
   const injectPlus = () => {
     let btn = document.getElementById('openDrawerBtn');
@@ -35,19 +62,17 @@
       btn.textContent = '+';
       document.body.appendChild(btn);
     }
-    // Jistota pozice (kdyby kdokoli přepsal styl)
     btn.style.cssText += ';position:fixed;top:16px;right:16px;z-index:2147483647;';
     return btn;
   };
 
   const ensureDrawer = () => {
-    // pro jistotu odstraníme staré instance (kdyby vznikly duplicity)
     document.querySelectorAll('.drawer').forEach((d, i) => { if (i > 0) d.remove(); });
 
     let drawer = document.querySelector('.drawer');
     if (!drawer) {
       drawer = document.createElement('aside');
-      drawer.className = 'drawer';              // <- defaultně skrytý (viz CSS)
+      drawer.className = 'drawer';
       drawer.innerHTML = `
         <div class="drawer__scrim" aria-hidden="true"></div>
         <div class="drawer__panel" role="dialog" aria-modal="true" aria-label="Nástroje">
@@ -59,16 +84,15 @@
         </div>`;
       document.body.appendChild(drawer);
     } else {
-      // kdyby náhodou dorazil už otevřený: zavřít
       drawer.classList.remove('open');
     }
 
     const body = drawer.querySelector('.drawer__body');
 
-    const ensureSection = (sel, html) => {
-      if (!drawer.querySelector(sel)) {
+    const ensureSection = (key, html) => {
+      if (!drawer.querySelector(key)) {
         const sec = document.createElement('section');
-        sec.className = `drawer__section ${sel.replace('.', '')}`;
+        sec.className = `drawer__section ${key.replace('.', '')}`;
         sec.innerHTML = html;
         body.appendChild(sec);
       }
@@ -93,30 +117,7 @@
       </div>
     `);
 
-    // zkusíme nakopírovat options do selectů (pokud existují zdroje)
-    const copyOptions = (fromSel, toSel) => {
-      const from = document.querySelector(fromSel);
-      const to   = drawer.querySelector(toSel);
-      if (from && to && !to.options.length) {
-        to.innerHTML = from.innerHTML;
-        to.value = from.value;
-      }
-    };
-    // TIP: přidej data-source na původní selecty v app (client/status/assignee)
-    copyOptions('[data-source="client-list"]',   '#jobClientSel');
-    copyOptions('[data-source="status-list"]',   '#jobStatusSel');
-    copyOptions('[data-source="assignee-list"]', '#jobAssigneeSel');
-
-    // selecty vždy klikatelně nad scrimem
-    drawer.querySelectorAll('select').forEach(s => {
-      s.disabled = false;
-      s.style.pointerEvents = 'auto';
-      s.style.position = 'relative';
-      s.style.zIndex = 1004;
-    });
-
-    // jistota – po vytvoření je opravdu skrytý
-    drawer.classList.remove('open');
+    drawer.classList.remove('open'); // default zavřeno
 
     return drawer;
   };
@@ -129,6 +130,8 @@
     const open = () => {
       drawer.classList.add('open');
       requestAnimationFrame(() => { try { panel.focus({ preventScroll:true }); } catch(_){} });
+      // Pokaždé při otevření doplníme volby (kdyby se mezitím re-renderovala tabulka)
+      populateDrawerOptions(drawer);
     };
     const close = () => drawer.classList.remove('open');
 
@@ -141,6 +144,56 @@
     });
   };
 
+  /* ---------- Naplnění selectů z DOM ---------- */
+
+  const populateDrawerOptions = (drawer) => {
+    const clientSel   = drawer.querySelector('#jobClientSel');
+    const statusSel   = drawer.querySelector('#jobStatusSel');
+    const assigneeSel = drawer.querySelector('#jobAssigneeSel');
+
+    // 1) Klienti
+    let clientValues = [];
+    // Kandidát: jakýkoli dropdown v prvním sloupci seznamu (u řádků mívá kompletní seznam klientů)
+    const rowClientSelect = document.querySelector('main td:first-child select, .tableWrap td:first-child select');
+    if (rowClientSelect && rowClientSelect.options?.length > 1) {
+      clientValues = Array.from(rowClientSelect.options).map(o => (o.text || '').trim());
+    }
+    // Fallback: posbíráme texty z prvního sloupce tabulky
+    if (!clientValues.length) clientValues = uniqueTextsInColumn(1);
+    // Záloha: pokud se nic nenašlo, necháme prázdné (uživatel má aspoň možnost psát název dřív, než přidáme zdroj)
+
+    // 2) Statusy – ideálně z horního “status” filtru (ten mívá hodnoty Nová/Probíhá/Hotovo)
+    let statusValues = [];
+    // zkuste vyhledat select, jehož vybraná položka je jedna z [Nová, Probíhá, Hotovo]
+    const candidateSelects = Array.from(document.querySelectorAll('main select, header select, .wrap select'));
+    for (const s of candidateSelects) {
+      const opts = Array.from(s.options).map(o => (o.text || '').trim());
+      const hasStatuses = ['Nová','Probíhá','Hotovo'].some(x => opts.includes(x));
+      if (hasStatuses) { statusValues = opts.filter(Boolean); break; }
+    }
+    if (!statusValues.length) statusValues = ['Nová','Probíhá','Hotovo'];
+
+    // 3) Grafik – ideálně z horního “Grafik: …” filtru
+    let assigneeValues = [];
+    for (const s of candidateSelects) {
+      const opts = Array.from(s.options).map(o => (o.text || '').trim());
+      if (opts.some(t => /^Grafik:/i.test(t))) {
+        // z „Grafik: xxx“ uděláme jen jméno (bez prefixu), zároveň přidáme „nikdo“
+        assigneeValues = uniq(
+          opts.map(t => t.replace(/^Grafik:\s*/i,'').trim())
+        );
+        break;
+      }
+    }
+    if (!assigneeValues.length) assigneeValues = ['nikdo'];
+
+    fillSelect(clientSel,   uniq(clientValues));
+    fillSelect(statusSel,   uniq(statusValues));
+    fillSelect(assigneeSel, uniq(assigneeValues));
+  };
+
+  /* ---------- boot ---------- */
+
   const boot = () => {
     hideTopRightBox();
 
@@ -148,19 +201,24 @@
     const drawer = ensureDrawer();
     wireOpenClose(drawer, plus);
 
-    // udržuj stav, kdyby app re-renderovala
-    let n = 0;
+    // jednou po načtení zkusíme popsat (když už jsou na stránce selecty)
+    populateDrawerOptions(drawer);
+
+    // držíme stav i při re-renderu
+    let ticks = 0;
     const keep = setInterval(() => {
       injectPlus();
       hideTopRightBox();
-      drawer.classList.remove('open');  // <- kdyby ho někdo po loadu „otevřel“
-      if (++n > 30) clearInterval(keep);
+      // pokud je zavřený, držíme ho zavřený
+      if (!drawer.classList.contains('open')) drawer.classList.remove('open');
+      if (++ticks > 40) clearInterval(keep);
     }, 300);
 
+    // když app překreslí DOM, znovu schovej user box a doplň options při otevření
     const mo = new MutationObserver(() => {
       hideTopRightBox();
-      injectPlus();
-      drawer.classList.remove('open');  // <- jistota
+      // options doplňujeme až při otevření (rychlejší), ale můžeme i zde, pokud je panel otevřený:
+      if (drawer.classList.contains('open')) populateDrawerOptions(drawer);
     });
     mo.observe(document.documentElement, { childList:true, subtree:true });
   };

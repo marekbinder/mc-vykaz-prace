@@ -1,10 +1,49 @@
-/* ===== Drawer – kompletní, samoopravný init + skrytí e-mailu/odhlášení ===== */
+/* ===== Drawer v2 – robustní init, injekce „+“ a tvrdé skrytí user boxu ===== */
 (function () {
-  const READY = () =>
-    document.readyState === 'complete' || document.readyState === 'interactive';
+  const READY = () => /complete|interactive/.test(document.readyState);
 
-  const run = () => {
-    /* 1) ZAJIŠTĚNÍ MARKUPU (vytvoříme sami, pokud chybí) */
+  /* Tvrdá style injekce (pro případ, že se CSS nenačte dřív) */
+  (function ensureStyle() {
+    if (!document.getElementById('drawerHardStyle')) {
+      const st = document.createElement('style');
+      st.id = 'drawerHardStyle';
+      st.textContent = `
+        #userBoxTopRight { display:none !important; visibility:hidden !important; pointer-events:none !important; }
+      `;
+      document.head.appendChild(st);
+    }
+  })();
+
+  /* Opakovaně schovávej e-mail/odhlásit, kdyby app re-renderovala */
+  const hideTopRightBox = () => {
+    const box = document.getElementById('userBoxTopRight');
+    if (box) {
+      box.style.display = 'none';
+      box.style.visibility = 'hidden';
+      box.style.pointerEvents = 'none';
+      box.style.position = 'absolute';
+      box.style.width = '0'; box.style.height = '0'; box.style.overflow = 'hidden';
+    }
+  };
+
+  /* Injekce a udržování tlačítka „+“ */
+  const injectPlus = () => {
+    let btn = document.getElementById('openDrawerBtn');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = 'openDrawerBtn';
+      btn.type = 'button';
+      btn.setAttribute('aria-label', 'Nástroje');
+      btn.textContent = '+';
+      document.body.appendChild(btn);
+    }
+    // jistota pozice i po reflow
+    btn.style.cssText += ';position:fixed;top:16px;right:16px;z-index:2147483647;';
+    return btn;
+  };
+
+  /* Vytvoření panelu a obsahu */
+  const ensureDrawer = () => {
     let drawer = document.querySelector('.drawer');
     if (!drawer) {
       drawer = document.createElement('aside');
@@ -20,59 +59,8 @@
         </div>`;
       document.body.appendChild(drawer);
     }
-    const panel  = drawer.querySelector('.drawer__panel');
-    const scrim  = drawer.querySelector('.drawer__scrim');
-    const body   = drawer.querySelector('.drawer__body');
+    const body = drawer.querySelector('.drawer__body');
 
-    /* 2) TLAČÍTKO „+“ – vytvoříme vždy, pokud chybí */
-    let btnOpen = document.querySelector('#openDrawerBtn');
-    if (!btnOpen) {
-      btnOpen = document.createElement('button');
-      btnOpen.id = 'openDrawerBtn';
-      btnOpen.type = 'button';
-      btnOpen.setAttribute('aria-label', 'Nástroje');
-      btnOpen.textContent = '+';
-      document.body.appendChild(btnOpen);
-    }
-
-    const btnClose = drawer.querySelector('.drawer__close');
-
-    const ensureSelectInteractable = (root) => {
-      root.querySelectorAll('select').forEach(s => {
-        s.disabled = false;
-        s.style.pointerEvents = 'auto';
-        s.style.position = 'relative';
-        s.style.zIndex = 1004;
-      });
-    };
-
-    const open = () => {
-      drawer.classList.add('open');
-      panel.style.pointerEvents = 'auto';
-      drawer.style.pointerEvents = 'auto';
-      scrim.style.pointerEvents  = 'auto';
-
-      requestAnimationFrame(() => {
-        panel.setAttribute('tabindex', '-1');
-        try { panel.focus({ preventScroll: true }); } catch (e) {}
-        ensureSelectInteractable(drawer);
-      });
-    };
-
-    const close = () => {
-      drawer.classList.remove('open');
-      scrim.style.pointerEvents  = 'none';
-      panel.style.pointerEvents  = 'none';
-    };
-
-    btnOpen.addEventListener('click', open);
-    if (btnClose) btnClose.addEventListener('click', close);
-    if (scrim)   scrim.addEventListener('click', close);
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && drawer.classList.contains('open')) close();
-    });
-
-    /* 3) OBSAH PANELU – dvě oddělené sekce (Zakázka / Klient) */
     const ensureSection = (sel, html) => {
       if (!drawer.querySelector(sel)) {
         const sec = document.createElement('section');
@@ -101,7 +89,7 @@
       </div>
     `);
 
-    /* 4) NAPLNĚNÍ SELECTŮ – zkopírujeme možnosti, pokud existují na stránce */
+    // copy helper (bez chyb, když zdroj není)
     const copyOptions = (fromSel, toSel) => {
       const from = document.querySelector(fromSel);
       const to   = drawer.querySelector(toSel);
@@ -111,67 +99,60 @@
       }
     };
 
-    /* pokud máte zdrojové selecty, nastavte jim data-source atributy:
-       <select data-source="client-list">…</select> atd. */
+    // pokud máš zdrojové selecty, nastav jim data-source atributy
     copyOptions('[data-source="client-list"]',   '#jobClientSel');
     copyOptions('[data-source="status-list"]',   '#jobStatusSel');
     copyOptions('[data-source="assignee-list"]', '#jobAssigneeSel');
-    ensureSelectInteractable(drawer);
 
-    /* 5) HOOKY – pokud máš globální funkce, napojíme je */
-    const addJobBtn = drawer.querySelector('#drawerAddJobBtn');
-    if (addJobBtn && typeof window.addJobFromDrawer === 'function') {
-      addJobBtn.onclick = () => {
-        const payload = {
-          clientId: drawer.querySelector('#jobClientSel')?.value,
-          name:     drawer.querySelector('#jobNameInp')?.value?.trim(),
-          statusId: drawer.querySelector('#jobStatusSel')?.value,
-          assignee: drawer.querySelector('#jobAssigneeSel')?.value
-        };
-        window.addJobFromDrawer(payload);
-      };
-    }
-    const addClientBtn = drawer.querySelector('#drawerAddClientBtn');
-    if (addClientBtn && typeof window.addClientFromDrawer === 'function') {
-      addClientBtn.onclick = () => {
-        const name = drawer.querySelector('#clientNameInp')?.value?.trim();
-        window.addClientFromDrawer({ name });
-      };
-    }
+    // selecty vždy klikatelné
+    drawer.querySelectorAll('select').forEach(s => {
+      s.disabled = false;
+      s.style.pointerEvents = 'auto';
+      s.style.position = 'relative';
+      s.style.zIndex = 1004;
+    });
 
-    /* 6) NEMILOSRDNÉ SKRÝVÁNÍ E-MAILU A „ODHLÁSIT“ (i při re-renderu) */
-    const isEmail    = (t) => /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(t);
-    const isLogout   = (t) => /odhl[aá]sit/i.test(t);
-
-    const hideAuthChips = () => {
-      const candidates = document.querySelectorAll('a,button,div,span');
-      candidates.forEach(el => {
-        const txt = (el.textContent || el.innerText || '').trim();
-        if (!txt) return;
-        if (isEmail(txt) || isLogout(txt)) {
-          el.style.visibility    = 'hidden';
-          el.style.pointerEvents = 'none';
-          el.style.position      = 'absolute';
-          el.style.width         = '0';
-          el.style.height        = '0';
-          el.style.overflow      = 'hidden';
-        }
-      });
-    };
-
-    // první průchod + několik retry pokusů (kdyby se vše kreslilo později)
-    hideAuthChips();
-    let retry = 0;
-    const timer = setInterval(() => {
-      hideAuthChips();
-      if (++retry > 20) clearInterval(timer);
-    }, 300);
-
-    // a watcher na přerenderování
-    const mo = new MutationObserver(hideAuthChips);
-    mo.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    return drawer;
   };
 
-  if (READY()) run();
-  else document.addEventListener('DOMContentLoaded', run);
+  const wireOpenClose = (drawer, plusBtn) => {
+    const scrim = drawer.querySelector('.drawer__scrim');
+    const panel = drawer.querySelector('.drawer__panel');
+    const closeBtn = drawer.querySelector('.drawer__close');
+
+    const open = () => {
+      drawer.classList.add('open');
+      requestAnimationFrame(() => { try { panel.focus({ preventScroll: true }); } catch(_){} });
+    };
+    const close = () => drawer.classList.remove('open');
+
+    plusBtn.addEventListener('click', open);
+    scrim .addEventListener('click', close);
+    closeBtn.addEventListener('click', close);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && drawer.classList.contains('open')) close(); });
+  };
+
+  const boot = () => {
+    hideTopRightBox();                    // okamžitě pryč
+    const plus = injectPlus();            // ať je vždy
+    const drawer = ensureDrawer();        // panel + obsah
+    wireOpenClose(drawer, plus);
+
+    // opakované pojistky (kdyby app něco překreslovala)
+    let n = 0;
+    const keep = setInterval(() => {
+      injectPlus();
+      hideTopRightBox();
+      if (++n > 30) clearInterval(keep);
+    }, 300);
+
+    const mo = new MutationObserver(() => {
+      hideTopRightBox();
+      injectPlus();
+    });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+  };
+
+  if (READY()) boot();
+  else document.addEventListener('DOMContentLoaded', boot);
 })();

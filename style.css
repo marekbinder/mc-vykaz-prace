@@ -483,3 +483,27 @@ header [class*="email" i]{
 
 /* drobný spacing kvůli FAB vpravo */
 header.topbar{ padding-right:72px; }
+
+
+/* ===== Schovat e-mail přihlášeného uživatele + tlačítko Odhlásit ===== */
+#logoutBtn,
+.logout,
+.btn-logout,
+.user-chip,
+.userChip,
+#userChip,
+.topbar .auth-chip,
+.topbar .user,
+.topbar [data-auth],
+.topbar a[href^="mailto:"],
+.topbar button[title="Odhlásit"],
+.topbar .logoutBtn {
+  display: none !important;
+}
+
+/* Pro jistotu schovej starý řádek „addRow“, kdyby někde zbyl */
+.addRow,
+#addRow,
+section.addRow {
+  display: none !important;
+}

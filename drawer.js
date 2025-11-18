@@ -1,146 +1,144 @@
-/* drawer.js – nástroje v pravém panelu
- * Vytvoří FAB „+“, overlay a panel; přesune existující prvky přidání
- * (klient/zakázka/status + přiřazení grafika) z hlavní stránky do panelu.
- */
-(() => {
-  const qs  = (s, r=document) => r.querySelector(s);
-  const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
+/* ===== Drawer (postranní panel) – kompletní ===== */
 
-  // ---------- UI kostra: FAB + overlay + panel ----------
-  const toggleBtn = document.createElement('button');
-  toggleBtn.id = 'drawerToggle';
-  toggleBtn.className = 'drawer-toggle';
-  toggleBtn.type = 'button';
-  toggleBtn.textContent = '+';
-  toggleBtn.setAttribute('aria-label','Otevřít nástroje');
-  document.body.appendChild(toggleBtn);
+(function () {
+  const drawer = document.querySelector('.drawer');
+  if (!drawer) return;
 
-  const overlay = document.createElement('div');
-  overlay.id = 'drawerOverlay';
-  overlay.className = 'drawer-overlay';
-  document.body.appendChild(overlay);
+  const panel  = drawer.querySelector('.drawer__panel');
+  const scrim  = drawer.querySelector('.drawer__scrim');
+  const btnOpen = document.querySelector('#openDrawerBtn'); // plovoucí „+“
+  const btnClose = drawer.querySelector('.drawer__close');
 
-  const drawer = document.createElement('aside');
-  drawer.id = 'drawer';
-  drawer.className = 'drawer';
-  drawer.setAttribute('aria-hidden','true');
-  document.body.appendChild(drawer);
-
-  const header = document.createElement('div');
-  header.className = 'drawer-header';
-  header.innerHTML = `<h2>Nástroje</h2>`;
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'drawer-close';
-  closeBtn.type = 'button';
-  closeBtn.textContent = '×';
-  closeBtn.setAttribute('aria-label','Zavřít panel');
-  header.appendChild(closeBtn);
-  drawer.appendChild(header);
-
-  const makeSection = (title) => {
-    const sec = document.createElement('section');
-    sec.className = 'tool-section';
-    const h3 = document.createElement('h3');
-    h3.textContent = title;
-    const wrap = document.createElement('div');
-    wrap.className = 'tool-wrap';
-    sec.appendChild(h3);
-    sec.appendChild(wrap);
-    drawer.appendChild(sec);
-    return wrap;
-  };
-
-  // ---------- Schovat top-right email + Odhlásit ----------
-  const hideTopRightStuff = () => {
-    // „Odhlásit“
-    const logout = qsa('button, a').find(el => /odhl[aá]sit/i.test(el.textContent));
-    if (logout) logout.style.display = 'none';
-    // email chip – prvek vpravo nahoře s „@“
-    const emailChip = qsa('div,span,a,button').find(el =>
-      /@/.test(el.textContent || '') &&
-      el.getBoundingClientRect &&
-      el.getBoundingClientRect().top < 120 &&
-      el.getBoundingClientRect().left > (window.innerWidth * 0.55)
-    );
-    if (emailChip) emailChip.style.display = 'none';
-  };
-  hideTopRightStuff();
-
-  // ---------- Přesun prvků do panelu ----------
-  // Původní add řádek schováme (ale až po vyjmutí prvků)
-  const addRow = qs('#addRow');
-
-  // Základ: jméno klienta + tlačítko
-  const newClientName = qs('#newClientName');
-  const addClientBtn  = qs('#addClientBtn');
-
-  // Zakázka: klient, název, status, tlačítko
-  const newJobClient  = qs('#newJobClient');
-  const newJobName    = qs('#newJobName');
-  const newJobStatus  = qs('#newJobStatus');
-  const addJobBtn     = qs('#addJobBtn');
-
-  // Robustní detekce prvku PRO PŘIŘAZENÍ GRAFIKA (ten „Grafik: …“)
-  const findAssigneeControl = () => {
-    // nejdřív zkus uvnitř addRow
-    const insideAdd = addRow
-      ? qsa('*', addRow).find(el =>
-          /assignee|grafik/i.test((el.id||'') + ' ' + (el.className||'')) ||
-          /^grafik:/i.test((el.textContent||'').trim())
-        )
-      : null;
-    if (insideAdd) return insideAdd;
-
-    // fallback – najdi „pill/select“, co má text „Grafik:“ a není to filtr „Všichni“
-    const pills = qsa('.pill-select, .pill-btn, select, button, [role="button"]')
-      .filter(el => /grafik/i.test((el.textContent||'') + ' ' + (el.id||'') + ' ' + (el.className||'')));
-    const nonFilter = pills.find(el => !/v[šs]ichni/i.test(el.textContent||''));
-    return nonFilter || null;
-  };
-
-  const newJobAssignee = findAssigneeControl();
-
-  // Sekce 1: Přidání zakázky
-  const jobWrap = makeSection('Přidání zakázky');
-  if (newJobClient)  jobWrap.appendChild(newJobClient);
-  if (newJobName)    jobWrap.appendChild(newJobName);
-  if (newJobStatus)  jobWrap.appendChild(newJobStatus);
-  if (newJobAssignee) jobWrap.appendChild(newJobAssignee); // <- doplněno
-  if (addJobBtn)     jobWrap.appendChild(addJobBtn);
-
-  // Sekce 2: Přidání klienta
-  const clientWrap = makeSection('Přidání klienta');
-  if (newClientName) clientWrap.appendChild(newClientName);
-  if (addClientBtn)  clientWrap.appendChild(addClientBtn);
-
-  // Až teď bezpečně skryj celý původní řádek
-  if (addRow) addRow.style.display = 'none';
-
-  // Pokud by někde zůstala zatoulaná „Grafik: …“ pilulka (duplicitní),
-  // preventivně ji schovej:
-  const strayGrafik = qsa('.pill-select, .pill-btn, select, button, [role="button"]')
-    .find(el => /^grafik:/i.test((el.textContent||'').trim()) && !drawer.contains(el));
-  if (strayGrafik) strayGrafik.style.display = 'none';
-
-  // ---------- Open / Close ----------
   const open = () => {
     drawer.classList.add('open');
-    overlay.classList.add('show');
-    drawer.setAttribute('aria-hidden','false');
-    const focusable = qsa('input,select,button', drawer).find(el => !el.disabled);
-    if (focusable) focusable.focus();
-  };
-  const close = () => {
-    drawer.classList.remove('open');
-    overlay.classList.remove('show');
-    drawer.setAttribute('aria-hidden','true');
-    toggleBtn.focus();
+
+    // jistota, že ovládací prvky jsou interaktivní
+    panel.style.pointerEvents = 'auto';
+    drawer.style.pointerEvents = 'auto';
+    scrim.style.pointerEvents = 'auto';
+
+    // některé mobilní prohlížeče potřebují panel získat fokus
+    requestAnimationFrame(() => {
+      panel.setAttribute('tabindex', '-1');
+      panel.focus({ preventScroll: true });
+    });
+
+    // pro jistotu zvednout z-index rozbalovacím selectům
+    drawer.querySelectorAll('select').forEach(s => {
+      s.disabled = false;
+      s.style.pointerEvents = 'auto';
+      s.style.position = 'relative';
+      s.style.zIndex = 1004;
+    });
   };
 
-  toggleBtn.addEventListener('click', open);
-  closeBtn.addEventListener('click', close);
-  overlay.addEventListener('click', close);
-  window.addEventListener('keydown', (e) => {
+  const close = () => {
+    drawer.classList.remove('open');
+    // po zavření už panel nic neodchytává
+    scrim.style.pointerEvents  = 'none';
+    panel.style.pointerEvents  = 'none';
+  };
+
+  if (btnOpen)  btnOpen.addEventListener('click', open);
+  if (btnClose) btnClose.addEventListener('click', close);
+  if (scrim)    scrim.addEventListener('click', close);
+
+  // ESC zavře
+  document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && drawer.classList.contains('open')) close();
   });
+
+  // --- Přesun „Přidat zakázku“ a „Přidat klienta“ do panelu (pokud už nejsou) ---
+  // Očekává: v hlavní stránce existují prvky s id #addJobForm a #addClientForm (nebo jejich části)
+  const host = drawer.querySelector('.drawer__body');
+  if (host) {
+    const addJobForm    = document.querySelector('#addJobForm');
+    const addClientForm = document.querySelector('#addClientForm');
+
+    // vytvoření UI, když nebylo součástí HTML (bezpečná varianta)
+    if (!drawer.querySelector('.drawer__section.section-job')) {
+      const secJob = document.createElement('section');
+      secJob.className = 'drawer__section section-job';
+      secJob.innerHTML = `
+        <h3>Přidání zakázky</h3>
+        <div class="form-stack" id="drawerJobStack">
+          <div class="control"><select id="jobClientSel"></select></div>
+          <div class="control"><input  id="jobNameInp" placeholder="Název zakázky"></div>
+          <div class="control"><select id="jobStatusSel"></select></div>
+          <div class="control"><select id="jobAssigneeSel"></select></div>
+          <button id="drawerAddJobBtn" class="btn-primary">Přidat zakázku</button>
+        </div>`;
+      host.appendChild(secJob);
+    }
+
+    if (!drawer.querySelector('.drawer__section.section-client')) {
+      const secClient = document.createElement('section');
+      secClient.className = 'drawer__section section-client';
+      secClient.innerHTML = `
+        <h3>Přidání klienta</h3>
+        <div class="form-stack" id="drawerClientStack">
+          <div class="control"><input id="clientNameInp" placeholder="Název klienta"></div>
+          <button id="drawerAddClientBtn" class="btn-primary">Přidat klienta</button>
+        </div>`;
+      host.appendChild(secClient);
+    }
+
+    // napojení na tvou existující logiku
+    // – tady jen přesměruj akce na stejné handler funkce jako na hlavní stránce
+    const ids = {
+      clientSel:   '#jobClientSel',
+      jobName:     '#jobNameInp',
+      statusSel:   '#jobStatusSel',
+      assigneeSel: '#jobAssigneeSel',
+      addJobBtn:   '#drawerAddJobBtn',
+      clientName:  '#clientNameInp',
+      addClientBtn:'#drawerAddClientBtn'
+    };
+
+    // data do selectů (přebíráme z existujících selectů na stránce, ať je vše konzistentní)
+    const copyOptions = (fromSel, toSel) => {
+      const from = document.querySelector(fromSel);
+      const to   = drawer.querySelector(toSel);
+      if (from && to && !to.options.length) {
+        to.innerHTML = from.innerHTML;
+        to.value = from.value;
+      }
+    };
+
+    copyOptions('[data-source="client-list"]', ids.clientSel);
+    copyOptions('[data-source="status-list"]', ids.statusSel);
+    copyOptions('[data-source="assignee-list"]', ids.assigneeSel);
+
+    // pro jistotu znovu uvolnit pointer events
+    drawer.querySelectorAll(`${ids.clientSel},${ids.statusSel},${ids.assigneeSel}`).forEach(el => {
+      el.disabled = false;
+      el.style.pointerEvents = 'auto';
+    });
+
+    // Předpoklad: globální funkce addJobFromDrawer / addClientFromDrawer
+    // Pokud používáš jiné názvy, jen je tu zavolej.
+    const addJobBtn = drawer.querySelector(ids.addJobBtn);
+    if (addJobBtn && typeof window.addJobFromDrawer === 'function') {
+      addJobBtn.onclick = () => {
+        const payload = {
+          clientId: drawer.querySelector(ids.clientSel)?.value,
+          name:     drawer.querySelector(ids.jobName)?.value?.trim(),
+          statusId: drawer.querySelector(ids.statusSel)?.value,
+          assignee: drawer.querySelector(ids.assigneeSel)?.value
+        };
+        window.addJobFromDrawer(payload);
+      };
+    }
+
+    const addClientBtn = drawer.querySelector(ids.addClientBtn);
+    if (addClientBtn && typeof window.addClientFromDrawer === 'function') {
+      addClientBtn.onclick = () => {
+        const name = drawer.querySelector(ids.clientName)?.value?.trim();
+        window.addClientFromDrawer({ name });
+      };
+    }
+  }
+
+  // export ovládací funkce, kdybys je potřeboval z app.js
+  window._drawer = { open, close, el: drawer };
 })();

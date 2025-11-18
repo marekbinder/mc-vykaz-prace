@@ -1,5 +1,7 @@
 /* === Utility Drawer (off-canvas) ======================================== */
 
+.is-hidden { display: none !important; }
+
 .backdrop {
   position: fixed;
   inset: 0;
@@ -16,15 +18,20 @@
   height: 100vh;
   background: #fff;
   color: #0a1220;
-  box-shadow: -24px 0 60px rgba(20,30,50,.25);
+  /* stín *jen* při otevření – tím zmizí šedý gradient na pravém okraji */
+  box-shadow: none;
   transform: translateX(100%);
-  transition: transform .28s ease;
+  transition: transform .28s ease, box-shadow .28s ease;
   z-index: 70;
   display: flex;
   flex-direction: column;
   border-left: 1px solid #eef1f5;
+  will-change: transform;
 }
-.drawer.open { transform: translateX(0); }
+.drawer.open {
+  transform: translateX(0);
+  box-shadow: -24px 0 60px rgba(20,30,50,.25);
+}
 
 .drawer-head {
   display: flex;
@@ -57,6 +64,12 @@
   padding: 6px 8px;
 }
 
+/* styl burger tlačítka v topbaru */
+.util-trigger {
+  margin-left: auto;
+}
+
+/* občas se hodí „ghost“ varianta */
 .pill-btn.ghost {
   background: transparent;
   border: 1px solid #d7dde5;

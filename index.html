@@ -1,87 +1,143 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="cs">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Výkaz práce</title>
   <link rel="stylesheet" href="style.css"/>
-  <link rel="stylesheet" href="drawer.css"/>
+
+  <!-- knihovny -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <header class="topbar">
     <h1>Výkaz práce</h1>
 
-    <div class="weekbar">
-      <button id="prevWeek" class="nav-btn" aria-label="Předchozí týden">‹</button>
-      <div id="weekLabel" class="week-chip">–</div>
-      <button id="nextWeek" class="nav-btn" aria-label="Další týden">›</button>
-    </div>
+    <!-- (ponecháno kvůli stávajícímu app.js, ale skryto v CSS) -->
+    <div id="userBoxTopRight" class="userbox"></div>
 
-    <div class="actions-right">
-      <button id="exportBtn" class="pill-btn">Export do Excelu</button>
-      <!-- kulaté + -->
-      <button id="drawerOpenBtn" class="fab" aria-label="Otevřít nástroje">+</button>
-    </div>
+    <!-- kulaté + (FAB) pro otevření panelu Nástroje -->
+    <button id="drawerOpenBtn" class="fab" aria-label="Otevřít nástroje">+</button>
   </header>
 
   <main id="app" class="wrap">
-    <!-- Tady app.js renderuje tabulku a filtry, NECHÁVAT PRÁZDNÉ -->
+    <!-- týden + export -->
+    <section class="weekbar">
+      <div class="weeknav">
+        <button id="prevWeek" class="navbtn" title="Předchozí týden">◀</button>
+        <div id="weekRange" class="weekpill">–</div>
+        <button id="nextWeek" class="navbtn" title="Další týden">▶</button>
+      </div>
+      <button id="exportXlsx" class="pill-btn export">Export do Excelu</button>
+    </section>
+
+    <!-- filtry -->
+    <section class="filters">
+      <div class="filters-row">
+        <label class="lbl">Nastavení filtru:</label>
+
+        <select id="filterClient" class="pill-select"></select>
+        <select id="filterStatus" class="pill-select"></select>
+
+        <select id="totalsScope" class="pill-select">
+          <option value="ME">Součty: Já</option>
+          <option value="ALL">Součty: Všichni</option>
+        </select>
+
+        <!-- filtr „Grafik“ s ukotveným menu -->
+        <div class="menuAnchor">
+          <button id="assigneeFilterBtn" class="pill-btn">Grafik: Všichni</button>
+          <div id="assigneeFilterMenu" class="menu" hidden>
+            <label><input type="checkbox" value="Viki"> Viki</label>
+            <label><input type="checkbox" value="Standa"> Standa</label>
+            <label><input type="checkbox" value="Marek"> Marek</label>
+            <div class="menuRow">
+              <button id="assigneeFilterClear" class="pill-btn small" type="button">Vymazat</button>
+              <button id="assigneeFilterClose" class="pill-btn small" type="button">Zavřít</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- (řádek přidání byl přesunut do draweru) -->
+
+    <!-- tabulka -->
+    <section class="tableWrap">
+      <table class="grid">
+        <thead>
+          <tr class="headpill">
+            <th>Klient</th>
+            <th>Zakázka</th>
+            <th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th>
+            <th>Celkem</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot>
+          <tr id="sumRow">
+            <td colspan="2" class="sumLabel">Součet za den</td>
+            <td class="sumCell"></td>
+            <td class="sumCell"></td>
+            <td class="sumCell"></td>
+            <td class="sumCell"></td>
+            <td class="sumCell"></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
   </main>
+
+  <!-- Overlay + Drawer (Nástroje) -->
+  <div id="drawerOverlay" class="drawer-overlay" aria-hidden="true"></div>
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <h2>Nástroje</h2>
+      <button id="drawerCloseBtn" class="pill-btn small ghost" aria-label="Zavřít">✕</button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- Přidání zakázky -->
+      <section class="drawer-sec">
+        <h3>Přidání zakázky</h3>
+        <div class="drawer-grid">
+          <select id="newJobClient" class="pill-select"></select>
+          <input id="newJobName" class="pill-input" placeholder="Název zakázky"/>
+          <select id="newJobStatus" class="pill-select"></select>
+
+          <div class="menuAnchor">
+            <button id="assigneesNewBtn" class="pill-btn">Grafik: nikdo</button>
+            <div id="assigneesNewMenu" class="menu" hidden>
+              <label><input type="checkbox" value="Viki"> Viki</label>
+              <label><input type="checkbox" value="Standa"> Standa</label>
+              <label><input type="checkbox" value="Marek"> Marek</label>
+              <div class="menuRow">
+                <button id="assigneesNewClear" class="pill-btn small" type="button">Vymazat</button>
+                <button id="assigneesNewClose" class="pill-btn small" type="button">Zavřít</button>
+              </div>
+            </div>
+          </div>
+
+          <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
+        </div>
+      </section>
+
+      <!-- Přidání klienta -->
+      <section class="drawer-sec">
+        <h3>Přidání klienta</h3>
+        <div class="drawer-grid">
+          <input id="newClientName" class="pill-input" placeholder="Název klienta"/>
+          <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
+        </div>
+      </section>
+    </div>
+  </aside>
 
   <div id="err" class="toast" style="display:none"></div>
 
-  <!-- Overlay pro drawer -->
-  <div class="drawer-overlay"></div>
-
-  <!-- Drawer (pravý panel) -->
-  <aside class="drawer" aria-hidden="true" aria-labelledby="drawerTitle">
-    <div class="drawer-head">
-      <h2 id="drawerTitle">Nástroje</h2>
-      <button id="drawerCloseBtn" class="icon-btn" aria-label="Zavřít">✕</button>
-    </div>
-
-    <section class="drawer-section">
-      <h3>Přidání zakázky</h3>
-
-      <!-- DŮLEŽITÉ: STEJNÁ ID, jaká app.js očekává -->
-      <label class="drawer-label">Klient</label>
-      <select id="newJobClient" class="drawer-input">
-        <!-- app.js si hodnoty doplní / nebo můžeš vložit default -->
-      </select>
-
-      <label class="drawer-label">Název zakázky</label>
-      <input id="newJobName" class="drawer-input" type="text" placeholder="Název zakázky"/>
-
-      <label class="drawer-label">Stav</label>
-      <select id="newJobStatus" class="drawer-input">
-        <option value="NEW">Nová</option>
-        <option value="PROBIHA">Probíhá</option>
-        <option value="HOTOVO">Hotovo</option>
-      </select>
-
-      <label class="drawer-label">Grafik</label>
-      <select id="newJobAssignee" class="drawer-input">
-        <option value="NONE">nikdo</option>
-        <option value="Marek">Marek</option>
-        <option value="Viki">Viki</option>
-        <option value="Standa">Standa</option>
-      </select>
-
-      <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
-    </section>
-
-    <section class="drawer-section">
-      <h3>Přidání klienta</h3>
-
-      <!-- DŮLEŽITÉ: STEJNÁ ID, jaká app.js očekává -->
-      <label class="drawer-label">Název klienta</label>
-      <input id="newClientName" class="drawer-input" type="text" placeholder="Název klienta"/>
-
-      <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
-    </section>
-  </aside>
-
   <script src="app.js"></script>
-  <script src="drawer.js"></script>
 </body>
 </html>

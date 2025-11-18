@@ -10,10 +10,10 @@
 .drawer__scrim {
   position: absolute;
   inset: 0;
-  background: rgba(18, 23, 28, 0.55);  /* jemné ztmavení */
+  background: rgba(18, 23, 28, 0.55);
   opacity: 0;
   transition: opacity .22s ease;
-  pointer-events: none;           /* scrim neodchytává klik dokud není open */
+  pointer-events: none;
 }
 
 .drawer__panel {
@@ -89,7 +89,7 @@
 
 .form-stack .control {
   position: relative;
-  z-index: 0;                     /* každý control získá vlastní stacking context */
+  z-index: 0;                     /* stacking context pro selecty */
 }
 
 .form-stack select,
@@ -126,21 +126,33 @@
 }
 
 /* Stav otevřeno */
-.drawer.open {
-  pointer-events: auto;           /* celé UI panelu může chytat události */
-}
+.drawer.open { pointer-events: auto; }
+.drawer.open .drawer__scrim { opacity: 1; pointer-events: auto; }
+.drawer.open .drawer__panel { transform: translateX(0); }
 
-.drawer.open .drawer__scrim {
-  opacity: 1;
-  pointer-events: auto;           /* scrim chytá klik pro zavření */
-}
-
-.drawer.open .drawer__panel {
-  transform: translateX(0);
-}
-
-/* Zajištění, že rozbalovací seznamy jsou nad scrimem i na iOS */
+/* Selecty vždy nad scrimem i na iOS */
 .drawer .control { position: relative; z-index: 1003; }
 .drawer select { position: relative; z-index: 1004; }
 
-/* ŽÁDNÝ skrytý gradient/stín u pravého okraje v zavřeném stavu */
+/* ===== Plovoucí „+“ tlačítko (vpravo nahoře) ===== */
+#openDrawerBtn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1100;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: #0b1523;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  line-height: 1;
+  box-shadow: 0 8px 22px rgba(0,0,0,.18);
+  cursor: pointer;
+}
+#openDrawerBtn:focus { outline: 3px solid rgba(11,21,35,.25); }
+
+/* ŽÁDNÝ skrytý gradient/stín v zavřeném stavu – nic dalšího netřeba */

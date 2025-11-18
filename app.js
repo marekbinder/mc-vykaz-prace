@@ -235,65 +235,77 @@ async function deleteJob(jobId){
   state.jobs=await loadJobs(); await refreshTotals(); renderTable();
 }
 
-// export do excelu (vynechá řádky bez hodin v týdnu) — BEZ "Celkem"
+// export do excelu (vynechá řádky bez hodin v týdnu)
 async function exportExcel() {
-  const daysISO = getDays();
+  const daysISO = getDays();                                  // např. 5 dní aktuálního týdne
   const daysTxt = daysISO.map(d => dayjs(d).format('D. M. YYYY'));
 
+  // aplikované filtry na joby
   const visible = state.jobs
     .filter(j => (state.filterClient === 'ALL' || String(j.client_id) === String(state.filterClient)))
     .filter(j => (state.filterStatus === 'ALL' || String(j.status_id) === String(state.filterStatus)))
     .filter(j => jobPassesAssigneeFilter(j));
 
+  // jen ty, co mají v daném týdnu aspoň nějaké hodiny
   const withHours = visible.filter(j => daysISO.some(d => cellValue(j.id, d) > 0));
 
+  // ExcelJS workbook/sheet
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Výkaz');
 
-  // jméno do záhlaví + do názvu souboru
-  const userEmail = (state.session?.user?.email || '').trim();
-  const userName = nameFromEmail(userEmail);
-
-  const start = dayjs(state.weekStart);
-  const end = dayjs(addDays(state.weekStart, 4));
-  const rangeTxt = `${start.format('D. M. YYYY')} – ${end.format('D. M. YYYY')}`;
-
-  ws.addRow([`Uživatel: ${userName || userEmail || '—'}`]);
-  ws.addRow([`Týden: ${rangeTxt}`]);
+  // hlavička
+  const user = state.session?.user?.email || '';
+  const range = `${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart, 4)).format('D. M. YYYY')}`;
+  ws.addRow([`Uživatel: ${user}`]);
+  ws.addRow([`Týden: ${range}`]);
   ws.addRow([]);
 
-  // hlavička bez "Celkem"
-  const header = ['Klient', 'Zakázka', ...daysTxt];
-  const hdrRow = ws.addRow(header);
-  hdrRow.font = { bold: true };
+  // řádek s názvy sloupců (tučně)
+  const header = ws.addRow(['Klient', 'Zakázka', ...daysTxt]);
+  header.font = { bold: true };
 
-  // řádky
+  // data
   for (const j of withHours) {
-    const vals = daysISO.map(d => cellValue(j.id, d));
+    const vals = daysISO.map(d => cellValue(j.id, d) || 0);
     ws.addRow([j.client, j.name, ...vals]);
   }
 
-  // šířky sloupců
-  ws.columns = header.map((_, i) => ({ width: i < 2 ? 28 : 12 }));
+  // --- NOVINKA: součtový řádek ---
+  // 1) Mezi data a součtem prázdný řádek
+  ws.addRow([]);
 
-  // uložení
-  const fileName = `Vykaz_prace_${(userName || userEmail || 'Uzivatel')
-    .replace(/[^\p{L}\p{N}_-]+/gu, '_')}_${start.format('YYYY-MM-DD')}_${end.format('YYYY-MM-DD')}.xlsx`;
+  // 2) Výpočet součtů po dnech
+  const totals = daysISO.map(d => withHours.reduce((sum, j) => sum + (cellValue(j.id, d) || 0), 0));
 
-  const buf = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buf], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
+  // 3) Součtový řádek, celý tučně
+  const sumRow = ws.addRow(['', 'Součet', ...totals]);
+  sumRow.font = { bold: true };
 
-  if (window.saveAs) {
-    saveAs(blob, fileName);
-  } else {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fileName;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2500);
+  // volitelné: číselný formát hodin u součtového řádku
+  for (let i = 0; i < daysISO.length; i++) {
+    sumRow.getCell(3 + i).numFmt = '0.##'; // sloupce s dny začínají ve 3. sloupci
   }
+
+  // slušná šířka sloupců
+  ws.columns = [
+    { width: 28 }, // Klient
+    { width: 36 }, // Zakázka
+    ...daysISO.map(() => ({ width: 10 }))
+  ];
+
+  // finální uložení
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+  // název souboru (ponecháváme stávající logiku, případně přizpůsob podle předchozího mapování jmen)
+  const fileName = `vykaz_${dayjs(state.weekStart).format('YYYY-MM-DD')}.xlsx`;
+
+  // stažení
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 

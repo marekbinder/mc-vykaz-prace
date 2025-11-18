@@ -1,63 +1,45 @@
-// Toggle postranního panelu – izolováno od app.js
-(function(){
-  const menuBtn     = document.getElementById('menuBtn');
-  const scrim       = document.getElementById('scrim');
-  const drawer      = document.getElementById('drawer');
-  const drawerClose = document.getElementById('drawerClose');
+// Ovládání pravého vysouvacího panelu.
+// Záměrně izolované – nesaháme do app.js ani do stávající logiky.
 
-  function openDrawer(){
-    drawer.classList.add('is-open');
-    scrim.classList.add('is-visible');
-    drawer.setAttribute('aria-hidden','false');
-  }
-  function closeDrawer(){
-    drawer.classList.remove('is-open');
-    scrim.classList.remove('is-visible');
-    drawer.setAttribute('aria-hidden','true');
-  }
+const body = document.body;
+const burgerBtn = document.getElementById('burgerBtn');
+const backdrop = document.getElementById('drawerBackdrop');
 
-  menuBtn?.addEventListener('click', openDrawer);
-  scrim?.addEventListener('click', closeDrawer);
-  drawerClose?.addEventListener('click', closeDrawer);
+// Div, do kterého tvůj původní kód vypisuje e-mail/odhlášení:
+const userBoxTopRight = document.getElementById('userBoxTopRight');
+// Slot v panelu, kam to zkopírujeme (jen HTML; nic nepřesouváme)
+const drawerUserSlot = document.getElementById('drawerUserSlot');
 
-  // Zobrazení e-mailu v menu – pokud existuje session v app.js
-  try{
-    if (window.supabase && window.supabase.auth){
-      window.supabase.auth.getSession().then(({data})=>{
-        const email = data?.session?.user?.email || 'Nepřihlášený';
-        const label = document.getElementById('userEmailLabel');
-        if (label) label.textContent = email;
-      });
+function openDrawer() {
+  // Vyrobíme kopii aktuálního HTML s e-mailem/odhlášením (původní app.js to tam rendruje)
+  if (userBoxTopRight && drawerUserSlot) {
+    drawerUserSlot.innerHTML = userBoxTopRight.innerHTML || '';
+    // Malé doladění: obalíme to kapslí, aby ladilo s UI
+    if (drawerUserSlot.firstElementChild) {
+      drawerUserSlot.firstElementChild.style.display = 'inline-flex';
+      drawerUserSlot.firstElementChild.style.gap = '8px';
+      drawerUserSlot.firstElementChild.style.alignItems = 'center';
     }
-  }catch(e){}
-
-  // Export – volá tvůj existující exportExcel()
-  function handleExport(){ if (typeof window.exportExcel==='function') window.exportExcel(); }
-  document.getElementById('exportBtn')?.addEventListener('click', handleExport);
-  document.getElementById('exportBtnDrawer')?.addEventListener('click', handleExport);
-
-  // Odhlášení – používá Supabase
-  document.getElementById('signOutBtn')?.addEventListener('click', async ()=>{
-    try{
-      await window.supabase.auth.signOut();
-      location.reload();
-    }catch(e){
-      const t=document.getElementById('err'); if(t){ t.textContent='Odhlášení se nezdařilo'; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
-    }
-  });
-
-  // Týdny – zachováno: jen předává na stávající logiku v app.js
-  const weekLabel = document.getElementById('weekLabel');
-  function setWeekLabel(start){
-    if (!window.dayjs) return;
-    const end = new Date(start); end.setDate(end.getDate()+4);
-    weekLabel.textContent = `${dayjs(start).format('DD. MM. YYYY')} – ${dayjs(end).format('DD. MM. YYYY')}`;
   }
-  // Pokud app.js nastavuje week sám, tohle se přepíše – nevadí.
-  if (weekLabel && !weekLabel.textContent.includes('.')) {
-    const d = new Date(); const m = new Date(d);
-    const diff = (m.getDay()+6)%7; m.setDate(m.getDate()-diff);
-    setWeekLabel(m);
-  }
+  body.classList.add('drawer-open');
+  backdrop.hidden = false;
+}
 
-})();
+function closeDrawer() {
+  body.classList.remove('drawer-open');
+  backdrop.hidden = true;
+}
+
+burgerBtn?.addEventListener('click', () => {
+  if (body.classList.contains('drawer-open')) closeDrawer();
+  else openDrawer();
+});
+
+backdrop?.addEventListener('click', closeDrawer);
+
+// Zavřít ESC
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && body.classList.contains('drawer-open')) {
+    closeDrawer();
+  }
+});

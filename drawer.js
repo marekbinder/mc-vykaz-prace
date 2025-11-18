@@ -1,75 +1,61 @@
-/* drawer.js – čistě UI kontroler pravého vysouvacího panelu
-   Bez zásahů do app.js. Používá stejné ID prvků, které app.js už zná.
-*/
+// drawer.js – robust opener/closer, binds after DOM is ready
 (function () {
-  const qs  = (s,p=document) => p.querySelector(s);
-  const qsa = (s,p=document) => Array.from(p.querySelectorAll(s));
-
-  // prvky
-  const fab      = qs('#toolsFab');
-  const drawer   = qs('#toolsDrawer');
-  const backdrop = qs('#toolsBackdrop');
-  const closeX   = qs('#toolsClose');
-
-  // Vnitřní prvky, necháváme stejné ID, které očekává app.js
-  const addJobBtn     = qs('#addJobBtn');
-  const addClientBtn  = qs('#addClientBtn');
-  const logoutBtn     = qs('#logoutBtn');
-
-  // helpery
-  const lockScroll = (on) => {
-    if (on) {
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
+  const ready = (fn) => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once: true });
     } else {
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
+      fn();
     }
   };
 
-  const openDrawer = () => {
-    drawer.classList.add('open');
-    backdrop.classList.add('show');
-    lockScroll(true);
-    // focus: první pole v sekci Přidání zakázky (select klienta)
-    const first = qs('#newJobClient');
-    first && first.focus();
-  };
+  ready(() => {
+    const qs  = (s,p=document)=>p.querySelector(s);
+    const drawer   = qs('#toolsDrawer');
+    const backdrop = qs('#toolsBackdrop');
 
-  const closeDrawer = () => {
-    drawer.classList.remove('open');
-    backdrop.classList.remove('show');
-    lockScroll(false);
-  };
+    if (!drawer || !backdrop) {
+      console.warn('[drawer] Missing #toolsDrawer or #toolsBackdrop in DOM.');
+      return;
+    }
 
-  // vazby
-  fab     && fab.addEventListener('click', openDrawer);
-  closeX  && closeX.addEventListener('click', closeDrawer);
-  backdrop&& backdrop.addEventListener('click', closeDrawer);
+    const closeBtn = qs('#toolsClose', drawer);
+    const open = () => {
+      drawer.classList.add('open');
+      backdrop.classList.add('show');
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      // focus první pole v přidání zakázky
+      const first = qs('#newJobClient');
+      if (first) setTimeout(()=> first.focus(), 10);
+    };
+    const close = () => {
+      drawer.classList.remove('open');
+      backdrop.classList.remove('show');
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    };
 
-  // ESC pro zavření
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
-  });
-
-  // Pokud app.js připojí vlastní handlery na #addJobBtn/#addClientBtn/#logoutBtn,
-  // necháváme to plně na něm. Zde jen prevence defaultu (form uvnitř sidebaru)
-  [addJobBtn, addClientBtn, logoutBtn].forEach(btn=>{
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      // Zavřeme po úspěšném kliku – app.js typicky ukáže toast/refreshne, UI se zavře
-      // Pokud potřebuješ zavírat až po potvrzení, můžeš to udělat v app.js po úspěchu.
-      // Tady necháme “optimisticky” zavřít:
-      setTimeout(()=> {
-        if (drawer.classList.contains('open')) closeDrawer();
-      }, 120);
+    // Delegated open/close (works for #toolsFab and any [data-open-drawer]/[data-close-drawer])
+    document.addEventListener('click', (e) => {
+      const openEl  = e.target.closest('[data-open-drawer], #toolsFab');
+      const closeEl = e.target.closest('[data-close-drawer], #toolsClose');
+      if (openEl)  { e.preventDefault(); open();  }
+      if (closeEl) { e.preventDefault(); close(); }
+      // klik mimo sheet zavře
+      if (drawer.classList.contains('open')) {
+        const sheet = drawer; // whole aside is our sheet
+        if (!sheet.contains(e.target) && !openEl) {
+          // klik na backdrop
+          if (backdrop.contains(e.target)) close();
+        }
+      }
     });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && drawer.classList.contains('open')) close();
+    });
+
+    // expose for quick testing in console
+    window.drawer = { open, close, el: drawer };
   });
-
-  // Hotfix: v některých prohlížečích mohla otravovat “skákající” animace zleva.
-  // Jasně definujeme směr zprava:
-  if (drawer) {
-    drawer.style.transformOrigin = 'right center';
-  }
-
 })();

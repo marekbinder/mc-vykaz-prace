@@ -1,134 +1,317 @@
-/* ====== ZÁKLADNÍ RESET / TYPografie ====== */
-*,
-*::before,
-*::after{ box-sizing:border-box; }
-
-html, body{
-  margin:0; padding:0;
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol";
-  color:#0f172a; background:#fafafa;
+/* ==== základ ==== */
+*{box-sizing:border-box}
+:root{
+  --pill-h: 44px;
+  --pill-r: 9999px;
 }
+html,body{margin:0;padding:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:#0E1625}
 
-/* ====== PILL komponenty (držím tvůj styl) ====== */
-.pill-input,.pill-select{
-  border:1px solid rgba(0,0,0,.12);
-  background:#fff; border-radius:999px;
-  padding:10px 14px; font:inherit; outline:none;
-}
-.pill-input:focus,.pill-select:focus{ border-color:#0d1522; }
-
-.pill-btn{
-  border:1px solid rgba(0,0,0,.1);
-  background:#f5f7fa; color:#0f172a;
-  padding:10px 16px; border-radius:999px;
-  display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  cursor:pointer; font-weight:600;
-}
-.pill-btn:hover{ background:#eef1f6; }
-.pill-btn.ghost{ background:transparent; border-color:rgba(0,0,0,.15); }
-.pill-btn.accent{ background:#0d1522; color:#fff; border-color:#0d1522; }
-.pill-btn.icon{ width:44px; height:44px; border-radius:12px; }
-
-.exportBtn{ position:absolute; top:20px; right:76px; }
-
-/* ====== HLAVIČKA ====== */
+/* hlavička – nadpis na střed, user vpravo */
 .topbar{
   position:relative;
-  display:flex; flex-direction:column; align-items:center; gap:10px;
-  padding:18px 12px 8px;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:16px 16px 0;
 }
-.topbar h1{ margin:0 0 6px; font-size:28px; font-weight:700; }
+h1{font-size:42px;margin:0;font-weight:800}
+.userbox{position:absolute; right:16px; top:12px; display:flex; gap:10px; align-items:center}
 
-/* ====== TÝDENNÍ NAVIGACE ====== */
-.weekbar{
-  display:flex; align-items:center; gap:10px;
+/* obal */
+.wrap{max-width:1100px;margin:0 auto;padding:24px 16px 60px}
+
+/* týden + export */
+.weekbar{position:relative;margin-bottom:10px}
+.weeknav{display:flex;gap:10px;justify-content:center;align-items:center}
+.navbtn{
+  border:none;background:transparent;color:#0E1625;
+  width:36px;height:36px;border-radius:12px;font-size:18px;cursor:pointer
 }
-.weekRange{
-  min-width:240px; text-align:center;
-  padding:10px 16px; border-radius:999px;
-  background:#0d1522; color:#fff; font-weight:700;
+.weekpill{background:#0E1625;color:#fff;padding:10px 18px;border-radius:28px;font-weight:700;letter-spacing:.3px;min-width:260px;text-align:center}
+.pill-btn.export{position:absolute;right:0;top:0}
+
+/* filtry */
+.filters .filters-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}
+.lbl{font-weight:700;color:#444}
+
+/* přidání – zarovnání tlačítka vpravo jako „Celkem“ */
+.add-grid{
+  display:grid;
+  grid-template-columns:240px 150px 160px 1fr 140px 160px auto;
+  gap:10px; align-items:center
+}
+#addJobBtn{justify-self:end}
+
+/* pills */
+.pill-input,.pill-select,.pill-btn{
+  height:var(--pill-h);border:1px solid #E6E6EA;border-radius:var(--pill-r);
+  padding:0 14px;background:#fff;line-height:var(--pill-h);white-space:nowrap
+}
+.pill-input{min-width:180px;line-height:normal;padding:0 14px}
+.pill-select{appearance:none;background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%23666" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>') no-repeat right 12px center;background-size:10px 6px;padding-right:26px}
+.pill-btn{cursor:pointer}
+.pill-btn.accent{background:#0E1625;color:#fff;border-color:#0E1625}
+.pill-btn.small{height:32px;line-height:32px;border-radius:12px}
+
+/* menu (ukotvené k tlačítku) */
+.menuAnchor{position:relative;display:inline-block}
+.menu[hidden]{display:none!important}
+.menu{
+  position:absolute;top:calc(100% + 8px);left:0;background:#fff;border:1px solid #E6E6EA;
+  border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:2000;min-width:160px
+}
+.menu label{display:flex;gap:8px;align-items:center;margin:6px 4px}
+.menuRow{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+
+/* tabulka */
+.tableWrap{margin-top:10px}
+.grid{width:100%;border-collapse:separate;border-spacing:0 10px}
+.grid thead .headpill th{
+  background:#0E1625;color:#fff;border:none;padding:12px 14px;text-align:center
+}
+.grid thead .headpill th:first-child{border-top-left-radius:22px;border-bottom-left-radius:22px;text-align:left}
+.grid thead .headpill th:nth-child(2){text-align:left}
+.grid thead .headpill th:last-child{border-top-right-radius:22px;border-bottom-right-radius:22px}
+
+/* buňky */
+.grid tbody td{padding:6px 8px;border:none}
+.grid tbody tr td:first-child{width:180px}  /* menší „Klient“ */
+.grid tbody tr td:nth-child(2){width:auto}   /* „Zakázka“ může dýchat */
+
+/* bubliny s hodinami */
+.bubble{
+  width:40px;height:40px;border-radius:40px;border:none;background:#ECEEF2;
+  display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;cursor:pointer
+}
+.bubble:active{transform:translateY(1px)}
+
+/* sumy za den */
+.sumLabel{font-weight:700;color:#111;padding-left:8px}
+#sumRow .sumCell{height:40px;text-align:center}
+.sumBubble{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:40px;font-weight:700}
+.sumRed{background:#F44336;color:#fff}
+.sumOrange{background:#FFA726;color:#fff}
+.sumGreen{background:#4CAF50;color:#fff}
+
+/* statusy */
+.statusSel.is-nova{background:#E6F0FF}
+.statusSel.is-probiha{background:#FDEFB4}
+.statusSel.is-hotovo{background:#D7F5E3}
+
+/* buňky zakázky */
+.jobCell{display:flex;gap:8px;align-items:center}
+.jobNameIn{min-width:220px}
+.clientSel{min-width:160px}
+.jobDelete{border:none;background:#ECEEF2;width:36px;height:36px;border-radius:10px;cursor:pointer}
+
+/* inline „Grafik“ – ikonové tlačítko, žádné jméno na první pohled */
+.assigneeIcon{background:#ECEEF2;border:1px solid #E6E6EA}
+
+/* součet vpravo – střed + stejná velikost jako bubliny */
+.totalCell{text-align:center}
+.totalVal{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:40px;height:40px;font-weight:700;font-size:16px
 }
 
-/* ====== FILTRY ====== */
+/* toast */
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#111;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:3000}
+
+
+/* 1) Filtry na střed */
+.filters { 
+  display: flex; 
+  justify-content: center; 
+  gap: 12px; 
+  flex-wrap: wrap; 
+}
+
+/* 2) Koš bez podbarvení a na střed */
+.pill-btn.jobDelete {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  display: inline-flex;
+  align-items: center;   /* srovná ikonku vertikálně */
+  justify-content: center;
+  padding: 0 6px;        /* jemné „klikací“ pole */
+  height: 36px;          /* sjednotí výšku s ostatními pilly */
+}
+
+/* 3) Přidat zakázku – zarovnat s headerem tabulky vpravo */
+.addJobBar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-inline: auto;
+  max-width: 1200px;     /* stejná šířka, jakou používáš pro tabulku */
+}
+
+
+/* Odstranění podkladu a zarovnání ikony koše */
+td .pill-btn.jobDelete,
+.jobCell .pill-btn.jobDelete,
+button.pill-btn.jobDelete {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+
+  display: inline-flex !important;
+  align-items: center !important;   /* srovná ikonku vertikálně */
+  justify-content: center !important;
+  height: 36px !important;          /* stejná výška jako ostatní pilly */
+  padding: 0 6px !important;        /* malé klikací pole */
+}
+
+
+/* “Široká síť” – použije se ta třída, kterou máš v projektu */
+.filters,
+.filtersRow,
+.filters-bar,
+.controls,
+.controls-row,
+#filters {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  align-items: center;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto 16px !important;
+}
+
+
+/* Zkusíme nejčastější názvy wrapperů; použije se ten, který existuje */
+.addJobBar,
+.addJobWrapper,
+.add-job-bar,
+.table-actions,
+.actions-row {
+  max-width: 1200px;
+  margin: 8px auto 0;      /* zarovná s tabulkou */
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center;
+}
+
+.addJobBar .addJobBtn,
+.addJobWrapper .addJobBtn,
+.add-job-bar .addJobBtn,
+.table-actions .addJobBtn,
+.actions-row .addJobBtn {
+  align-self: center;
+}
+
+
+/* sjednocení výšek pilů pro čistší grid */
+.pill-btn,
+.pill-input,
+.pill-select {
+  min-height: 36px;
+  line-height: 36px;
+}
+
+
+/* 1) Všude jinde necháme anchor normální */
+.menuAnchor{
+  position: relative;
+  width: auto;
+  height: auto;
+  overflow: visible;
+}
+
+/* 2) Ale v přidávacím řádku ho „zmenšíme“, aby netlačil tlačítko */
+.addRow .menuAnchor{
+  width: 0;
+  height: 0;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+/* 3) Rozložení přidávací řádky + tlačítka */
+.add-grid{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+#addJobBtn{
+  margin-left: auto;
+  align-self: center;
+}
+
+
+/* — ŘÁDEK FILTRŮ — */
 .filters{
-  display:flex; justify-content:center; gap:10px; flex-wrap:wrap;
-  padding:8px 12px 6px;
+  display: flex;          /* sjednoceně přes flex */
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;    /* VERTIKÁLNÍ ZAROVNÁNÍ NA STŘED */
+  justify-content: center;/* centrování celé řady pod datumem */
 }
 
-/* ====== HORNÍ VYHLED (zůstává pro kompatibilitu) ====== */
-.searchbar{
-  display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;
-  padding:8px 12px;
+/* Všechny „pills“ ve filtrech bez vlastních offsetů */
+.filters .pill-select,
+.filters .pill-input,
+.filters .pill-btn{
+  margin: 0;
+  align-self: center;     /* pro jistotu, kdyby si něco neslo vlastní zarovnání */
 }
 
-/* Skrytí legacy „přidávacího řádku“ – povoleno až když běží JS */
-html.js .addRowButton,
-html.js [data-add-row] { display:none !important; }
-
-/* ====== TABULKA ====== */
-.tableWrap{ padding:8px 16px 32px; }
-.hoursTable{
-  width:100%; border-collapse:separate; border-spacing:0;
-  background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:16px; overflow:hidden;
-}
-.hoursTable th, .hoursTable td{
-  text-align:center; padding:12px 10px; border-bottom:1px solid rgba(0,0,0,.06);
-}
-.hoursTable thead th{
-  background:#0d1522; color:#fff; font-weight:700;
-}
-.hoursTable tbody tr:last-child td{ border-bottom:none; }
-.hoursTable td:first-child, .hoursTable th:first-child{ text-align:left; padding-left:16px; }
-.hoursTable td:nth-child(2), .hoursTable th:nth-child(2){ text-align:left; }
-
-/* poznámka */
-.footerNote{
-  margin-top:8px; font-size:12px; color:#6b7280; text-align:left;
+/* Pokud má filtr „Grafik: …“ uvnitř anchor pro menu, ať nedělá odsazení */
+.filters .menuAnchor{
+  width: auto;
+  height: auto;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
 }
 
-/* ====== DRAWER (namespaced) ====== */
-.x-burger{
-  position:fixed; top:16px; right:16px; z-index:1100;
-  width:44px; height:44px; border-radius:12px; border:none;
-  background:#0d1522; display:flex; align-items:center; justify-content:center;
-  gap:4px; cursor:pointer;
-  box-shadow:0 4px 16px rgba(0,0,0,.15);
-}
-.x-burger span{ display:block; width:18px; height:2px; background:#fff; border-radius:2px; }
-@media (max-width:640px){ .x-burger{ top:12px; right:12px; } }
-
-.x-scrim{
-  position:fixed; inset:0; background:rgba(0,0,0,.35);
-  backdrop-filter:saturate(110%) blur(2px);
-  z-index:1090;
-}
-.x-scrim[hidden]{ display:none; }
-
-.x-drawer{
-  position:fixed; top:0; right:-380px; width:360px; max-width:90vw; height:100dvh;
-  background:#fff; z-index:1101; box-shadow: -20px 0 40px rgba(0,0,0,.18);
-  display:flex; flex-direction:column; transition:right .28s ease;
-  border-left:1px solid rgba(0,0,0,.06);
-}
-.x-drawer.is-open{ right:0; }
-
-.x-drawer__head{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:18px 18px; border-bottom:1px solid rgba(0,0,0,.06);
-}
-.x-drawer__head h2{ font-size:18px; margin:0; }
-.x-drawer__close{
-  border:none; background:#0d1522; color:#fff; width:36px; height:36px; border-radius:10px;
-  cursor:pointer;
+/* === Přidání zakázky — jeden řádek, nic se nezalamuje === */
+.addRow .add-grid{
+  display: grid;
+  /* Sloupce odpovídají pořadí prvků:
+     [Název klienta] [Přidat klienta] [Klient] [Název zakázky] [Status] [Grafik] [Přidat zakázku] */
+  grid-template-columns: 
+    320px           /* Název klienta (input) */
+    max-content     /* Přidat klienta (button) */
+    180px           /* Klient (select) */
+    360px           /* Název zakázky (input) */
+    180px           /* Status (select) */
+    max-content     /* Grafik (anchor/„pill“) -> aby se nezalamoval */
+    max-content;    /* Přidat zakázku (button) */
+  gap: 16px;
+  align-items: center;
+  justify-content: center; /* držíme celou řadu pěkně uprostřed */
 }
 
-.x-drawer__body{
-  padding:16px; overflow:auto; flex:1; display:flex; flex-direction:column; gap:12px;
+/* „Grafik“ v přidávacím řádku je renderovaný do anchoru, ať se netváří jako blok s vlastním odsazením */
+.addRow .menuAnchor{
+  margin: 0;
+  padding: 0;
+  width: auto;
+  height: auto;
+  align-self: center;
+  justify-self: start;    /* ať drží u předchozího prvku */
+  white-space: nowrap;   /* krátký text „Grafik: nikdo“ se neprotáhne na další řádek */
 }
 
-.x-card{
-  background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:14px;
-  padding:14px; display:flex; flex-direction:column; gap:10px;
+/* Pro jistotu srovnáme i vnitřní „pills“ v add-row, aby nic netlačilo okolí */
+.addRow .pill-select,
+.addRow .pill-input,
+.addRow .pill-btn{
+  margin: 0;
+  align-self: center;
 }
-.x-card h3{ font-size:14px; margin:0 0 6px; color:#111827; }
-.x-card--ghost{ border-style:dashed; background:#fafafa; }
+
+/* Lehké zúžení sloupců u menších šířek, aby se to stále vešlo do jedné řady */
+@media (max-width: 1600px){
+  .addRow .add-grid{
+    grid-template-columns:
+      280px max-content 160px 320px 160px max-content max-content;
+  }
+}
+

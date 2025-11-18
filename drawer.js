@@ -1,164 +1,141 @@
-/* ===== Drawer v2.3 – bez intervalů, bez těžkého MO, naplnění selectů při otevření ===== */
-(function () {
-  const onReady = (fn) => (document.readyState === 'complete' || document.readyState === 'interactive')
-    ? queueMicrotask(fn) : document.addEventListener('DOMContentLoaded', fn);
+/* ========================================================================
+   drawer.js — COMPLETE
+   Pravostranný šuplík s overlayem, focus-trapem a veřejným API
+   ===================================================================== */
 
-  /* Skryj trvale e-mail/odhlášení vpravo */
-  (function ensureHideUser() {
-    if (!document.getElementById('drawerHardStyle')) {
-      const st = document.createElement('style');
-      st.id = 'drawerHardStyle';
-      st.textContent = '#userBoxTopRight{display:none!important;visibility:hidden!important;pointer-events:none!important}';
-      document.head.appendChild(st);
+/* Pomocné: selektor fokusovatelných prvků */
+const FOCUSABLE_SEL =
+  'a[href], area[href], input:not([disabled]):not([type="hidden"]), ' +
+  'select:not([disabled]), textarea:not([disabled]), button:not([disabled]), ' +
+  'iframe, object, embed, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
+
+(function initDrawer() {
+  const drawer   = document.getElementById('drawer');
+  const overlay  = document.getElementById('drawerOverlay');
+  const fab      = document.getElementById('drawerFab');       // kulaté + vpravo nahoře
+  const closeBtn = document.getElementById('drawerClose') ||
+                   (drawer ? drawer.querySelector('[data-close]') : null);
+
+  if (!drawer || !overlay || !fab) {
+    // Není v DOM – nic neinicializujeme, ale nepadáme
+    console.warn('[drawer] Missing DOM nodes (drawer/overlay/fab).');
+    return;
+  }
+
+  let isOpen = false;
+  let lastActive = null;
+
+  function getFocusable(container) {
+    return Array.from(container.querySelectorAll(FOCUSABLE_SEL))
+      .filter(el => el.offsetParent !== null || el === document.activeElement);
+  }
+
+  function trapFocus(e) {
+    if (!isOpen) return;
+    if (!drawer.contains(e.target)) {
+      // pokud klik mimo drawer, posuň fokus dovnitř
+      const els = getFocusable(drawer);
+      (els[0] || drawer).focus();
+      e.preventDefault();
     }
-    const bx = document.getElementById('userBoxTopRight');
-    if (bx) {
-      Object.assign(bx.style, {
-        display:'none', visibility:'hidden', pointerEvents:'none',
-        position:'absolute', width:'0', height:'0', overflow:'hidden'
-      });
+  }
+
+  function onKeyDown(e) {
+    if (!isOpen) return;
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeDrawer();
+      return;
     }
-  })();
 
-  /* ---- util ---- */
-  const uniq = (arr) => Array.from(new Set((arr||[]).filter(Boolean)));
+    if (e.key === 'Tab') {
+      // focus trap
+      const focusables = getFocusable(drawer);
+      if (focusables.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusables[0];
+      const last  = focusables[focusables.length - 1];
+      const active = document.activeElement;
 
-  const getSelectOptionsText = (sel) => {
-    const s = document.querySelector(sel);
-    if (!s || !s.options) return [];
-    return Array.from(s.options).map(o => (o.text || '').trim()).filter(Boolean);
-  };
-
-  const uniqueTextsInColumn = (idx /* 1-based */) => {
-    const rows = Array.from(document.querySelectorAll('main tr, .tableWrap tr'));
-    const texts = rows.map(r => (r.cells && r.cells[idx-1] ? r.cells[idx-1].innerText.trim() : '')).filter(Boolean);
-    return uniq(texts);
-  };
-
-  const fillSelect = (el, values) => {
-    if (!el) return;
-    const v = values && values.length ? values : [];
-    el.innerHTML = v.map(x => `<option value="${x}">${x}</option>`).join('');
-  };
-
-  /* ---- UI scaffold ---- */
-  const ensurePlus = () => {
-    let b = document.getElementById('openDrawerBtn');
-    if (!b) {
-      b = document.createElement('button');
-      b.id = 'openDrawerBtn';
-      b.type = 'button';
-      b.setAttribute('aria-label', 'Nástroje');
-      b.textContent = '+';
-      document.body.appendChild(b);
-    }
-    // pokud je v DOM, přesuň ho nahoru vpravo (kdyby ho cokoliv vykoplo jinam)
-    b.style.cssText += ';position:fixed;top:16px;right:16px;';
-    return b;
-  };
-
-  const ensureDrawer = () => {
-    document.querySelectorAll('.drawer').forEach((d,i)=>{ if(i>0) d.remove(); });
-    let dr = document.querySelector('.drawer');
-    if (!dr) {
-      dr = document.createElement('aside');
-      dr.className = 'drawer';
-      dr.innerHTML = `
-        <div class="drawer__scrim" aria-hidden="true"></div>
-        <div class="drawer__panel" role="dialog" aria-modal="true" aria-label="Nástroje">
-          <div class="drawer__header">
-            <div class="drawer__title">Nástroje</div>
-            <button class="drawer__close" type="button" aria-label="Zavřít">×</button>
-          </div>
-          <div class="drawer__body">
-            <section class="drawer__section section-job">
-              <h3>Přidání zakázky</h3>
-              <div class="form-stack">
-                <div class="control"><select id="jobClientSel" aria-label="Klient"></select></div>
-                <div class="control"><input  id="jobNameInp" placeholder="Název zakázky" aria-label="Název zakázky"></div>
-                <div class="control"><select id="jobStatusSel" aria-label="Status"></select></div>
-                <div class="control"><select id="jobAssigneeSel" aria-label="Grafik"></select></div>
-                <button id="drawerAddJobBtn" class="btn-primary">Přidat zakázku</button>
-              </div>
-            </section>
-
-            <section class="drawer__section section-client">
-              <h3>Přidání klienta</h3>
-              <div class="form-stack">
-                <div class="control"><input id="clientNameInp" placeholder="Název klienta" aria-label="Název klienta"></div>
-                <button id="drawerAddClientBtn" class="btn-primary">Přidat klienta</button>
-              </div>
-            </section>
-          </div>
-        </div>`;
-      document.body.appendChild(dr);
-    }
-    dr.classList.remove('open'); // default zavřeno
-    return dr;
-  };
-
-  /* ---- naplnění selectů – volá se jen při otevření ---- */
-  const populateOptions = (drawer) => {
-    const clientSel   = drawer.querySelector('#jobClientSel');
-    const statusSel   = drawer.querySelector('#jobStatusSel');
-    const assigneeSel = drawer.querySelector('#jobAssigneeSel');
-
-    // Klienti: z řádkového selectu v 1. sloupci, případně z textu 1. sloupce
-    let clients = [];
-    const rowClientSelect = document.querySelector('td:first-child select, .tableWrap td:first-child select');
-    if (rowClientSelect?.options?.length) {
-      clients = Array.from(rowClientSelect.options).map(o => (o.text||'').trim());
-    }
-    if (!clients.length) clients = uniqueTextsInColumn(1);
-
-    // Status: z horního filtru, jinak default
-    let statuses = [];
-    const allSelects = Array.from(document.querySelectorAll('select'));
-    for (const s of allSelects) {
-      const t = Array.from(s.options||[]).map(o => (o.text||'').trim());
-      if (['Nová','Probíhá','Hotovo'].some(x => t.includes(x))) { statuses = t; break; }
-    }
-    if (!statuses.length) statuses = ['Nová','Probíhá','Hotovo'];
-
-    // Grafik: z horního filtru, pokud existuje (často „Grafik: …“), jinak fallback
-    let assignees = [];
-    for (const s of allSelects) {
-      const t = Array.from(s.options||[]).map(o => (o.text||'').trim());
-      // heuristika: v textu některé option bývá prefix „Grafik:“
-      if (t.some(x => /^Grafik:/i.test(x))) {
-        assignees = t.map(x => x.replace(/^Grafik:\s*/i,'').trim()).filter(Boolean);
-        break;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
       }
     }
-    if (!assignees.length) assignees = ['nikdo'];
+  }
 
-    fillSelect(clientSel,   uniq(clients));
-    fillSelect(statusSel,   uniq(statuses));
-    fillSelect(assigneeSel, uniq(assignees));
+  function preventTouchScroll(e) {
+    // zabráníme scrollu podkladu při otevřeném šuplíku (iOS)
+    if (!drawer.contains(e.target)) e.preventDefault();
+  }
+
+  function openDrawer() {
+    if (isOpen) return;
+    isOpen = true;
+
+    lastActive = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+
+    // zapneme overlay + animaci šuplíku
+    overlay.classList.add('show');
+    // „force reflow“ pro Safari/Chrome, aby navazující transform vždy proběhl
+    // eslint-disable-next-line no-unused-expressions
+    drawer.offsetWidth;
+    drawer.classList.add('open');
+
+    // přístupnost + tělo bez scrollu
+    drawer.setAttribute('aria-hidden', 'false');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('noscroll');
+
+    // posluchače
+    document.addEventListener('keydown', onKeyDown, { passive: false });
+    document.addEventListener('focus', trapFocus, true);
+    document.addEventListener('touchmove', preventTouchScroll, { passive: false });
+
+    // fokus dovnitř
+    const els = getFocusable(drawer);
+    (els[0] || drawer).focus();
+  }
+
+  function closeDrawer() {
+    if (!isOpen) return;
+    isOpen = false;
+
+    drawer.classList.remove('open');
+    overlay.classList.remove('show');
+    drawer.setAttribute('aria-hidden', 'true');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('noscroll');
+
+    document.removeEventListener('keydown', onKeyDown, { passive: false });
+    document.removeEventListener('focus', trapFocus, true);
+    document.removeEventListener('touchmove', preventTouchScroll, { passive: false });
+
+    if (lastActive && typeof lastActive.focus === 'function') {
+      lastActive.focus();
+      lastActive = null;
+    }
+  }
+
+  // ——— Události ————————————————————————————————————————————————
+  fab.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openDrawer(); });
+  overlay.addEventListener('click', closeDrawer);
+  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  // kliky uvnitř šuplíku nepouštíme na overlay
+  drawer.addEventListener('click', (e) => e.stopPropagation());
+
+  // API ven
+  window.vpDrawer = {
+    open:  openDrawer,
+    close: closeDrawer,
+    isOpen: () => isOpen
   };
-
-  /* ---- open / close ---- */
-  const wire = (drawer, plus) => {
-    const scrim   = drawer.querySelector('.drawer__scrim');
-    const panel   = drawer.querySelector('.drawer__panel');
-    const closeBt = drawer.querySelector('.drawer__close');
-
-    const open = () => {
-      drawer.classList.add('open');
-      populateOptions(drawer); // jen teď, ne pořád
-      try { panel.focus({preventScroll:true}); } catch(_) {}
-    };
-    const close = () => drawer.classList.remove('open');
-
-    plus.addEventListener('click', open, { passive:true });
-    scrim.addEventListener('click', close, { passive:true });
-    closeBt.addEventListener('click', close, { passive:true });
-    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && drawer.classList.contains('open')) close(); }, { passive:true });
-  };
-
-  onReady(() => {
-    const plus   = ensurePlus();
-    const drawer = ensureDrawer();
-    wire(drawer, plus);
-  });
 })();

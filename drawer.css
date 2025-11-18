@@ -1,148 +1,81 @@
-/* ===== Drawer – kompletní ===== */
+/* ===== Drawer – kompletní v2.1 ===== */
 
-.drawer {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  pointer-events: none;
+/* Panel nikdy nesmí být vidět po loadu */
+.drawer{ 
+  position:fixed; inset:0; z-index:1000; 
+  pointer-events:none; 
+  display:none;            /* <- jistota, že defaultně není vidět */
+}
+.drawer.open{ 
+  pointer-events:auto; 
+  display:block;           /* <- vidíme jen při open */
 }
 
-.drawer__scrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(18, 23, 28, 0.55);
-  opacity: 0;
-  transition: opacity .22s ease;
-  pointer-events: none;
+.drawer__scrim{
+  position:absolute; inset:0;
+  background:rgba(18,23,28,.55);
+  opacity:0; transition:opacity .22s ease;
+  pointer-events:none;
+}
+.drawer.open .drawer__scrim{ opacity:1; pointer-events:auto; }
+
+.drawer__panel{
+  position:absolute; top:0; right:0; height:100%;
+  width:min(420px,100%);
+  background:#fff;
+  transform:translateX(100%) !important;   /* <- jisté skrytí */
+  transition:transform .24s ease;
+  box-shadow:-24px 0 40px rgb(0 0 0 / 18%), -8px 0 24px rgb(0 0 0 / 12%);
+  display:flex; flex-direction:column; z-index:1002;
+  pointer-events:auto;
+  will-change:transform;
+}
+.drawer.open .drawer__panel{
+  transform:translateX(0) !important;      /* <- jisté otevření */
 }
 
-.drawer__panel {
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: min(420px, 100%);
-  background: #fff;
-  transform: translateX(100%);
-  transition: transform .24s ease;
-  box-shadow: -24px 0 40px rgb(0 0 0 / 18%), -8px 0 24px rgb(0 0 0 / 12%);
-  display: flex;
-  flex-direction: column;
-  z-index: 1002;
-  pointer-events: auto;
+.drawer__header{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:20px 24px 16px; border-bottom:1px solid #eef0f2;
+}
+.drawer__title{ font-size:20px; line-height:1.25; font-weight:700; color:#0b1523; }
+.drawer__close{
+  appearance:none; border:0; outline:none; width:44px; height:44px; border-radius:12px;
+  background:#0b1523; color:#fff; display:grid; place-items:center; cursor:pointer;
 }
 
-.drawer__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid #eef0f2;
-}
-
-.drawer__title {
-  font-size: 20px;
-  line-height: 1.25;
-  font-weight: 700;
-  color: #0b1523;
-}
-
-.drawer__close {
-  -webkit-appearance: none;
-  appearance: none;
-  border: 0;
-  outline: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: #0b1523;
-  color: #fff;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-
-.drawer__body {
-  padding: 20px 24px 24px;
-  overflow: auto;
-  flex: 1 1 auto;
-}
+.drawer__body{ padding:20px 24px 24px; overflow:auto; flex:1 1 auto; }
 
 /* Sekce + formuláře */
-.drawer__section { margin-bottom: 28px; }
-.drawer__section h3 {
-  font-size: 14px;
-  letter-spacing: .02em;
-  font-weight: 700;
-  color: #0b1523;
-  margin: 0 0 12px;
+.drawer__section{ margin-bottom:28px; }
+.drawer__section h3{ font-size:14px; letter-spacing:.02em; font-weight:700; color:#0b1523; margin:0 0 12px; }
+
+.form-stack{ display:grid; grid-template-columns:1fr; gap:12px; }
+.form-stack .control{ position:relative; z-index:1003; }
+.form-stack select, .form-stack input{
+  width:100%; height:44px; padding:0 14px; border-radius:12px;
+  border:1px solid #e8ecef; background:#fff; font:inherit; color:#0b1523; outline:none;
+}
+.form-stack select:focus, .form-stack input:focus{ border-color:#0b1523; }
+
+.btn-primary{
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  width:100%; height:48px; border-radius:16px; border:0; background:#0b1523;
+  color:#fff; font-weight:700; cursor:pointer;
 }
 
-.form-stack {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+/* Selecty musí být klikatelné i na iOS nad scrimem */
+.drawer select{ position:relative; z-index:1004; }
+
+/* „+“ plovoucí – vždy nahoře */
+#openDrawerBtn{
+  position:fixed; top:16px; right:16px; z-index:2147483647;
+  width:44px; height:44px; border-radius:50%;
+  border:0; background:#0b1523; color:#fff;
+  display:grid; place-items:center; font-size:24px; line-height:1;
+  box-shadow:0 8px 22px rgba(0,0,0,.18); cursor:pointer;
 }
-.form-stack .control { position: relative; z-index: 1003; }
-.form-stack select,
-.form-stack input {
-  width: 100%;
-  height: 44px;
-  padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid #e8ecef;
-  background: #fff;
-  font: inherit;
-  color: #0b1523;
-  outline: none;
-}
-.form-stack select:focus,
-.form-stack input:focus { border-color: #0b1523; }
+#openDrawerBtn:focus{ outline:3px solid rgba(11,21,35,.25); }
 
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  height: 48px;
-  border-radius: 16px;
-  border: 0;
-  background: #0b1523;
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* Stav otevřeno */
-.drawer.open { pointer-events: auto; }
-.drawer.open .drawer__scrim { opacity: 1; pointer-events: auto; }
-.drawer.open .drawer__panel { transform: translateX(0); }
-
-/* Selecty musí být vždy klikatelně nad scrimem (i na iOS) */
-.drawer select { position: relative; z-index: 1004; }
-
-/* ===== Plovoucí „+“ – extrémní z-index, aby šlo vždy stisknout ===== */
-#openDrawerBtn {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: 2147483647; /* > vše */
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 0;
-  background: #0b1523;
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 24px;
-  line-height: 1;
-  box-shadow: 0 8px 22px rgba(0,0,0,.18);
-  cursor: pointer;
-}
-#openDrawerBtn:focus { outline: 3px solid rgba(11,21,35,.25); }
-
-/* ===== Tvrdé schování uživatelské krabičky vpravo nahoře ===== */
-#userBoxTopRight { display: none !important; visibility: hidden !important; pointer-events: none !important; }
+/* Tvrdé schování uživatelské krabičky vpravo nahoře */
+#userBoxTopRight{ display:none !important; visibility:hidden !important; pointer-events:none !important; }

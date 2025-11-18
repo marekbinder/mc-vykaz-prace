@@ -18,7 +18,7 @@
   height: 100vh;
   background: #fff;
   color: #0a1220;
-  /* stín jen při otevření – tím zmizí šedý gradient na pravém okraji */
+  /* stín jen při otevření – zmizí tak „šedý pruh“ na pravém okraji */
   box-shadow: none;
   transform: translateX(100%);
   transition: transform .28s ease, box-shadow .28s ease;
@@ -72,7 +72,7 @@
   z-index: 80;
 }
 
-/* občas se hodí „ghost“ varianta */
+/* pomocná “ghost” varianta tlačítka */
 .pill-btn.ghost {
   background: transparent;
   border: 1px solid #d7dde5;

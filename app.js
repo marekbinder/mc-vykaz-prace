@@ -14,6 +14,38 @@ const state = {
   newJobAssignees: []               // pro přidání zakázky
 };
 
+// ---- Pomocné načítání bez relací ----
+
+// vrátí { jobId: [{date, hours}, ...], ... }
+async function fetchJobHoursByJobIds(jobIds) {
+  if (!Array.isArray(jobIds) || jobIds.length === 0) return {};
+  const { data, error } = await state.sb
+    .from('job_hour')
+    .select('job_id,date,hours')
+    .in('job_id', jobIds);
+  if (error) { showErr(error); return {}; }
+
+  const map = {};
+  for (const r of data) {
+    (map[r.job_id] ||= []).push({ date: r.date, hours: r.hours });
+  }
+  return map;
+}
+
+// spojí joby s hodinami a názvem klienta z již načtených clients
+function attachHoursAndClient(jobs, hoursMap, clients) {
+  const clientMap = new Map((clients || []).map(c => [String(c.id), c.name]));
+  return (jobs || []).map(j => ({
+    id: j.id,
+    name: j.name,
+    status_id: j.status_id,
+    client_id: j.client_id,
+    client: clientMap.get(String(j.client_id)) || '',
+    assignees: Array.isArray(j.assignees) ? j.assignees : [],
+    hours: hoursMap[j.id] || []
+  }));
+}
+
 /* ====== HELPERY ====== */
 function startOfISOWeek(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }

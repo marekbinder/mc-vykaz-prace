@@ -437,40 +437,71 @@ function buildShellControls(){
   fClear.onclick=()=>{ state.filterAssignees=[]; fBtn.textContent='Grafik: Všichni'; setMenuChecked(fMenu,[]); renderTable(); };
   fClose.onclick=()=> fMenu.hidden=true;
 
-  // přidávání
-  const jobClient=document.getElementById('newJobClient');
-  jobClient.innerHTML = state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-  const jobStatus=document.getElementById('newJobStatus');
-  jobStatus.innerHTML = state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
-  colorizeStatus(jobStatus); jobStatus.onchange=()=>colorizeStatus(jobStatus);
+    // === přidávání ==========================================================
+  const jobClient = document.getElementById('newJobClient');
+  jobClient.innerHTML = state.clients
+    .map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
+    .join('');
 
-  document.getElementById('addClientBtn').onclick=async()=>{
-    const name=document.getElementById('newClientName').value.trim(); if(!name) return showErr('Zadej název klienta');
-    const {error}=await state.sb.from('client').insert({name}); if(error) return showErr(error.message);
-    document.getElementById('newClientName').value=''; state.clients=await loadClients(); buildShellControls();
+  // preferuj aktuální filtr klienta (pokud je nastaven)
+  const defaultClient = (state.filterClient !== 'ALL')
+    ? String(state.filterClient)
+    : String(state.clients[0]?.id || '');
+  if (defaultClient) jobClient.value = defaultClient;
+
+  const jobStatus = document.getElementById('newJobStatus');
+  jobStatus.innerHTML = state.statuses
+    .map(s => `<option value="${s.id}">${escapeHtml(s.label)}</option>`)
+    .join('');
+
+  // preferuj „Nová“, případně první status
+  const novId = state.statuses.find(s => /nov/i.test(s.label))?.id ?? state.statuses[0]?.id;
+  if (novId) jobStatus.value = String(novId);
+  colorizeStatus(jobStatus);
+  jobStatus.onchange = () => colorizeStatus(jobStatus);
+
+  document.getElementById('addClientBtn').onclick = async () => {
+    const name = document.getElementById('newClientName').value.trim();
+    if (!name) return showErr('Zadej název klienta');
+    const { error } = await state.sb.from('client').insert({ name });
+    if (error) return showErr(error.message);
+    document.getElementById('newClientName').value = '';
+    state.clients = await loadClients();
+    buildShellControls();
   };
 
-  // „Grafik“ u nové zakázky
-  const aBtn=document.getElementById('assigneesNewBtn');
-  const aMenu=document.getElementById('assigneesNewMenu');
-  const aClear=document.getElementById('assigneesNewClear');
-  const aClose=document.getElementById('assigneesNewClose');
-  aBtn.onclick=()=>{ setMenuChecked(aMenu,state.newJobAssignees); toggleMenu(aMenu); };
-  aMenu.onchange=()=>{ state.newJobAssignees=collectMenuChecked(aMenu); aBtn.textContent='Grafik: '+(state.newJobAssignees.length? renderAssigneeLabel(state.newJobAssignees): 'nikdo'); };
-  aClear.onclick=()=>{ state.newJobAssignees=[]; setMenuChecked(aMenu,[]); aBtn.textContent='Grafik: nikdo'; };
-  aClose.onclick=()=> aMenu.hidden=true;
+  // „Grafik“ u nové zakázky (checkboxové menu)
+  const aBtn   = document.getElementById('assigneesNewBtn');
+  const aMenu  = document.getElementById('assigneesNewMenu');
+  const aClear = document.getElementById('assigneesNewClear');
+  const aClose = document.getElementById('assigneesNewClose');
 
-  document.getElementById('addJobBtn').onclick=async()=>{
-    const name=document.getElementById('newJobName').value.trim(); if(!name) return showErr('Zadej název zakázky');
-    const client_id=document.getElementById('newJobClient').value;
-    const status_id=+document.getElementById('newJobStatus').value;
-    const assignees=state.newJobAssignees.slice();
-    const {error}=await state.sb.from('job').insert({client_id,name,status_id,assignees});
-    if(error) return showErr(error.message);
-    document.getElementById('newJobName').value=''; state.newJobAssignees=[]; aBtn.textContent='Grafik: nikdo';
-    state.jobs=await loadJobs(); await refreshTotals(); renderTable();
+  aBtn.onclick = () => { setMenuChecked(aMenu, state.newJobAssignees); toggleMenu(aMenu); };
+  aMenu.onchange = () => {
+    state.newJobAssignees = collectMenuChecked(aMenu);
+    aBtn.textContent = 'Grafik: ' + (state.newJobAssignees.length ? renderAssigneeLabel(state.newJobAssignees) : 'nikdo');
   };
-}
+  aClear.onclick = () => { state.newJobAssignees = []; setMenuChecked(aMenu, []); aBtn.textContent = 'Grafik: nikdo'; };
+  aClose.onclick = () => aMenu.hidden = true;
+
+  document.getElementById('addJobBtn').onclick = async () => {
+    const name = document.getElementById('newJobName').value.trim();
+    if (!name) return showErr('Zadej název zakázky');
+    const client_id = document.getElementById('newJobClient').value;
+    const status_id = +document.getElementById('newJobStatus').value;
+    const assignees = state.newJobAssignees.slice();
+
+    const { error } = await state.sb.from('job').insert({ client_id, name, status_id, assignees });
+    if (error) return showErr(error.message);
+
+    document.getElementById('newJobName').value = '';
+    state.newJobAssignees = [];
+    aBtn.textContent = 'Grafik: nikdo';
+
+    state.jobs = await loadJobs();
+    await refreshTotals();
+    renderTable();
+  };
 async function buildShell(){
   setWeekHandlers(); setWeekRangeLabel(); buildShellControls(); renderTable();
 }

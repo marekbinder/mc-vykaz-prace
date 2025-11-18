@@ -5,64 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Výkaz práce</title>
 
-  <!-- Původní hlavní styly aplikace – ponechány beze změny -->
-  <link rel="stylesheet" href="./style.css" />
-  <!-- Nové doplňkové styly pro vysouvací panel -->
-  <link rel="stylesheet" href="./drawer.css" />
+  <!-- TVÉ původní styly – zachovány -->
+  <link rel="stylesheet" href="./style.css?v=10fix" />
+  <!-- DOPLNĚK: styly pro pravý vysouvací panel -->
+  <link rel="stylesheet" href="./drawer.css?v=1" />
 </head>
 <body>
-  <!-- Hlavička: titulek vycentrovaný, vpravo burger (uživatel se už v hlavičce nezobrazuje) -->
-  <header class="siteHeader">
-    <div></div>
-    <h1>Výkaz práce</h1>
 
-    <div class="rightSlot">
-      <!-- Burger -->
-      <button id="burgerBtn" class="circle ghost" aria-label="Menu" title="Menu">☰</button>
-      <!-- Ponecháme místo pro e-mail/odhlášení, ale schováme je v hlavičce (ukáže se v panelu) -->
-      <div id="userBoxTopRight" style="display:none"></div>
-    </div>
+  <!-- PŮVODNÍ HLAVIČKA (třída .topbar ponechána kvůli style.css) -->
+  <header class="topbar">
+    <!-- tvůj app.js sem obvykle dopisuje e-mail / Odhlásit -->
+    <div id="userBoxTopRight"></div>
   </header>
 
-  <main id="app">
-    <!-- Týden + Export (beze změny) -->
-    <section class="toolbar toolbar--grid3">
-      <div class="toolbarLeft"></div>
-      <div class="navGroup">
-        <button class="circle ghost" id="prevWeek" aria-label="Předchozí týden">◀</button>
-        <div class="pill dark navRange" id="weekRange">1. 1. 2025 – 5. 1. 2025</div>
-        <button class="circle ghost" id="nextWeek" aria-label="Další týden">▶</button>
-      </div>
-      <div class="toolbarRight">
-        <button class="pill-btn" id="exportXlsx">Export do Excelu</button>
+  <main id="app" class="wrap">
+
+    <!-- ===== TÝDEN + EXPORT (původní struktura) ===== -->
+    <section class="weekbar">
+      <button id="prevWeek" class="circle ghost" aria-label="Předchozí týden">◀</button>
+      <div id="weekRange" class="pill dark navRange">1. 1. 2025 – 5. 1. 2025</div>
+      <button id="nextWeek" class="circle ghost" aria-label="Další týden">▶</button>
+
+      <div class="weekbar__right">
+        <button id="exportXlsx" class="pill-btn">Export do Excelu</button>
       </div>
     </section>
 
-    <!-- Filtry (beze změny) -->
-    <section class="filters filters--center">
+    <!-- ===== FILTRY (ponechány ids, ať je app.js najde) ===== -->
+    <section class="filters">
       <span class="label">Nastavení filtru:</span>
-      <select class="pill-select" id="filterClient"><option value="ALL">Všichni klienti</option></select>
-      <select class="pill-select" id="filterStatus"><option value="ALL">Všechny zakázky</option></select>
+      <select id="filterClient" class="pill-select">
+        <option value="ALL">Všichni klienti</option>
+      </select>
+      <select id="filterStatus" class="pill-select">
+        <option value="ALL">Všechny zakázky</option>
+      </select>
+      <select id="sumBy" class="pill-select">
+        <option value="me">Součty: Já</option>
+      </select>
+      <select id="assigneeFilter" class="pill-select">
+        <option value="ALL">Grafik: Všichni</option>
+      </select>
     </section>
 
-    <!-- ====== ADD ROW – ZŮSTÁVÁ STEJNÉ ID/PRVKY, POUZE SE VYKRESLUJE JAKO PANEL ====== -->
-    <section class="addRow addRow--stretch" id="addRowDrawer">
+    <!-- ===== ADD ROW – přesunuto do PRAVÉHO PANELU, ale IDS zůstávají ===== -->
+    <section class="addRow add-grid" id="addRowDrawer">
       <h3 class="drawerTitle">Nástroje</h3>
 
-      <!-- Původní prvky pro přidání klienta/zakázky – IDs zachovány -->
-      <input class="pill-input" id="newClientName" placeholder="Název klienta" />
-      <button class="pill-btn" id="addClientBtn">Přidat klienta</button>
+      <input id="newClientName" class="pill-input" placeholder="Název klienta" />
+      <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
 
-      <select class="pill-select" id="newJobClient"></select>
-      <input class="pill-input jobName flexGrow" id="newJobName" placeholder="Název zakázky" />
-      <select class="pill-select statusSel" id="newJobStatus"></select>
-      <button class="pill-btn" id="addJobBtn">Přidat zakázku</button>
+      <select id="newJobClient" class="pill-select"></select>
+      <input id="newJobName" class="pill-input" placeholder="Název zakázky" />
+      <select id="newJobStatus" class="pill-select"></select>
+      <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
 
-      <!-- Slot pro uživatele/odhlášení (zkopírujeme obsah z #userBoxTopRight) -->
-      <div class="drawerUser" id="drawerUserSlot"></div>
+      <!-- sem zkopírujeme obsah e-mail/odhlášení -->
+      <div id="drawerUserSlot" class="drawerUser"></div>
     </section>
 
-    <!-- Tabulka (beze změny) -->
+    <!-- ===== TABULKA – beze změny (ids nechány) ===== -->
     <section class="tableWrap">
       <table>
         <thead>
@@ -84,22 +86,24 @@
       </table>
     </section>
 
-    <div id="err" class="err" style="display:none"></div>
+    <div id="err" class="toast" style="display:none"></div>
   </main>
 
   <footer class="siteFooter">
     <small>Frontend: GitHub Pages · Data: Supabase</small>
   </footer>
 
-  <!-- Backdrop pro vysouvací panel -->
+  <!-- ====== BURGER (pevně vpravo nahoře) + backdrop ====== -->
+  <button id="burgerBtn" class="circle ghost burger-fixed" aria-label="Menu" title="Menu">☰</button>
   <div id="drawerBackdrop" class="drawerBackdrop" hidden></div>
 
-  <!-- Knihovny a původní aplikace -->
+  <!-- KNIHOVNY (stejně jako dřív) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>
 
-  <!-- Malý izolovaný skript pouze pro ovládání panelu (nenarušuje app.js) -->
+  <!-- NOVÉ: ovládání panelu (nezasahuje do app.js) -->
   <script type="module" src="./drawer.js?v=1"></script>
+  <!-- TVÁ APLIKACE – beze změny -->
   <script type="module" src="./app.js?v=10fix"></script>
 </body>
 </html>

@@ -403,5 +403,5 @@ section.addRow,
   margin: 8px 0;
 }
 
-/* stav otevření */
+/* stav otevření_ */
 #toolsDrawer.open { transform: translateX(0); }

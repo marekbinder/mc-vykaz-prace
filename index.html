@@ -113,44 +113,56 @@
 
   <div id="err" class="toast" style="display:none"></div>
 
- <!-- === FAB + DRAWER (Nástroje) ==================================== -->
-<button id="toolsFab" data-open-drawer title="Nástroje">+</button>
+<!-- FAB (+) -->
+<button id="toolsFab" aria-label="Nástroje">+</button>
+
+<!-- Backdrop -->
 <div id="toolsBackdrop" aria-hidden="true"></div>
 
-<aside id="toolsDrawer" aria-hidden="true" role="dialog" aria-label="Nástroje">
+<!-- Boční panel „Nástroje“ -->
+<aside
+  id="toolsDrawer"
+  class=""
+  role="dialog"
+  aria-label="Nástroje"
+  aria-hidden="true">
+
   <div class="toolsHead">
     <div class="toolsTitle">Nástroje</div>
-    <button id="toolsClose" data-close-drawer aria-label="Zavřít"></button>
+    <button id="toolsClose" aria-label="Zavřít"></button>
   </div>
 
   <div class="toolsBody">
     <!-- Přidání zakázky -->
-    <div class="toolsSection">
+    <section class="toolsSection">
       <h3>Přidání zakázky</h3>
+
       <select id="newJobClient" class="pill-select"></select>
-      <input  id="newJobName"   class="pill-input"  placeholder="Název zakázky" />
+      <input  id="newJobName"   class="pill-input"  type="text" placeholder="Název zakázky" />
+
       <select id="newJobStatus" class="pill-select">
-        <option value="NEW">Nová</option>
-        <option value="RUN">Probíhá</option>
-        <option value="DONE">Hotovo</option>
+        <!-- naplní se z #filterStatus; pokud neexistuje, zůstanou prázdné -->
       </select>
+
       <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
-    </div>
+    </section>
 
     <!-- Přidání klienta -->
-    <div class="toolsSection">
+    <section class="toolsSection">
       <h3>Přidání klienta</h3>
-      <input  id="newClientName" class="pill-input" placeholder="Název klienta" />
-      <button id="addClientBtn"  class="pill-btn">Přidat klienta</button>
-    </div>
+      <input id="newClientName" class="pill-input" type="text" placeholder="Název klienta" />
+      <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
+    </section>
 
-    <!-- Odhlášení -->
-    <div class="toolsSection">
+    <!-- Účet -->
+    <section class="toolsSection">
       <h3>Účet</h3>
       <button id="logoutBtn" class="pill-btn">Odhlásit</button>
-    </div>
+    </section>
   </div>
 </aside>
+
+
 <!-- ================================================================ -->
 
 <!-- Scripts (order matters: app.js first, then drawer.js) -->

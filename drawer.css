@@ -1,93 +1,49 @@
-/* === Right drawer + overlay ============================================ */
-
-/* zakázat scroll při otevřeném šuplíku */
-body.noscroll { overflow: hidden; }
-
-/* poloprůhledné pozadí – v základu neklikací a neviditelné */
-#drawerOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(20, 23, 28, 0.45);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s ease;
-  z-index: 1100;
+/* Overlay */
+.drawer-overlay{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,0);
+  opacity:0; pointer-events:none;
+  transition:opacity .18s ease;
+  z-index:900;
 }
-#drawerOverlay.show {
-  opacity: 1;
-  pointer-events: auto; /* overlay chytá klik mimo šuplík */
+.drawer-overlay.show{
+  background:rgba(0,0,0,.35);
+  opacity:1; pointer-events:auto;
 }
 
-/* vlastní šuplík – PEVNĚ vpravo, defaultně mimo obrazovku vpravo */
-#drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: min(420px, 92vw);
-  background: #fff;
-  box-shadow: -24px 0 48px rgba(0,0,0,.18);
-  transform: translateX(100%);        /* <<< vždy z PRAVA */
-  will-change: transform;
-  transition: transform .28s cubic-bezier(.4,0,.2,1);
-  z-index: 1200;                       /* nad overlayem */
-  display: flex;
-  flex-direction: column;
+/* Drawer panel – fixní zprava, bez transformů */
+.drawer{
+  position:fixed; top:0; right:-420px; height:100vh; width:min(420px, 92vw);
+  background:#fff; z-index:1000;
+  box-shadow: -18px 0 44px rgba(0,0,0,.18); /* po otevření */
+  transition:right .22s ease;
+  display:flex; flex-direction:column;
 }
-#drawer.open { transform: translateX(0); }
+.drawer.open{ right:0; }
 
-/* hlavička a tělo šuplíku */
-#drawer header {
-  padding: 20px 24px 12px;
-  font-weight: 700;
-  font-size: 20px;
+/* Head */
+.drawer-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 20px; border-bottom:1px solid #eef0f4;
 }
-#drawer .drawer-body {
-  padding: 12px 24px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  overflow: auto;
+.drawer-head h2{ margin:0; font-size:20px; }
+
+.icon-btn{
+  width:36px;height:36px;border-radius:10px;border:none;cursor:pointer;
+  background:#eef0f4; color:#0d1321; display:grid;place-items:center;
 }
 
-/* skupiny ve formuláři */
-#drawer .group { margin-top: 8px; }
-#drawer .group h3 {
-  font-size: 16px;
-  margin: 10px 0 8px;
+/* Content */
+.drawer-section{ padding:18px 20px; border-bottom:1px solid #f2f4f7; }
+.drawer-section h3{ margin:0 0 12px; font-size:16px; }
+
+.drawer-label{
+  display:block; font-size:13px; color:#606773; margin:10px 0 6px;
+}
+.drawer-input{
+  width:100%; padding:12px 14px; border:1px solid #e7e9ee; border-radius:14px;
+  outline:none; background:#fff; color:#0d1321;
+  margin:0 0 10px;
 }
 
-/* prvky na plnou šířku */
-#drawer .pill-select,
-#drawer .pill-input,
-#drawer .pill-btn.accent {
-  width: 100%;
-}
-
-/* zavírací X */
-#drawer .closeBtn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-}
-
-/* kulaté + tlačítko (FAB) vpravo nahoře */
-#drawerFab {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  z-index: 1250; /* nad vším */
-}
-
-/* jistota box-sizingu uvnitř šuplíku */
-#drawer, #drawer * { box-sizing: border-box; }
+.drawer .pill-btn{ width:100%; margin-top:10px; }

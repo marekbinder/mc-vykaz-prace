@@ -508,5 +508,81 @@ function showLogin(){
   };
 }
 
+/* ===== Drawer integration (append-only, bezpečné) ===== */
+(function () {
+  // Pokud na stránce není drawer, nic nedělej
+  const drawer   = document.querySelector('.drawer');
+  const overlay  = document.querySelector('.drawer-overlay');
+  const btnOpen  = document.getElementById('drawerOpenBtn'); // kulaté "+"
+  const btnClose = document.getElementById('drawerCloseBtn'); // křížek vpravo nahoře
+
+  if (!drawer || !overlay) return;
+
+  function openDrawer() {
+    drawer.classList.add('open');
+    overlay.classList.add('show');
+    // Safari/Chrome fix: zamezíme přepočtům layoutu
+    document.documentElement.classList.add('no-scroll');
+  }
+  function closeDrawer() {
+    drawer.classList.remove('open');
+    overlay.classList.remove('show');
+    document.documentElement.classList.remove('no-scroll');
+  }
+
+  // Ovládání
+  btnOpen  && btnOpen.addEventListener('click', openDrawer);
+  btnClose && btnClose.addEventListener('click', closeDrawer);
+  overlay.addEventListener('click', closeDrawer);
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
+
+  // === Napojení na původní logiku přidání klienta/zakázky ===
+  // DŮLEŽITÉ: Používáme STEJNÁ ID, která app.js už zná a na která si navěšuje
+  // listenery (nebo ze kterých čte hodnoty). Tím se nic dalšího v app.js měnit nemusí.
+
+  // Zakázka – prvky musí mít přesně tato ID:
+  const newJobClient  = document.getElementById('newJobClient');   // <select>
+  const newJobName    = document.getElementById('newJobName');     // <input>
+  const newJobStatus  = document.getElementById('newJobStatus');   // <select>
+  const newJobAssignee= document.getElementById('newJobAssignee'); // <select> "Grafik"
+  const addJobBtn     = document.getElementById('addJobBtn');
+
+  // Klient – prvky musí mít přesně tato ID:
+  const newClientName = document.getElementById('newClientName');  // <input>
+  const addClientBtn  = document.getElementById('addClientBtn');
+
+  // Pokud už máš v app.js funkce na přidání (většinou něco jako addJob / addClient),
+  // jen je zavoláme. Jinak to necháme být – nic se nerozbije.
+
+  addJobBtn && addJobBtn.addEventListener('click', async () => {
+    try {
+      // Pokud máš v app.js funkci addJob(newJobClient, newJobName, newJobStatus, newJobAssignee),
+      // klidně zavolej přímo ji:
+      if (typeof window.addJob === 'function') {
+        await window.addJob(newJobClient, newJobName, newJobStatus, newJobAssignee);
+      } else {
+        // Fallback: pošleme custom event – hodí se, pokud si app.js sám naslouchá
+        // na klik addJobBtn a bere hodnoty z těchto ID.
+        addJobBtn.dispatchEvent(new Event('drawer-submit', { bubbles: true }));
+      }
+      closeDrawer();
+    } catch (e) {
+      console.error(e);
+    }
+  });
+
+  addClientBtn && addClientBtn.addEventListener('click', async () => {
+    try {
+      if (typeof window.addClient === 'function') {
+        await window.addClient(newClientName);
+      } else {
+        addClientBtn.dispatchEvent(new Event('drawer-submit', { bubbles: true }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  });
+})();
+
 // ==== BOOT ====
 init().then(render).catch(showErr);

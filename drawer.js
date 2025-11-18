@@ -1,44 +1,45 @@
 /* === Utility Drawer (off-canvas) ========================================
    Co dělá:
-   - vloží burger „Další“ do pravého horního rohu místo e-mailu/odhlášení
-   - e-mail a „Odhlásit“ z hlavní stránky skryje (zůstanou v panelu)
-   - přesune „Přidat klienta“ do panelu
-   - přesune i „Přidat zakázku“ (a pokud jsou, tak i #newJobClient/#newJobName/#newJobStatus)
-
-   Nezasahuje do tvojí logiky – přenesené prvky si zachovají event-handlery.
+   - vytvoří FIXED burger „Další“ v pravém horním rohu (mimo layout),
+   - robustně skryje v horní části prvky s e-mailem a tlačítko „Odhlásit“,
+   - přesune „Přidat klienta“ a „Přidat zakázku“ do postranního panelu,
+   - v panelu ukáže e-mail + umožní odhlášení.
 ======================================================================== */
 
 (function () {
   const $  = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  function findTopbar() {
-    return $('.topbar') || $('header') || $('#app .wrap') || document.body;
+  /* Snažíme se skrýt e-mail/chip a „Odhlásit“ v horní části stránky,
+     i kdyby se změnilo rozvržení. */
+  function hideTopAccountPieces() {
+    const nodes = $$('body *');
+    const isEmail = (t) => /.+@.+\..+/.test(t);
+    const isLogout = (t) => /odhl/i.test(t);
+
+    nodes.forEach(n => {
+      const t = (n.textContent || '').trim();
+      if (!t) return;
+      const rect = n.getBoundingClientRect();
+      // bereme jen horní pás (abychom neodstřelili něco v obsahu)
+      if (rect.top > 160) return;
+
+      if (isEmail(t) || isLogout(t)) {
+        n.style.display = 'none';
+      }
+    });
   }
 
-  function ensureBurgerInTopRight() {
-    const topbar = findTopbar();
-    if (!topbar) return null;
-
-    // Zkusíme najít stávající kontejner s účtem/odhlášením
-    const logoutBtn = $$('button', topbar).find(b => /odhl/i.test(b.textContent || ''));
-    const accountChip = logoutBtn ? logoutBtn.previousElementSibling : null;
-    const rightContainer = logoutBtn ? logoutBtn.parentElement : topbar;
-
-    // Skryj e-mail i „Odhlásit“ na hlavní stránce
-    accountChip?.classList?.add('is-hidden');
-    logoutBtn?.classList?.add('is-hidden');
-
-    // Vlož burger (pokud už náhodou neexistuje)
+  function createFixedBurger() {
     let btn = $('#utilOpen');
     if (!btn) {
       btn = document.createElement('button');
       btn.id        = 'utilOpen';
       btn.type      = 'button';
-      btn.className = 'pill-btn util-trigger';
+      btn.className = 'pill-btn util-trigger fixed';
       btn.title     = 'Další';
       btn.textContent = '☰ Další';
-      rightContainer.appendChild(btn);
+      document.body.appendChild(btn); // FIXED – nezasahuje do layoutu hlavičky
     }
     return btn;
   }
@@ -126,7 +127,6 @@
     const holder = $('#drawerAddJob');
     if (!holder) return;
 
-    // 1) pokus o přesun známých ID
     const jobClient = $('#newJobClient');
     const jobName   = $('#newJobName');
     const jobStat   = $('#newJobStatus');
@@ -137,7 +137,6 @@
       if (el) { holder.appendChild(el); moved = true; }
     });
 
-    // 2) fallback – jen tlačítko „Přidat zakázku“ (např. to headrové)
     if (!moved) {
       const headBtn = $$('button').find(b => (b.textContent || '').trim().toLowerCase() === 'přidat zakázku');
       if (headBtn) holder.appendChild(headBtn);
@@ -169,13 +168,23 @@
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    const openBtn = ensureBurgerInTopRight();          // burger vpravo nahoře (místo účtu)
+    // 1) Skryj původní email/odhlášení v horní části
+    hideTopAccountPieces();
+
+    // 2) Vytvoř a umísti FIXED burger vpravo nahoře
+    const openBtn = createFixedBurger();
+
+    // 3) Vytvoř drawer/backdrop
     const { drawer, backdrop } = buildDrawerIfMissing();
 
-    moveAddClientToDrawer();                           // „Přidat klienta“ do panelu
-    moveAddJobToDrawer();                              // „Přidat zakázku“ do panelu
-    wireAccount(drawer);                               // e-mail + odhlášení v panelu
+    // 4) Přesuny do panelu
+    moveAddClientToDrawer();
+    moveAddJobToDrawer();
 
+    // 5) Účet v panelu
+    wireAccount(drawer);
+
+    // 6) Ovládání panelu
     const closeBtn = $('#utilClose', drawer);
     const open  = () => openDrawer(drawer, backdrop, openBtn);
     const close = () => closeDrawer(drawer, backdrop, openBtn);

@@ -1,119 +1,113 @@
-// drawer.js – sidebar s hydratační logikou pro klienty/statusy v add-formu
+// drawer.js – sidebar “Nástroje” + hydratace selectů v přidání zakázky
 (function () {
-  const ready = (fn) => {
+  const onReady = (fn) => {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', fn, { once: true });
-    } else {
-      fn();
-    }
+    } else fn();
   };
 
-  ready(() => {
-    const qs  = (s,p=document)=>p.querySelector(s);
-    const qsa = (s,p=document)=>Array.from(p.querySelectorAll(s));
-
+  onReady(() => {
+    const qs  = (s, r = document) => r.querySelector(s);
     const drawer   = qs('#toolsDrawer');
     const backdrop = qs('#toolsBackdrop');
+    const fab      = qs('#toolsFab');
+    const closeBtn = qs('#toolsClose');
+    const mainLike = qs('main, #app, .wrap, body');   // pro inert
 
-    if (!drawer || !backdrop) {
-      console.warn('[drawer] Missing #toolsDrawer or #toolsBackdrop in DOM.');
+    if (!drawer || !backdrop || !fab) {
+      console.warn('[drawer] Chybí DOM prvky (drawer/backdrop/fab).');
       return;
     }
 
-    // --- zdroje (filtry na hlavní stránce) a cíle (formulář v panelu)
-    const SRC_CLIENT  = '#filterClient';
-    const SRC_STATUS  = '#filterStatus';
-    const DST_CLIENT  = '#newJobClient';
-    const DST_STATUS  = '#newJobStatus';
+    // zdroje (filtry na hlavní stránce) → cíle (selecty v panelu)
+    const SRC_CLIENT = '#filterClient';
+    const SRC_STATUS = '#filterStatus';
+    const DST_CLIENT = '#newJobClient';
+    const DST_STATUS = '#newJobStatus';
 
-    function copyOptions(srcSel, dstSel, { skipValues = [] } = {}) {
+    function copyOptions(srcSel, dstSel, { skip = [] } = {}) {
       const src = qs(srcSel);
       const dst = qs(dstSel);
+      if (!src || !dst) return;
 
-      if (!src)  { console.info('[drawer] Nenalezen zdroj', srcSel); return; }
-      if (!dst)  { console.info('[drawer] Nenalezen cíl', dstSel);  return; }
-
-      // Když už v cíli nějaké položky jsou, nepřepisujeme
-      if (dst.options && dst.options.length > 0) {
-        console.info('[drawer] Cíl už má položky:', dstSel, dst.options.length);
-        return;
-      }
+      // pokud už cíl má data, nepřepisujeme
+      if (dst.options && dst.options.length) return;
 
       const opts = Array.from(src.options || []);
-      if (!opts.length) {
-        console.info('[drawer] Zdroj nemá žádné položky:', srcSel);
-        return;
-      }
-
       const frag = document.createDocumentFragment();
-      opts.forEach(opt => {
-        const v = String(opt.value ?? '');
-        if (skipValues.includes(v)) return;
-        const o = document.createElement('option');
-        o.value = v;
-        o.textContent = opt.textContent || v;
-        frag.appendChild(o);
+      opts.forEach(o => {
+        const v = String(o.value ?? '');
+        if (skip.includes(v)) return;
+        const n = document.createElement('option');
+        n.value = v;
+        n.textContent = o.textContent || v;
+        frag.appendChild(n);
       });
-
-      if (frag.childNodes.length > 0) {
+      if (frag.childNodes.length) {
         dst.innerHTML = '';
         dst.appendChild(frag);
-        console.info('[drawer] Doplněno do', dstSel, '→', dst.options.length, 'položek');
-      } else {
-        console.info('[drawer] Po odfiltrování nezbyly žádné položky pro', dstSel);
       }
     }
 
-    function hydrateAddForm() {
-      copyOptions(SRC_CLIENT, DST_CLIENT, { skipValues: ['ALL'] });
-      copyOptions(SRC_STATUS, DST_STATUS, { skipValues: ['ALL'] });
+    function hydrate() {
+      copyOptions(SRC_CLIENT, DST_CLIENT, { skip: ['ALL'] });
+      copyOptions(SRC_STATUS, DST_STATUS, { skip: ['ALL'] });
+
+      // jistota: povolíme selecty (kdyby někde zůstaly disabled)
+      const c = qs(DST_CLIENT);
+      const s = qs(DST_STATUS);
+      if (c) c.disabled = false;
+      if (s) s.disabled = false;
     }
 
-    // Sleduj, jestli se filtry nenaplní až později – jakmile se změní, zkus rehydratovat
-    [SRC_CLIENT, SRC_STATUS].forEach(sel => {
-      const el = qs(sel);
-      if (!el) return;
-      const mo = new MutationObserver(() => hydrateAddForm());
-      mo.observe(el, { childList: true });
-    });
+    function open() {
+      hydrate();
 
-    const open = () => {
-      hydrateAddForm(); // vždy zkus doplnit při otevření
       drawer.classList.add('open');
       backdrop.classList.add('show');
+
+      // ARIA / fokus / “zbytek stránky”
+      drawer.removeAttribute('aria-hidden');
+      if (mainLike) mainLike.setAttribute('inert', '');
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
 
-      // Focus na první prvek
-      const first = qs(DST_CLIENT);
-      if (first) setTimeout(() => first.focus(), 10);
-    };
+      // focus na první ovládací prvek
+      const first = qs(DST_CLIENT) || qs('#toolsClose');
+      if (first) setTimeout(() => first.focus(), 15);
+    }
 
-    const close = () => {
+    function close() {
       drawer.classList.remove('open');
       backdrop.classList.remove('show');
+
+      // vrátit ARIA/inert/scroll
+      drawer.setAttribute('aria-hidden', 'true');
+      if (mainLike) mainLike.removeAttribute('inert');
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
-    };
+      fab?.focus();
+    }
 
-    // Otevírání/zavírání
-    document.addEventListener('click', (e) => {
-      const openEl  = e.target.closest('[data-open-drawer], #toolsFab');
-      const closeEl = e.target.closest('[data-close-drawer], #toolsClose');
-
-      if (openEl)  { e.preventDefault(); open();  }
-      if (closeEl) { e.preventDefault(); close(); }
-
-      if (drawer.classList.contains('open') && e.target === backdrop) {
-        close();
-      }
+    // ovládání
+    fab.addEventListener('click', open);
+    closeBtn?.addEventListener('click', close);
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) close();
     });
-
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && drawer.classList.contains('open')) close();
     });
 
-    // Expozice pro ruční test
-    window.drawer = { open, close, el: drawer };
+    // Pokud se filtry naplní až později, rehydruj selecty
+    [SRC_CLIENT, SRC_STATUS].forEach(sel => {
+      const el = qs(sel);
+      if (!el) return;
+      const mo = new MutationObserver(hydrate);
+      mo.observe(el, { childList: true });
+    });
+
+    // Exponujeme pro rychlý test
+    window.toolsDrawer = { open, close };
   });
 })();

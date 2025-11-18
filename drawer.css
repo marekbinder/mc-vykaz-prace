@@ -1,35 +1,51 @@
-/* ====== Pravý vysouvací panel (burger) – žádný gradient, jen čisté překrytí ====== */
+/* ===== Přídavné styly pro pravý vysouvací panel (burger) ===== */
 
-/* Schováme defaultní řádek pro přidání (bude sloužit jako panel) */
+/* Burger: fixně vpravo nahoře, aby nic nepřekrývalo */
+.burger-fixed {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 1003;
+  min-width: 40px;
+  min-height: 40px;
+  line-height: 1;
+  font-size: 18px;
+}
+
+/* E-mail/odhlášení v hlavičce schováme – bude v panelu */
+#userBoxTopRight {
+  display: none !important;
+}
+
+/* Výchozí stav – „řádek přidání“ neschováváme z DOM, jen vizuálně */
 #addRowDrawer {
   display: none;
 }
 
-/* Aktivní stav: tělo dostane class z JS a panel se ukáže jako boční */
+/* Při otevřeném panelu: */
 body.drawer-open #addRowDrawer {
   display: grid;
   position: fixed;
-  z-index: 1002;
   top: 0;
   right: 0;
-  width: 380px;
   height: 100vh;
+  width: 380px;
+  background: #fff;
+  z-index: 1002;
   padding: 24px;
   box-sizing: border-box;
-  background: #fff;
   box-shadow: -16px 0 40px rgba(0,0,0,0.18);
   overflow: auto;
 
-  /* z původní addRow si vezmeme „stretch“, ale tady děláme sloupec */
   grid-template-columns: 1fr;
   grid-auto-rows: minmax(40px, auto);
   gap: 12px;
 }
 
 #addRowDrawer .drawerTitle {
-  margin: 0 0 8px 0;
-  font-size: 18px;
+  margin: 0 0 6px 0;
   font-weight: 700;
+  font-size: 18px;
 }
 
 #addRowDrawer .drawerUser {
@@ -41,32 +57,12 @@ body.drawer-open #addRowDrawer {
 /* Backdrop */
 .drawerBackdrop {
   position: fixed;
-  z-index: 1001;
   inset: 0;
+  z-index: 1001;
   background: rgba(0,0,0,0.35);
   backdrop-filter: blur(2px);
 }
 
-/* Základní reset hlavičky: uživatele v hlavičce neukazujeme */
-.siteHeader #userBoxTopRight {
-  display: none !important;
-}
-
-/* Burger vpravo nahoře */
-.siteHeader .rightSlot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-#burgerBtn {
-  min-width: 40px;
-  min-height: 40px;
-  line-height: 1;
-  font-size: 18px;
-}
-
-/* Na mobilu může panel zabrat více šířky */
 @media (max-width: 480px) {
   body.drawer-open #addRowDrawer {
     width: min(92vw, 420px);

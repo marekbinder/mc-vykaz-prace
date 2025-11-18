@@ -315,3 +315,108 @@ button.pill-btn.jobDelete {
   }
 }
 
+/* ========== DRAWER / TOOLS PANEL ========== */
+
+/* Kulaté plovoucí + vpravo nahoře */
+#drawerToggle.drawer-toggle{
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-size: 28px;
+  line-height: 44px;
+  text-align: center;
+  color: #0B1220;
+  background: #101826;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  z-index: 1300;
+}
+#drawerToggle.drawer-toggle:hover{ transform: translateY(-1px); }
+
+/* Overlay (jen při otevření) */
+.drawer-overlay{
+  position: fixed; inset: 0;
+  background: rgba(16,24,38,.55);
+  backdrop-filter: blur(2px);
+  opacity: 0; pointer-events: none;
+  transition: opacity .18s ease;
+  z-index: 1290;
+}
+.drawer-overlay.show{ opacity: 1; pointer-events: all; }
+
+/* Panel vpravo */
+.drawer{
+  position: fixed; top: 0; right: 0;
+  height: 100dvh; width: min(420px, 100%);
+  background: #fff;
+  transform: translateX(100%);
+  transition: transform .22s ease-out;
+  z-index: 1310;
+
+  /* DŮLEŽITÉ: bez stínu, když je zavřený (nechceme „gradient“) */
+  box-shadow: none;
+}
+.drawer.open{
+  transform: translateX(0);
+  /* jemný stín až při otevření */
+  box-shadow: 0 0 0 1px rgba(15,23,42,.06),
+              0 24px 48px rgba(2,6,23,.18);
+}
+
+.drawer-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 20px 22px 8px 22px;
+  border-bottom: 1px solid rgba(15,23,42,.06);
+}
+.drawer-header h2{ font-size: 18px; margin: 0; }
+.drawer-close{
+  width: 36px; height: 36px; border-radius: 8px;
+  border: none; background: transparent; font-size: 22px; cursor: pointer;
+}
+.drawer-close:hover{ background: rgba(15,23,42,.06); }
+
+/* Obsah panelu */
+.drawer .tool-section{
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(15,23,42,.06);
+}
+.drawer .tool-section h3{
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: #0b1220;
+}
+
+/* Svislé řazení prvků pod sebe */
+.drawer .tool-wrap{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+/* Tlačítko přidat (zděděné tvary „pill-btn“) – plná šířka */
+.drawer .tool-wrap .pill-btn,
+.drawer .tool-wrap button{
+  width: 100%;
+}
+
+/* Inputy/selecty – na šířku panelu */
+.drawer .tool-wrap input[type="text"],
+.drawer .tool-wrap select{
+  width: 100%;
+}
+
+/* Schovej původní řádek na hlavní stránce */
+#addRow{ display: none !important; }
+
+/* Schovej email/odhlásit v top baru (zůstaly v DOM) */
+.userChip, .logoutBtn{ display: none !important; }
+
+/* Fix pro drobný spacing nahoře, když je toggle vpravo */
+header.topbar{ padding-right: 72px; }

@@ -1,192 +1,172 @@
-/* app.js — kompletní, odolná verze (MC výkaz práce) */
+/* MC Vykaz prace – robustní app.js (komplet) */
 'use strict';
 
-/* =========================
-   KONSTANTY & STAV APLIKACE
-   ========================= */
-const STEP = 0.5; // krok přičítání/odčítání bublin
-const ASSIGNEE_OPTIONS = ['Viki', 'Standa', 'Marek'];
+/* -------------------- util datumu (bez dayjs) -------------------- */
+function startOfISOWeek(d){
+  const x = new Date(d); const wd = (x.getDay()+6)%7;
+  x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x;
+}
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function fmtISO(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
+function fmtHuman(d){
+  try { if (window.dayjs) return dayjs(d).format('D. M. YYYY'); } catch {}
+  const dd=d.getDate(), mm=d.getMonth()+1, yy=d.getFullYear();
+  return `${dd}. ${mm}. ${yy}`;
+}
 
-const state = {
-  sb: null,
-  session: null,
+/* -------------------- state -------------------- */
+const STEP=0.5;
+const ASSIGNEE_OPTIONS=['Viki','Standa','Marek'];
+const state={
+  sb:null, session:null,
   weekStart: startOfISOWeek(new Date()),
-
-  clients: [],
-  statuses: [],
-  jobs: [],
-  entries: {},      // map[job_id][YYYY-MM-DD] = hours (jen aktuální týden)
-  totalsAll: {},    // map[job_id] = kumulativní hodiny (ME/ALL)
-
-  filterClient: 'ALL',
-  filterStatus: 'ALL',
-  totalsScope: 'ME',       // 'ME' | 'ALL'
-  filterAssignees: [],     // „Grafik“ – filtr
-  newJobAssignees: [],     // připraveno na budoucí rozšíření
+  clients:[], statuses:[], jobs:[],
+  entries:{}, totalsAll:{},
+  filterClient:'ALL', filterStatus:'ALL', totalsScope:'ME',
+  filterAssignees:[], newJobAssignees:[]
 };
 
-// hezčí jméno do exportu
-const USER_NAME_BY_EMAIL = {
-  'binder.marek@gmail.com': 'Marek',
-  'grafika@media-consult.cz': 'Viki',
-  'stanislav.hron@icloud.com': 'Standa',
+/* -------------------- helpers -------------------- */
+const USER_NAME_BY_EMAIL={
+  'binder.marek@gmail.com':'Marek',
+  'grafika@media-consult.cz':'Viki',
+  'stanislav.hron@icloud.com':'Standa',
 };
-function nameFromEmail(email) {
-  if (!email || typeof email !== 'string') return '';
-  const key = email.toLowerCase().trim();
+function nameFromEmail(email){
+  if(!email) return 'Neznámý';
+  const key=email.toLowerCase().trim();
   return USER_NAME_BY_EMAIL[key] || key.split('@')[0];
 }
-
-/* =============
-   POMOCNÉ FUNKCE
-   ============= */
-function startOfISOWeek(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
-function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-function fmtDate(d){ return dayjs(d).format('YYYY-MM-DD'); }
-function round05(x){ return Math.round(x*2)/2; }
-function formatNum(x){ return (x%1===0) ? String(x) : x.toFixed(1); }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-function getDays(){ return [0,1,2,3,4].map(i=>fmtDate(addDays(state.weekStart,i))); }
-function showErr(msg){
-  console.error(msg);
-  const e=document.getElementById('err'); if(!e) return;
-  e.textContent=(msg?.message)||String(msg);
-  e.style.display='block';
-  setTimeout(()=> e.style.display='none', 5200);
+function showErr(e){
+  console.error(e);
+  const el=document.getElementById('err'); if(!el) return;
+  el.textContent=(e&&e.message)||String(e); el.style.display='block';
+  setTimeout(()=>el.style.display='none',5200);
 }
-function setWeekRangeLabel(){
-  const el=document.getElementById('weekRange'); if(!el) return;
-  const a=dayjs(state.weekStart).format('D. M. YYYY');
-  const b=dayjs(addDays(state.weekStart,4)).format('D. M. YYYY');
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function round05(x){ return Math.round(x*2)/2; }
+function formatNum(x){ return (x%1===0)? String(x) : x.toFixed(1); }
+function getDays(){ return [0,1,2,3,4].map(i=>fmtISO(addDays(state.weekStart,i))); }
+function cellValue(jobId, iso){ return state.entries[jobId]?.[iso] || 0; }
+function jobPassesAssigneeFilter(j){
+  if(!state.filterAssignees.length) return true;
+  const set=new Set(j.assignees||[]); return state.filterAssignees.some(a=>set.has(a));
+}
+
+/* -------------------- week label & arrows -------------------- */
+function findWeekLabelEl(){
+  return document.querySelector('#weekRange, #weekLabel, [data-week-range]') ||
+         document.querySelector('[data-role="week-pill"]') ||
+         // auto – prostřední pilulka mezi dvěma šipkami
+         (()=>{
+            const pills=[...document.querySelectorAll('.weekbar .pill, .week-pill, .date-pill')];
+            return pills.length ? pills[Math.floor(pills.length/2)] : null;
+         })();
+}
+function setWeekLabel(){
+  const el=findWeekLabelEl(); if(!el) return;
+  const a=fmtHuman(state.weekStart); const b=fmtHuman(addDays(state.weekStart,4));
   el.textContent=`${a} – ${b}`;
 }
-
-/* =============
-   START / INIT
-   ============= */
-function findSupabaseConfig(){
-  // 1) globální konstanty, které už máš
-  const url =
-    window.SUPABASE_URL ||
-    window.__SUPABASE_URL ||
-    (window.APP_CONFIG && window.APP_CONFIG.supabaseUrl) ||
-    (document.querySelector('meta[name="supabase-url"]')?.content) || '';
-
-  const key =
-    window.SUPABASE_ANON_KEY ||
-    window.SUPABASE_KEY ||
-    window.__SUPABASE_KEY ||
-    (window.APP_CONFIG && window.APP_CONFIG.supabaseAnonKey) ||
-    (document.querySelector('meta[name="supabase-anon-key"]')?.content) || '';
-
-  return { url, key };
+function wireWeekArrows(){
+  const prev = document.querySelector('#prevWeek, [data-week="prev"]') ||
+               document.querySelector('.weekbar [data-dir="prev"]') ||
+               document.querySelector('.icon-prev, .btn-prev');
+  const next = document.querySelector('#nextWeek, [data-week="next"]') ||
+               document.querySelector('.weekbar [data-dir="next"]') ||
+               document.querySelector('.icon-next, .btn-next');
+  if(prev) prev.onclick=()=>{ state.weekStart=addDays(state.weekStart,-7); setWeekLabel(); refreshData(); };
+  if(next) next.onclick=()=>{ state.weekStart=addDays(state.weekStart,+7); setWeekLabel(); refreshData(); };
 }
 
-async function init(){
-  // jestli už máš někde vytvořený klient, použijeme ho
-  if (window.__sbClient) {
-    state.sb = window.__sbClient;
-  } else {
-    const { url, key } = findSupabaseConfig();
-    if (!url || !key) {
-      showErr('Chybí Supabase URL/KEY (SUPABASE_URL / SUPABASE_ANON_KEY).');
-      return;
-    }
-    try {
-      state.sb = window.supabase.createClient(url, key, { auth:{ persistSession:true, autoRefreshToken:true } });
-    } catch (e) {
-      return showErr(e);
-    }
-  }
+/* -------------------- drawer (funguje i bez drawer.js) -------------------- */
+function wireDrawer(){
+  const drawer = document.querySelector('#drawer, [data-drawer]');
+  if(!drawer) return;
+  const scrim  = document.querySelector('#drawerScrim, [data-drawer-scrim]');
+  const open = ()=>{ drawer.classList.add('open'); document.body.classList.add('drawer-open'); };
+  const close= ()=>{ drawer.classList.remove('open'); document.body.classList.remove('drawer-open'); };
 
-  const { data:{ session }, error } = await state.sb.auth.getSession();
-  if (error) console.warn(error);
-  state.session = session;
-
-  // fallback: přihlášení není nutné pro čtení dat
-  state.sb.auth.onAuthStateChange((_e, s)=>{ state.session = s; refreshData(); });
-
-  // postranní panel (funguje i bez drawer.js)
-  wireDrawerFallback();
+  // openers – delegace (stačí aby + mělo jednu z těchto tříd/atributů)
+  document.addEventListener('click', (e)=>{
+    const t=e.target;
+    if(t.closest('[data-open-drawer], #drawerOpen, #burgerBtn, #plusFab, .fab-plus, .btn-plus, .open-drawer, .openSidebar')) { open(); }
+    if(t.closest('[data-close-drawer], #drawerClose, #drawerX, .drawerClose')) { close(); }
+  });
+  if(scrim) scrim.addEventListener('click', close);
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') close(); });
 }
 
-/* =====
-   DATA
-   ===== */
-async function ensureProfile(){
-  const uid = state.session?.user?.id;
-  if(!uid) return;
-  await state.sb.from('app_user').upsert(
-    { id: uid, full_name: state.session.user.email, role:'admin' },
-    { onConflict:'id' }
-  );
+/* -------------------- Supabase init (neblokuje UI) -------------------- */
+function sbConfig(){
+  const url = window.SUPABASE_URL || window.__SUPABASE_URL ||
+              (window.APP_CONFIG&&APP_CONFIG.supabaseUrl) ||
+              (document.querySelector('meta[name="supabase-url"]')?.content)||'';
+  const key = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY || window.__SUPABASE_KEY ||
+              (window.APP_CONFIG&&APP_CONFIG.supabaseAnonKey) ||
+              (document.querySelector('meta[name="supabase-anon-key"]')?.content)||'';
+  return {url,key};
+}
+async function sbInit(){
+  try{
+    if(window.__sbClient){ state.sb=window.__sbClient; return; }
+    const {url,key}=sbConfig(); if(!url||!key) return; // UI poběží i bez SB
+    state.sb = window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true}});
+    const { data:{session} } = await state.sb.auth.getSession(); state.session=session||null;
+    state.sb.auth.onAuthStateChange((_e,s)=>{ state.session=s; refreshData(); });
+  }catch(e){ showErr(e); }
 }
 
-async function loadClients(){
+/* -------------------- DB load -------------------- */
+async function loadClients(){ try{
+  if(!state.sb) return [];
   const { data, error } = await state.sb.from('client').select('id,name').order('name');
-  if(error){ showErr(error); return []; }
-  return data||[];
-}
-async function loadStatuses(){
+  if(error) throw error; return data||[];
+}catch(e){ showErr(e); return []; } }
+async function loadStatuses(){ try{
+  if(!state.sb) return [];
   const { data, error } = await state.sb.from('job_status').select('id,label').order('id');
-  if(error){ showErr(error); return []; }
-  return data||[];
-}
-async function loadJobs(){
+  if(error) throw error; return data||[];
+}catch(e){ showErr(e); return []; } }
+async function loadJobs(){ try{
+  if(!state.sb) return [];
   const { data, error } = await state.sb
     .from('job')
     .select('id,name,status_id,client_id,assignees, client:client_id(id,name), status:status_id(id,label)')
     .order('name');
-  if(error){ showErr(error); return []; }
-
+  if(error) throw error;
   return (data||[]).map(j=>({
-    id: j.id,
-    name: j.name,
+    id:j.id, name:j.name, status_id:j.status_id,
     client_id: j.client?.id ?? j.client_id,
     client: j.client?.name || '',
-    status_id: j.status_id,
     status: j.status?.label || '',
     assignees: j.assignees || []
   }));
-}
-async function loadEntriesMine(){
-  // bez session vrátíme prázdno (UI se načte)
-  const uid = state.session?.user?.id;
-  if(!uid) return {};
-  const from = fmtDate(state.weekStart);
-  const to   = fmtDate(addDays(state.weekStart,6));
+}catch(e){ showErr(e); return []; } }
+async function loadEntriesMine(){ try{
+  if(!state.sb || !state.session?.user?.id) return {};
+  const from=fmtISO(state.weekStart), to=fmtISO(addDays(state.weekStart,6));
   const { data, error } = await state.sb
-    .from('time_entry')
-    .select('job_id,work_date,hours')
-    .gte('work_date', from).lte('work_date', to)
-    .eq('user_id', uid);
-  if(error){ showErr(error); return {}; }
-  const map={};
-  for(const r of (data||[])){
-    map[r.job_id] ??= {};
-    map[r.job_id][r.work_date] = (map[r.job_id][r.work_date]||0) + Number(r.hours||0);
-  }
+    .from('time_entry').select('job_id,work_date,hours')
+    .gte('work_date',from).lte('work_date',to).eq('user_id',state.session.user.id);
+  if(error) throw error;
+  const map={}; for(const r of (data||[])){ (map[r.job_id]??={})[r.work_date]=(map[r.job_id][r.work_date]||0)+Number(r.hours||0); }
   return map;
-}
-async function loadTotalsAll(jobIds){
-  if(!jobIds.length) return {};
+}catch(e){ showErr(e); return {}; } }
+async function loadTotalsAll(jobIds){ try{
+  if(!state.sb || !jobIds.length) return {};
   if(state.totalsScope==='ME'){
-    const uid = state.session?.user?.id || '__none__';
+    const uid=state.session?.user?.id||'__none__';
     const { data, error } = await state.sb.from('time_entry').select('job_id,hours').in('job_id',jobIds).eq('user_id',uid);
-    if(error){ showErr(error); return {}; }
+    if(error) throw error;
     const m={}; for(const r of (data||[])) m[r.job_id]=(m[r.job_id]||0)+Number(r.hours||0); return m;
   }
-  // ALL: zkusíme RPC, jinak fallback
-  const { data:rpc, error:rpcErr } = await state.sb.rpc('fn_job_totals');
-  if(!rpcErr && rpc){ const m={}; for(const r of rpc) m[r.job_id]=Number(r.sum_hours||0); return m; }
   const { data, error } = await state.sb.from('time_entry').select('job_id,hours').in('job_id',jobIds);
-  if(error){ showErr(error); return {}; }
+  if(error) throw error;
   const m={}; for(const r of (data||[])) m[r.job_id]=(m[r.job_id]||0)+Number(r.hours||0); return m;
-}
+}catch(e){ showErr(e); return {}; } }
 
-/* =================
-   UI / TABULKA / UX
-   ================= */
+/* -------------------- render tabulky -------------------- */
 function colorizeStatus(sel){
   sel.classList.remove('is-nova','is-probiha','is-hotovo');
   const t=(sel.options[sel.selectedIndex]?.text||'').toLowerCase();
@@ -194,80 +174,62 @@ function colorizeStatus(sel){
   else if(t.includes('pro')||t.includes('běh')) sel.classList.add('is-probiha');
   else if(t.includes('hot')) sel.classList.add('is-hotovo');
 }
-function renderAssigneeLabel(arr){
-  if(!arr||!arr.length) return 'nikdo';
-  return arr.length===1 ? arr[0] : `${arr[0]} +${arr.length-1}`;
-}
-function jobPassesAssigneeFilter(job){
-  if(!state.filterAssignees.length) return true;
-  const set=new Set(job.assignees||[]);
-  return state.filterAssignees.some(x=>set.has(x));
-}
-function cellValue(jobId,d){ return state.entries[jobId]?.[d] || 0; }
-
 function renderTable(){
   const tbody=document.getElementById('tbody'); if(!tbody) return;
   tbody.innerHTML='';
+  const vis = state.jobs
+    .filter(j=> state.filterClient==='ALL'||String(j.client_id)===String(state.filterClient))
+    .filter(j=> state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus))
+    .filter(jobPassesAssigneeFilter);
 
   const days=getDays();
-  const visible = state.jobs
-    .filter(j => (state.filterClient==='ALL'||String(j.client_id)===String(state.filterClient)))
-    .filter(j => (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)))
-    .filter(j => jobPassesAssigneeFilter(j));
-
-  for(const j of visible){
+  for(const j of vis){
     const tr=document.createElement('tr'); tr.dataset.job=j.id;
 
     // klient
     const tdC=document.createElement('td');
-    const csel=document.createElement('select'); csel.className='pill-select clientSel';
+    const csel=document.createElement('select'); csel.className='pill-select';
     csel.innerHTML=state.clients.map(c=>`<option value="${c.id}" ${String(c.id)===String(j.client_id)?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
-    csel.onchange=async(e)=>{ await state.sb.from('job').update({client_id:e.target.value}).eq('id',j.id); };
-    tdC.append(csel); tr.append(tdC);
+    csel.onchange=async(e)=>{ if(!state.sb) return; await state.sb.from('job').update({client_id:e.target.value}).eq('id',j.id); };
+    tdC.appendChild(csel); tr.appendChild(tdC);
 
-    // zakázka
-    const tdJ=document.createElement('td'); tdJ.className='jobCell';
+    // zakázka + status + grafik
+    const tdJ=document.createElement('td');
 
-    const name=document.createElement('input'); name.className='pill-input jobNameIn'; name.value=j.name;
-    let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ await state.sb.from('job').update({name:e.target.value}).eq('id',j.id); },250); };
+    const nm=document.createElement('input'); nm.className='pill-input'; nm.value=j.name;
+    let t=null; nm.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ if(!state.sb) return; await state.sb.from('job').update({name:e.target.value}).eq('id',j.id); },250); };
 
-    const st=document.createElement('select'); st.className='pill-select statusSel';
+    const st=document.createElement('select'); st.className='pill-select';
     st.innerHTML=state.statuses.map(s=>`<option value="${s.id}" ${String(s.id)===String(j.status_id)?'selected':''}>${escapeHtml(s.label)}</option>`).join('');
     colorizeStatus(st);
-    st.onchange=async(e)=>{ colorizeStatus(st); await state.sb.from('job').update({status_id:+e.target.value}).eq('id',j.id); };
+    st.onchange=async(e)=>{ colorizeStatus(st); if(!state.sb) return; await state.sb.from('job').update({status_id:+e.target.value}).eq('id',j.id); };
 
-    const del=document.createElement('button'); del.className='pill-btn jobDelete'; del.textContent='🗑'; del.title='Odstranit';
-    del.onclick=()=> deleteJob(j.id);
-
-    const wrap=document.createElement('div'); wrap.className='menuAnchor';
-    const assBtn=document.createElement('button'); assBtn.className='pill-btn assigneeIcon'; assBtn.type='button';
-    assBtn.textContent=`Grafik: ${renderAssigneeLabel(j.assignees)}`;
+    const assBtn=document.createElement('button'); assBtn.className='pill-btn'; assBtn.textContent=`Grafik: ${ (j.assignees&&j.assignees.length)? (j.assignees.length===1?j.assignees[0]:`${j.assignees[0]} +${j.assignees.length-1}`) : 'nikdo' }`;
     const menu=document.createElement('div'); menu.className='menu'; menu.hidden=true;
-    menu.innerHTML=`
-      ${ASSIGNEE_OPTIONS.map(a=>`<label><input type="checkbox" value="${a}"> ${a}</label>`).join('')}
-      <div class="menuRow"><button type="button" class="pill-btn small closeBtn">Zavřít</button></div>
-    `;
-    setMenuChecked(menu, j.assignees);
-    assBtn.onclick=(e)=>{ e.stopPropagation(); toggleMenu(menu); };
+    menu.innerHTML=ASSIGNEE_OPTIONS.map(a=>`<label><input type="checkbox" value="${a}" ${j.assignees?.includes(a)?'checked':''}> ${a}</label>`).join('')+
+                   `<div class="menuRow"><button type="button" class="pill-btn small closeBtn">Zavřít</button></div>`;
+    assBtn.onclick=(e)=>{ e.stopPropagation(); menu.hidden=!menu.hidden; };
     menu.addEventListener('change', async ()=>{
-      const sel=collectMenuChecked(menu);
-      await state.sb.from('job').update({assignees: sel}).eq('id',j.id);
-      j.assignees=sel.slice(); assBtn.textContent=`Grafik: ${renderAssigneeLabel(j.assignees)}`;
+      const sel=[...menu.querySelectorAll('input:checked')].map(i=>i.value);
+      if(state.sb) await state.sb.from('job').update({assignees:sel}).eq('id',j.id);
+      j.assignees=sel; assBtn.textContent=`Grafik: ${ sel.length? (sel.length===1?sel[0]:`${sel[0]} +${sel.length-1}`) : 'nikdo' }`;
     });
     menu.querySelector('.closeBtn').onclick=()=> menu.hidden=true;
+    document.addEventListener('click',(e)=>{ if(!menu.contains(e.target) && !assBtn.contains(e.target)) menu.hidden=true; });
 
-    wrap.append(assBtn,menu);
-    tdJ.append(name,st,wrap,del);
-    tr.append(tdJ);
+    const del=document.createElement('button'); del.className='pill-btn'; del.textContent='🗑'; del.onclick=async()=>{ if(confirm('Odstranit zakázku?') && state.sb){ await state.sb.from('job').delete().eq('id',j.id); refreshData(); } };
+
+    const anchor=document.createElement('div'); anchor.className='menuAnchor'; anchor.append(assBtn,menu);
+    tdJ.append(nm,st,anchor,del); tr.appendChild(tdJ);
 
     // Po–Pá
     for(let i=0;i<5;i++){
-      const d=days[i];
-      const td=document.createElement('td'); td.dataset.day=i; td.style.textAlign='center';
-      const b=document.createElement('button'); b.className='bubble'; b.textContent='0';
-      b.onclick = ()=> bump(j.id,d,+STEP);
-      b.oncontextmenu=(e)=>{ e.preventDefault(); bump(j.id,d,-STEP); };
-      td.append(b); tr.append(td);
+      const iso=days[i];
+      const td=document.createElement('td'); td.style.textAlign='center';
+      const b=document.createElement('button'); b.className='bubble'; b.textContent=formatNum(cellValue(j.id,iso));
+      b.onclick = ()=> bump(j.id, iso, +STEP);
+      b.oncontextmenu=(e)=>{ e.preventDefault(); bump(j.id, iso, -STEP); };
+      td.appendChild(b); tr.appendChild(td);
     }
 
     // celkem
@@ -275,258 +237,126 @@ function renderTable(){
     tdT.innerHTML=`<span class="totalVal">${formatNum(state.totalsAll[j.id]||0)}</span>`;
     tr.appendChild(tdT);
 
-    tbody.appendChild(tr);
-    updateRow(j.id);
+    document.getElementById('tbody').appendChild(tr);
   }
-
-  updateSumRow(visible);
-}
-function toggleMenu(menu){
-  document.querySelectorAll('.menu:not([hidden])').forEach(m=> m.hidden=true);
-  menu.hidden=false;
-}
-function setMenuChecked(menu, values){
-  const set=new Set(values||[]);
-  menu.querySelectorAll('input[type="checkbox"]').forEach(i=> i.checked=set.has(i.value));
-}
-function collectMenuChecked(menu){
-  return [...menu.querySelectorAll('input[type="checkbox"]:checked')].map(i=> i.value);
-}
-document.addEventListener('click', (e)=>{
-  document.querySelectorAll('.menu:not([hidden])').forEach(m=>{
-    const anchor=m.parentElement;
-    if(!anchor.contains(e.target)) m.hidden=true;
-  });
-});
-function updateRow(jobId){
-  const days=getDays();
-  const tr=document.querySelector(`tr[data-job="${jobId}"]`);
-  if(!tr) return;
-
-  days.forEach((d,i)=>{
-    const val=cellValue(jobId,d);
-    const b=tr.querySelector(`td[data-day="${i}"] .bubble`);
-    if(b) b.textContent=formatNum(val);
-  });
-
-  const total=tr.querySelector('.totalCell .totalVal');
-  if(total) total.textContent=formatNum(state.totalsAll[j.id]||0);
-
-  queueMicrotask(()=> updateSumRow());
+  updateSumRow(vis);
 }
 function updateSumRow(visibleJobs){
-  const days=getDays();
-  const vis=visibleJobs||state.jobs;
-  const sums=days.map(d=> vis.reduce((a,j)=> a+(cellValue(j.id,d)||0), 0));
-  const tds=document.querySelectorAll('#sumRow .sumCell');
-  tds.forEach((td,i)=>{
-    const h=sums[i]||0;
-    const cls = h<=3 ? 'sumRed' : (h<=6 ? 'sumOrange' : 'sumGreen');
-    td.innerHTML=`<span class="sumBubble ${cls}">${formatNum(h)}</span>`;
-  });
+  const vis=visibleJobs||state.jobs; const days=getDays();
+  const sums=days.map(d=> vis.reduce((a,j)=> a+(cellValue(j.id,d)||0),0));
+  const row=document.getElementById('sumRow'); if(!row) return;
+  row.innerHTML = sums.map(s=>{
+    const cls = s<=3 ? 'sumRed' : (s<=6 ? 'sumOrange' : 'sumGreen');
+    return `<td class="sumCell"><span class="sumBubble ${cls}">${formatNum(s)}</span></td>`;
+  }).join('');
 }
 
-/* ============================
-   ULOŽENÍ / ZMĚNA HODIN & SMAZÁNÍ
-   ============================ */
-async function bump(jobId, dateISO, delta){
+/* -------------------- změna hodin -------------------- */
+async function bump(jobId, iso, delta){
+  const curr=cellValue(jobId,iso);
+  const next=Math.max(0, round05(curr+delta));
+  const eff=round05(next-curr);
+  if(eff===0) return;
+
+  // optimistic
+  state.entries[jobId] ??= {}; state.entries[jobId][iso]=next; renderTable();
+
+  if(!state.sb || !state.session?.user?.id){ showErr('Pro zapisování hodin se přihlaš.'); return; }
   try{
-    const curr=cellValue(jobId,dateISO);
-    const next=Math.max(0, round05(curr+delta));
-    const eff=round05(next-curr);
-    if(eff===0) return;
-
-    const uid=state.session?.user?.id;
-    if(!uid){ showErr('Pro zapisování hodin se prosím přihlas.'); return; }
-
-    // optimistic UI
-    state.entries[jobId] ??= {};
-    state.entries[jobId][dateISO]=next;
-    updateRow(jobId);
-
-    const ins={ job_id:jobId, work_date:dateISO, hours:eff, user_id:uid };
-    const { error } = await state.sb.from('time_entry').insert(ins);
-    if(error){ state.entries[jobId][dateISO]=curr; updateRow(jobId); return showErr(error.message); }
-
-    await refreshTotals();
-    updateRow(jobId);
-  }catch(e){ showErr(e); }
-}
-async function deleteJob(jobId){
-  if(!confirm('Opravdu odstranit zakázku?')) return;
-  const { error } = await state.sb.from('job').delete().eq('id',jobId);
-  if(error){ showErr(error.message); return; }
-  state.jobs=await loadJobs();
-  await refreshTotals();
-  renderTable();
+    const { error } = await state.sb.from('time_entry').insert({ job_id:jobId, work_date:iso, hours:eff, user_id:state.session.user.id });
+    if(error) throw error;
+    await refreshTotals(); renderTable();
+  }catch(e){ state.entries[jobId][iso]=curr; renderTable(); showErr(e); }
 }
 
-/* ==========
-   EXPORT XLSX
-   ========== */
+/* -------------------- export -------------------- */
 async function exportExcel(){
-  function safeDisplayName(rawEmail){
-    const email=(rawEmail||'').trim(); if(!email) return 'Neznámý';
-    if(typeof nameFromEmail==='function'){ const n=nameFromEmail(email); if(n&&n.trim()) return n.trim(); }
-    const maps=[USER_NAME_BY_EMAIL, window.USER_NAME_BY_EMAIL, window.NAME_BY_EMAIL].filter(Boolean);
-    const key=email.toLowerCase(); for(const m of maps){ if(m&&m[key]) return m[key]; }
-    return email.split('@')[0];
-  }
+  if(!window.ExcelJS){ showErr('Chybí ExcelJS'); return; }
+  const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('Výkaz');
 
-  const daysISO=getDays();
-  const daysTxt=daysISO.map(d=>dayjs(d).format('D. M. YYYY'));
-  const visible=state.jobs
-    .filter(j=> (state.filterClient==='ALL'||String(j.client_id)===String(state.filterClient)) )
-    .filter(j=> (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
-    .filter(j=> jobPassesAssigneeFilter(j));
-  const withHours=visible.filter(j=> daysISO.some(d=> (cellValue(j.id,d)||0) > 0));
+  const days=getDays(); const daysTxt=days.map(d=>fmtHuman(new Date(d)));
+  const visible=state.jobs.filter(j=>
+      (state.filterClient==='ALL'||String(j.client_id)===String(state.filterClient)) &&
+      (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) &&
+      jobPassesAssigneeFilter(j)
+  );
+  const withHours=visible.filter(j=> days.some(d=> (cellValue(j.id,d)||0)>0 ));
+  const userName=nameFromEmail(state.session?.user?.email||'');
 
-  const displayName = safeDisplayName(state.session?.user?.email||'');
-  const start=dayjs(state.weekStart); const end=dayjs(addDays(state.weekStart,4));
-  const rangeHuman=`${start.format('D. M. YYYY')} – ${end.format('D. M. YYYY')}`;
-
-  const wb=new ExcelJS.Workbook();
-  const ws=wb.addWorksheet('Výkaz');
-  ws.addRow([`Uživatel: ${displayName}`]);
-  ws.addRow([`Týden: ${rangeHuman}`]);
+  ws.addRow([`Uživatel: ${userName}`]);
+  ws.addRow([`Týden: ${fmtHuman(state.weekStart)} – ${fmtHuman(addDays(state.weekStart,4))}`]);
   ws.addRow([]);
+  ws.addRow(['Klient','Zakázka',...daysTxt]).font={bold:true};
 
-  const header=ws.addRow(['Klient','Zakázka',...daysTxt]); header.font={bold:true};
   for(const j of withHours){
-    const vals=daysISO.map(d=> cellValue(j.id,d)||0);
+    const vals=days.map(d=>cellValue(j.id,d)||0);
     const r=ws.addRow([j.client, j.name, ...vals]);
     for(let i=0;i<vals.length;i++) r.getCell(3+i).numFmt='0.##';
   }
   ws.addRow([]);
-  const totals=daysISO.map(d=> withHours.reduce((s,j)=> s+(cellValue(j.id,d)||0),0));
-  const sum=ws.addRow(['','Součet',...totals]); sum.font={bold:true};
+  const totals=days.map(d=> withHours.reduce((s,j)=> s+(cellValue(j.id,d)||0),0));
+  const sum=ws.addRow(['','Součet', ...totals]); sum.font={bold:true};
   for(let i=0;i<totals.length;i++) sum.getCell(3+i).numFmt='0.##';
 
-  ws.columns=[{width:28},{width:36},...daysISO.map(()=>({width:12}))];
+  ws.columns=[{width:28},{width:36},...days.map(()=>({width:12}))];
 
-  const safe=(s)=> (s||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9._ -]/g,'').trim() || 'Uzivatel';
-  const fileName=`Vykaz_${safe(displayName)}_${start.format('DD-MM-YYYY')}–${end.format('DD-MM-YYYY')}.xlsx`;
-
+  const safe=(s)=> (s||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9._ -]/g,'').trim()||'Uzivatel';
+  const fileName=`Vykaz_${safe(userName)}_${fmtISO(state.weekStart)}.xlsx`;
   const buf=await wb.xlsx.writeBuffer();
   const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-  if(window.saveAs) saveAs(blob,fileName);
-  else { const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fileName; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2500); }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fileName; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
 }
 
-/* ================
-   RENDER & HANDLERY
-   ================ */
-function buildFiltersUI(){
-  // klient
-  const selC=document.getElementById('filterClient');
-  if(selC){
-    selC.innerHTML=`<option value="ALL">Všichni klienti</option>` + state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-    selC.value=state.filterClient;
-    selC.onchange=(e)=>{ state.filterClient=e.target.value; renderTable(); };
-  }
-  // status
-  const selS=document.getElementById('filterStatus');
-  if(selS){
-    selS.innerHTML=`<option value="ALL">Všechny zakázky</option>` + state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
-    selS.value=state.filterStatus;
-    selS.onchange=(e)=>{ state.filterStatus=e.target.value; renderTable(); };
-  }
-  // součty
-  const selT=document.getElementById('totalsScope');
-  if(selT){
-    selT.value=state.totalsScope;
-    selT.onchange=async(e)=>{ state.totalsScope=e.target.value; await refreshTotals(); renderTable(); };
-  }
-  // „Grafik“ – menu
-  const btn=document.getElementById('assigneeFilterBtn');
-  const menu=document.getElementById('assigneeFilterMenu');
+/* -------------------- UI build -------------------- */
+function buildFilters(){
+  const fc=document.getElementById('filterClient'); if(fc){ fc.innerHTML=`<option value="ALL">Všichni klienti</option>`+state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join(''); fc.value=state.filterClient; fc.onchange=e=>{state.filterClient=e.target.value; renderTable();}; }
+  const fs=document.getElementById('filterStatus'); if(fs){ fs.innerHTML=`<option value="ALL">Všechny zakázky</option>`+state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join(''); fs.value=state.filterStatus; fs.onchange=e=>{state.filterStatus=e.target.value; renderTable();}; }
+  const ts=document.getElementById('totalsScope'); if(ts){ ts.value=state.totalsScope; ts.onchange=async e=>{state.totalsScope=e.target.value; await refreshTotals(); renderTable();}; }
+
+  const btn=document.getElementById('assigneeFilterBtn'); const menu=document.getElementById('assigneeFilterMenu');
   if(btn && menu){
-    const label=()=> btn.textContent = state.filterAssignees.length ? `Grafik: ${state.filterAssignees.join(', ')}` : 'Grafik: Všichni';
-    setMenuChecked(menu, state.filterAssignees);
-    label();
-    btn.onclick=(e)=>{ e.stopPropagation(); toggleMenu(menu); };
-    menu.addEventListener('change', ()=>{ state.filterAssignees=collectMenuChecked(menu); label(); renderTable(); });
-    const clr=document.getElementById('assigneeFilterClear'); if(clr) clr.onclick=()=>{ state.filterAssignees=[]; setMenuChecked(menu,[]); label(); renderTable(); };
-    const cls=document.getElementById('assigneeFilterClose'); if(cls) cls.onclick=()=> menu.hidden=true;
+    const setLabel=()=> btn.textContent = state.filterAssignees.length? `Grafik: ${state.filterAssignees.join(', ')}` : 'Grafik: Všichni';
+    menu.innerHTML=ASSIGNEE_OPTIONS.map(a=>`<label><input type="checkbox" value="${a}" ${state.filterAssignees.includes(a)?'checked':''}> ${a}</label>`).join('')+`<div class="menuRow"><button class="pill-btn small" id="assClose">Zavřít</button></div>`;
+    btn.onclick=(e)=>{ e.stopPropagation(); menu.hidden=!menu.hidden; };
+    menu.addEventListener('change',()=>{ state.filterAssignees=[...menu.querySelectorAll('input:checked')].map(i=>i.value); setLabel(); renderTable(); });
+    menu.querySelector('#assClose').onclick=()=> menu.hidden=true;
+    setLabel();
   }
-}
-function buildAddRowUI(){
-  const s=document.getElementById('newJobClient');
-  if(s) s.innerHTML=state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-  const st=document.getElementById('newJobStatus');
-  if(st) st.innerHTML=state.statuses.map(x=>`<option value="${x.id}">${escapeHtml(x.label)}</option>`).join('');
 
-  const addClientBtn=document.getElementById('addClientBtn');
-  if(addClientBtn){
-    addClientBtn.onclick=async()=>{
-      const name=document.getElementById('newClientName').value.trim(); if(!name) return;
-      const { error }=await state.sb.from('client').insert({name}); if(error) return showErr(error.message);
-      document.getElementById('newClientName').value=''; state.clients=await loadClients(); buildFiltersUI(); buildAddRowUI();
-    };
-  }
-  const addJobBtn=document.getElementById('addJobBtn');
-  if(addJobBtn){
-    addJobBtn.onclick=async()=>{
-      const client_id=document.getElementById('newJobClient')?.value;
-      const name=document.getElementById('newJobName')?.value?.trim();
-      const status_id=+(document.getElementById('newJobStatus')?.value||0);
-      if(!client_id||!name||!status_id) return;
-      const payload={ client_id, name, status_id, assignees: state.newJobAssignees };
-      const { error }=await state.sb.from('job').insert(payload); if(error) return showErr(error.message);
-      document.getElementById('newJobName').value=''; state.jobs=await loadJobs(); await refreshTotals(); renderTable();
-    };
-  }
+  const addC=document.getElementById('addClientBtn');
+  if(addC){ addC.onclick=async()=>{ const name=document.getElementById('newClientName')?.value?.trim(); if(!name||!state.sb) return; const {error}=await state.sb.from('client').insert({name}); if(error) return showErr(error); document.getElementById('newClientName').value=''; state.clients=await loadClients(); buildFilters(); buildAddRow(); }; }
 }
-function setWeekHandlers(){
-  const prev=document.getElementById('prevWeek');
-  const next=document.getElementById('nextWeek');
-  if(prev) prev.onclick=async()=>{ state.weekStart=addDays(state.weekStart,-7); await refreshData(); };
-  if(next) next.onclick=async()=>{ state.weekStart=addDays(state.weekStart, +7); await refreshData(); };
+function buildAddRow(){
+  const jc=document.getElementById('newJobClient'); if(jc) jc.innerHTML=state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  const js=document.getElementById('newJobStatus'); if(js) js.innerHTML=state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
+  const btn=document.getElementById('addJobBtn');
+  if(btn){ btn.onclick=async()=>{ if(!state.sb) return showErr('Přihlášení / DB není k dispozici'); const client_id=jc?.value, name=document.getElementById('newJobName')?.value?.trim(), status_id=+(js?.value||0); if(!client_id||!name||!status_id) return; const {error}=await state.sb.from('job').insert({client_id,name,status_id,assignees:state.newJobAssignees}); if(error) return showErr(error); document.getElementById('newJobName').value=''; await refreshData(); }; }
 }
-async function refreshTotals(){
-  const ids=state.jobs.map(j=>j.id);
-  state.totalsAll=await loadTotalsAll(ids);
-}
+
+/* -------------------- refresh -------------------- */
+async function refreshTotals(){ state.totalsAll = await loadTotalsAll(state.jobs.map(j=>j.id)); }
 async function refreshData(){
   try{
-    setWeekRangeLabel();
-    await ensureProfile();
-    [state.clients, state.statuses, state.jobs] = await Promise.all([ loadClients(), loadStatuses(), loadJobs() ]);
-    state.entries = await loadEntriesMine();
-    await refreshTotals();
-    buildFiltersUI();
-    buildAddRowUI();
-    renderTable();
+    setWeekLabel();
+    if(state.sb){
+      [state.clients, state.statuses, state.jobs] = await Promise.all([loadClients(), loadStatuses(), loadJobs()]);
+      state.entries = await loadEntriesMine();
+      await refreshTotals();
+    }
+    buildFilters(); buildAddRow(); renderTable();
   }catch(e){ showErr(e); }
 }
-function render(){ setWeekRangeLabel(); buildFiltersUI(); buildAddRowUI(); renderTable(); }
 
-/* ======================
-   SIDEBAR FALLBACK (bez drawer.js)
-   ====================== */
-function wireDrawerFallback(){
-  const drawer = document.getElementById('drawer');
-  if(!drawer) return; // když sidebar nepoužíváš, nic se neděje
-
-  const openers = document.querySelectorAll('[data-open-drawer], #drawerOpen, #burgerBtn, #btnPlus, .fabPlus');
-  const closers = document.querySelectorAll('[data-close-drawer], #drawerClose, #drawerX, .drawerClose');
-  const scrim   = document.getElementById('drawerScrim');
-
-  const open = ()=> { drawer.classList.add('open'); document.body.classList.add('drawer-open'); };
-  const close= ()=> { drawer.classList.remove('open'); document.body.classList.remove('drawer-open'); };
-
-  openers.forEach(el=> el.addEventListener('click', open));
-  closers.forEach(el=> el.addEventListener('click', close));
-  if(scrim) scrim.addEventListener('click', close);
-  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') close(); });
-}
-
-/* ==============
-   BOOTSTRAPPING
-   ============== */
+/* -------------------- boot -------------------- */
 window.addEventListener('DOMContentLoaded', async ()=>{
-  await init();
-  setWeekHandlers();
-  const exportBtn=document.getElementById('exportXlsx'); if(exportBtn) exportBtn.onclick=exportExcel;
-  await refreshData();
+  setWeekLabel();
+  wireWeekArrows();
+  wireDrawer();
+
+  // export
+  const ex=document.getElementById('exportXlsx'); if(ex) ex.onclick=exportExcel;
+
+  await sbInit();       // nespustí-li se, UI i tak žije
+  await refreshData();  // zkusíme načíst, ale renderujeme i bez SB
 });

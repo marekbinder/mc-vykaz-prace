@@ -1,29 +1,71 @@
-// Izolované ovládání pravého panelu (burger). App logiky se netýká.
+// drawer.js – izolovaný ovladač postranního panelu
+(function () {
+  const html   = document.documentElement;
+  html.classList.add('js'); // umožní skrýt legacy add-row prvky
 
-const body = document.body;
-const burgerBtn = document.getElementById('burgerBtn');
-const backdrop = document.getElementById('drawerBackdrop');
+  const burger = document.getElementById('x-burger');
+  const scrim  = document.getElementById('x-scrim');
+  const drawer = document.getElementById('x-drawer');
+  const close  = drawer?.querySelector('.x-drawer__close');
 
-const userBoxTopRight = document.getElementById('userBoxTopRight');
-const drawerUserSlot = document.getElementById('drawerUserSlot');
+  if (!burger || !scrim || !drawer || !close) return;
 
-function openDrawer() {
-  // Zkopíruj obsah (e-mail / Odhlásit), který tvůj app.js vykreslí do #userBoxTopRight
-  if (userBoxTopRight && drawerUserSlot) {
-    drawerUserSlot.innerHTML = userBoxTopRight.innerHTML || '';
+  const open = () => {
+    drawer.classList.add('is-open');
+    scrim.hidden = false;
+    drawer.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    // naplnit select klientů, pokud už máš načtené
+    const sel = document.getElementById('newJobClient');
+    if (sel && window.state?.clients?.length) {
+      sel.innerHTML = window.state.clients
+        .map(c => `<option value="${c.id}">${c.name}</option>`)
+        .join('');
+    }
+  };
+  const closeIt = () => {
+    drawer.classList.remove('is-open');
+    scrim.hidden = true;
+    drawer.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  };
+
+  burger.addEventListener('click', open);
+  scrim.addEventListener('click', closeIt);
+  close.addEventListener('click', closeIt);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeIt(); });
+
+  // Propojíme tlačítka s existující logikou v app.js (zůstává beze změny).
+  const addClientBtn = document.getElementById('addClientBtn');
+  const addJobBtn    = document.getElementById('addJobBtn');
+
+  if (addClientBtn) {
+    addClientBtn.addEventListener('click', () => {
+      // Očekáváme, že app.js poslouchá na #addClientBtn a #newClientName
+      // (tj. žádná změna API). Pokud ne, můžeš volat svoji funkci:
+      // window.addClient?.(document.getElementById('newClientName').value)
+    });
   }
-  body.classList.add('drawer-open');
-  backdrop.hidden = false;
-}
-function closeDrawer() {
-  body.classList.remove('drawer-open');
-  backdrop.hidden = true;
-}
 
-burgerBtn?.addEventListener('click', () => {
-  body.classList.contains('drawer-open') ? closeDrawer() : openDrawer();
-});
-backdrop?.addEventListener('click', closeDrawer);
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && body.classList.contains('drawer-open')) closeDrawer();
-});
+  if (addJobBtn) {
+    addJobBtn.addEventListener('click', () => {
+      // Očekáváme, že app.js poslouchá na #addJobBtn, #newJobClient, #newJobName, #newJobStatus
+      // Případně zde můžeš manuálně zavolat svou funkci:
+      // window.addJob?.({
+      //   clientId: document.getElementById('newJobClient').value,
+      //   name: document.getElementById('newJobName').value,
+      //   status: document.getElementById('newJobStatus').value
+      // })
+    });
+  }
+
+  // Odhlášení – pokud máš funkci v app.js, zavolej:
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      if (typeof window.logout === 'function') {
+        window.logout();
+      }
+    });
+  }
+})();

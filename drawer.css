@@ -1,49 +1,110 @@
-/* Overlay */
-.drawer-overlay{
-  position:fixed; inset:0;
-  background:rgba(0,0,0,0);
-  opacity:0; pointer-events:none;
-  transition:opacity .18s ease;
-  z-index:900;
-}
-.drawer-overlay.show{
-  background:rgba(0,0,0,.35);
-  opacity:1; pointer-events:auto;
+/* === Drawer (pravý postranní panel) === */
+#drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
 }
 
-/* Drawer panel – fixní zprava, bez transformů */
-.drawer{
-  position:fixed; top:0; right:-420px; height:100vh; width:min(420px, 92vw);
-  background:#fff; z-index:1000;
-  box-shadow: -18px 0 44px rgba(0,0,0,.18); /* po otevření */
-  transition:right .22s ease;
-  display:flex; flex-direction:column;
-}
-.drawer.open{ right:0; }
-
-/* Head */
-.drawer-head{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:18px 20px; border-bottom:1px solid #eef0f4;
-}
-.drawer-head h2{ margin:0; font-size:20px; }
-
-.icon-btn{
-  width:36px;height:36px;border-radius:10px;border:none;cursor:pointer;
-  background:#eef0f4; color:#0d1321; display:grid;place-items:center;
+#drawer.open {
+  pointer-events: auto;
 }
 
-/* Content */
-.drawer-section{ padding:18px 20px; border-bottom:1px solid #f2f4f7; }
-.drawer-section h3{ margin:0 0 12px; font-size:16px; }
-
-.drawer-label{
-  display:block; font-size:13px; color:#606773; margin:10px 0 6px;
-}
-.drawer-input{
-  width:100%; padding:12px 14px; border:1px solid #e7e9ee; border-radius:14px;
-  outline:none; background:#fff; color:#0d1321;
-  margin:0 0 10px;
+.drawer__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0);         /* žádný viditelný stín, jak sis přál */
+  transition: background .2s ease;
 }
 
-.drawer .pill-btn{ width:100%; margin-top:10px; }
+#drawer.open .drawer__backdrop {
+  background: rgba(0,0,0,0.18);      /* velmi jemné stmavení při otevření (klidně 0,0,0,0) */
+}
+
+.drawer__sheet {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: min(92vw, 480px);
+  max-width: 480px;
+  background: #fff;
+  border-radius: 16px 0 0 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  transform: translateX(100%);
+  transition: transform .25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+#drawer.open .drawer__sheet {
+  transform: translateX(0);
+}
+
+.drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+
+.drawer__title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.drawer__close {
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: 50%;
+  border: 0;
+  background: #0e1623;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.drawer__body {
+  padding: 18px 20px 24px 20px;
+  overflow: auto;
+  flex: 1;
+  display: grid;
+  gap: 22px;
+}
+
+.drawer__section h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.form-row {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.form-row > input,
+.form-row > select {
+  appearance: none;
+  height: 44px;
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.btn-primary {
+  height: 48px;
+  border-radius: 14px;
+  border: 0;
+  background: #0e1623;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Výkaz práce</title>
   <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="drawer.css">
 
   <!-- knihovny -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
@@ -114,5 +115,33 @@
   <div id="err" class="toast" style="display:none"></div>
 
   <script src="app.js"></script>
+
+<!-- Drawer CSS/JS -->
+<script src="drawer.js"></script>
+
+<!-- Fallback markup (drawer.js si ho umí vytvořit i sám) -->
+<div id="drawerBackdrop" class="backdrop" hidden></div>
+<aside id="utilityDrawer" class="drawer" aria-hidden="true" tabindex="-1">
+  <header class="drawer-head">
+    <strong>Další nastavení</strong>
+    <button id="utilClose" class="icon-btn" aria-label="Zavřít">✕</button>
+  </header>
+
+  <section class="drawer-sec">
+    <h4>Přidat klienta</h4>
+    <div id="drawerAddClient"></div>
+  </section>
+
+  <hr class="drawer-sep">
+
+  <section class="drawer-sec">
+    <h4>Účet</h4>
+    <div class="drawer-account">
+      <span id="drawerUser" class="userChip"></span>
+      <button id="drawerLogout" class="pill-btn ghost" type="button">Odhlásit</button>
+    </div>
+  </section>
+</aside>
+  
 </body>
 </html>

@@ -1,648 +1,512 @@
-/* app.js — kompletní verze pro index.html + style.css z tohoto vlákna
-   Schéma:
-     client(id uuid, name text, is_active bool)
-     job(id uuid, client_id uuid, name text, status_id int2, is_active bool, assignees _text / JSON)
-     job_status(id int2, code text, label text)
-     time_entry(id int8, user_id uuid, job_id uuid, work_date date, hours numeric)
-     app_user(id uuid, full_name text, role text, created_at timestamptz)
+// ==== KONSTANTY / STAV ====
+const STEP = 0.5;
+const ASSIGNEE_OPTIONS = ['Viki', 'Standa', 'Marek'];
 
-   Poznámky:
-   - „Součty: Já“ používá přihlášeného uživatele ze supabase.auth.getUser() (je-li k dispozici).
-   - Assignee („Grafik“) se ukládá jako JSON pole jmen do job.assignees.
-   - Export XLSX: klient, zakázka, 5 dní (bez sloupce celkem).
-*/
+const state = {
+  sb: null,
+  session: null,
+  weekStart: startOfISOWeek(new Date()),
+  clients: [],
+  statuses: [],
+  jobs: [],
+  entries: {},        // map[job_id][dateISO] = hours (týden / já)
+  totalsAll: {},      // kumulativní součty (ME/ALL)
+  filterClient: 'ALL',
+  filterStatus: 'ALL',
+  totalsScope: 'ME',
+  filterAssignees: [],
+  newJobAssignees: []
+};
 
-(() => {
-  // ---------- Pomůcky ----------
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-  const toastBox = $('#err');
-  const showToast = (msg, ms = 3500) => {
-    toastBox.textContent = msg;
-    toastBox.style.display = 'block';
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => (toastBox.style.display = 'none'), ms);
-  };
 
-  // Day.js helpers
-  const djs = dayjs; // načtený z CDN
-  const mondayOf = (d) => {
-    const wd = d.day(); // 0..6 (0=neděle)
-    const off = wd === 0 ? -6 : 1 - wd;
-    return d.add(off, 'day').startOf('day');
-  };
-  const rangeMonToFri = (monday) =>
-    [0, 1, 2, 3, 4].map((i) => monday.add(i, 'day'));
-  const fmtD = (d) => d.format('YYYY-MM-DD');
-  const niceD = (d) => d.format('D. M. YYYY');
+// --- Jména do exportu (email -> zobrazované jméno) ---
+const USER_NAME_BY_EMAIL = {
+  'binder.marek@gmail.com': 'Marek',
+  'grafika@media-consult.cz': 'Viki',
+  'stanislav.hron@icloud.com': 'Standa',
+};
 
-  // ---------- Supabase client ----------
-  const pick = (a, b) => (a == null || a === '' ? b : a);
-  const SB_URL =
-    pick(window.SUPABASE_URL, pick(window.SUPABASE_URL, null)) ||
-    pick(typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : null, null) ||
-    localStorage.getItem('sbUrl');
+// Vrátí hezké jméno k e-mailu (fallback: část před @)
+function nameFromEmail(email) {
+  if (!email || typeof email !== 'string') return '';
+  const key = email.toLowerCase().trim();
+  return USER_NAME_BY_EMAIL[key] || key.split('@')[0];
+}
 
-  const SB_KEY =
-    pick(window.SUPABASE_ANON_KEY, null) ||
-    pick(typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : null, null) ||
-    localStorage.getItem('sbKey');
+// ==== HELPERY ====
+function startOfISOWeek(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function fmtDate(d){ return dayjs(d).format('YYYY-MM-DD'); }
+function round05(x){ return Math.round(x*2)/2; }
+function formatNum(x){ return (x%1===0) ? String(x) : x.toFixed(1); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+function showErr(msg){ console.error(msg); const e=document.getElementById('err'); e.textContent=(msg?.message)||String(msg); e.style.display='block'; setTimeout(()=>e.style.display='none',5200); }
+function getDays(){ return [0,1,2,3,4].map(i=>fmtDate(addDays(state.weekStart,i))); }
+function setWeekRangeLabel(){ document.getElementById('weekRange').textContent = `${dayjs(state.weekStart).format('10. 11. 2025')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`.replace(/^10\. 11\. 2025/, dayjs(state.weekStart).format('D. M. YYYY')); } // jen ochrana proti cache
 
-  if (!SB_URL || !SB_KEY) {
-    showToast('Chybí Supabase URL/Key (SUPABASE_URL / SUPABASE_ANON_KEY).');
+// ==== SUPABASE INIT ====
+async function loadConfig(){
+  try{ const r=await fetch('./config.json',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(j.supabaseUrl&&j.supabaseAnonKey) return j; } }catch{}
+  const supabaseUrl=localStorage.getItem('vp.supabaseUrl'); const supabaseAnonKey=localStorage.getItem('vp.supabaseAnonKey');
+  if(supabaseUrl && supabaseAnonKey) return {supabaseUrl,supabaseAnonKey};
+  throw new Error('Chybí konfigurace Supabase (config.json nebo localStorage).');
+}
+async function init(){
+  const cfg=await loadConfig();
+  state.sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {auth:{persistSession:true,autoRefreshToken:true}});
+  const {data:{session}} = await state.sb.auth.getSession(); state.session=session;
+  state.sb.auth.onAuthStateChange((_e,s)=>{ state.session=s; render(); });
+}
+
+// ==== DATA ====
+async function ensureProfile(){
+  const uid=state.session?.user?.id; if(!uid) return;
+  await state.sb.from('app_user').upsert({id:uid, full_name: state.session.user.email, role:'admin'},{onConflict:'id'});
+}
+async function loadClients(){ const {data,error}=await state.sb.from('client').select('id,name').order('name'); if(error) showErr(error); return data||[]; }
+async function loadStatuses(){ const {data,error}=await state.sb.from('job_status').select('id,label').order('id'); if(error) showErr(error); return data||[]; }
+async function loadJobs(){
+  const {data,error}=await state.sb.from('job')
+    .select('id,name,status_id,client_id,assignees, client:client_id(id,name), status:status_id(id,label)')
+    .order('name');
+  if(error){ showErr(error); return []; }
+  return (data||[]).map(j=>({ id:j.id, name:j.name, client_id:j.client?.id||j.client_id, client:j.client?.name||'', status_id:j.status_id, status:j.status?.label||'', assignees:j.assignees||[] }));
+}
+async function loadEntriesMine(){
+  const from=fmtDate(state.weekStart), to=fmtDate(addDays(state.weekStart,6));
+  const {data,error}=await state.sb.from('time_entry')
+    .select('job_id,work_date,hours')
+    .gte('work_date',from).lte('work_date',to)
+    .eq('user_id', state.session.user.id);
+  if(error){ showErr(error); return {}; }
+  const map={}; for(const r of (data||[])){ map[r.job_id] ??={}; map[r.job_id][r.work_date]=(map[r.job_id][r.work_date]||0)+Number(r.hours||0); }
+  return map;
+}
+async function loadTotalsAll(jobIds){
+  if(!jobIds.length) return {};
+  if(state.totalsScope==='ME'){
+    const {data,error}=await state.sb.from('time_entry').select('job_id,hours').in('job_id',jobIds).eq('user_id',state.session.user.id);
+    if(error){ showErr(error); return {}; }
+    const m={}; for(const r of (data||[])){ m[r.job_id]=(m[r.job_id]||0)+Number(r.hours||0); } return m;
+  }
+  const {data:rpc,error:rpcErr}=await state.sb.rpc('fn_job_totals');
+  if(!rpcErr && rpc){ const m={}; for(const r of rpc){ m[r.job_id]=Number(r.sum_hours||0); } return m; }
+  const {data,error}=await state.sb.from('time_entry').select('job_id,hours').in('job_id',jobIds);
+  if(error){ showErr(error); return {}; }
+  const m={}; for(const r of (data||[])){ m[r.job_id]=(m[r.job_id]||0)+Number(r.hours||0); } return m;
+}
+
+// ==== UI helpery ====
+function colorizeStatus(sel){
+  sel.classList.remove('is-nova','is-probiha','is-hotovo');
+  const t=(sel.options[sel.selectedIndex]?.text||'').toLowerCase();
+  if(t.includes('nov')) sel.classList.add('is-nova');
+  else if(t.includes('pro')||t.includes('běh')) sel.classList.add('is-probiha');
+  else if(t.includes('hot')) sel.classList.add('is-hotovo');
+}
+function renderAssigneeLabel(arr){ if(!arr||!arr.length) return 'nikdo'; if(arr.length===1) return arr[0]; return `${arr[0]} +${arr.length-1}`; }
+function jobPassesAssigneeFilter(job){ if(!state.filterAssignees.length) return true; const set=new Set(job.assignees||[]); return state.filterAssignees.some(x=>set.has(x)); }
+function cellValue(jobId, d){ return state.entries[jobId]?.[d] || 0; }
+
+// ==== TABULKA ====
+function renderTable(){
+  const tbody=document.getElementById('tbody'); tbody.innerHTML='';
+  const days=getDays();
+
+  const visible = state.jobs
+    .filter(j=> (state.filterClient==='ALL'||String(j.client_id)===String(state.filterClient)) )
+    .filter(j=> (state.filterStatus==='ALL'||String(j.status_id)===String(state.filterStatus)) )
+    .filter(j=> jobPassesAssigneeFilter(j));
+
+  for(const j of visible){
+    const tr=document.createElement('tr'); tr.dataset.job=j.id;
+
+    // klient
+    const tdC=document.createElement('td');
+    const csel=document.createElement('select'); csel.className='pill-select clientSel';
+    csel.innerHTML = state.clients.map(c=>`<option value="${c.id}" ${String(c.id)===String(j.client_id)?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+    csel.onchange=async(e)=>{ await state.sb.from('job').update({client_id:e.target.value}).eq('id', j.id) };
+    tdC.append(csel); tr.append(tdC);
+
+    // zakázka (název + status + grafik + koš)
+    const tdJ=document.createElement('td'); tdJ.className='jobCell';
+
+    const name=document.createElement('input'); name.className='pill-input jobNameIn'; name.value=j.name;
+    let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ await state.sb.from('job').update({name:e.target.value}).eq('id', j.id) }, 250); };
+
+    const st=document.createElement('select'); st.className='pill-select statusSel';
+    st.innerHTML = state.statuses.map(s=>`<option value="${s.id}" ${String(s.id)===String(j.status_id)?'selected':''}>${escapeHtml(s.label)}</option>`).join('');
+    colorizeStatus(st); st.onchange=async(e)=>{ colorizeStatus(st); await state.sb.from('job').update({status_id:+e.target.value}).eq('id', j.id) };
+
+    const del=document.createElement('button'); del.className='pill-btn jobDelete'; del.textContent='🗑'; del.title='Odstranit';
+
+    // inline grafik – jen neutrální tlačítko „Grafik“
+    const wrap=document.createElement('div'); wrap.className='menuAnchor';
+    const assBtn=document.createElement('button'); assBtn.className='pill-btn assigneeIcon'; assBtn.type='button'; assBtn.textContent='Grafik';
+    const menu=document.createElement('div'); menu.className='menu'; menu.hidden=true;
+    ASSIGNEE_OPTIONS.forEach(opt=>{
+      const L=document.createElement('label'); const I=document.createElement('input'); I.type='checkbox'; I.value=opt; L.append(I, document.createTextNode(' '+opt)); menu.append(L);
+    });
+    const row=document.createElement('div'); row.className='menuRow';
+    const clr=document.createElement('button'); clr.className='pill-btn small'; clr.textContent='Vymazat'; clr.type='button';
+    const cls=document.createElement('button'); cls.className='pill-btn small'; cls.textContent='Zavřít'; cls.type='button';
+    row.append(clr,cls); menu.append(row);
+
+    assBtn.addEventListener('click', ()=>{ setMenuChecked(menu, j.assignees); toggleMenu(menu); });
+    clr.addEventListener('click', async ()=>{ j.assignees=[]; setMenuChecked(menu,[]); await state.sb.from('job').update({assignees:j.assignees}).eq('id', j.id); renderTable(); });
+    menu.addEventListener('change', async ()=>{ j.assignees=collectMenuChecked(menu); await state.sb.from('job').update({assignees:j.assignees}).eq('id', j.id); renderTable(); });
+    cls.addEventListener('click', ()=> menu.hidden=true);
+
+    wrap.append(assBtn, menu);
+    del.onclick=()=>deleteJob(j.id);
+
+    tdJ.append(name, st, wrap, del);
+    tr.append(tdJ);
+
+    // dny Po–Pá
+    for(let i=0;i<5;i++){
+      const d=days[i]; const td=document.createElement('td'); td.dataset.day=i; td.style.textAlign='center';
+      const b=document.createElement('button'); b.className='bubble'; b.textContent='0';
+      b.onclick=()=>bump(j.id,d,+STEP); b.oncontextmenu=(e)=>{e.preventDefault(); bump(j.id,d,-STEP)};
+      td.append(b); tr.append(td);
+    }
+
+    // kumulativní celkem – bez podbarvení, střed, stejná velikost
+    const tdT=document.createElement('td'); tdT.className='totalCell'; tdT.innerHTML = `<span class="totalVal">${formatNum(state.totalsAll[j.id]||0)}</span>`;
+    tr.appendChild(tdT);
+
+    document.getElementById('tbody').appendChild(tr);
+    updateRow(j.id);
+  }
+  updateSumRow(visible);
+}
+
+// menu helpery – zavření klikem mimo anchor
+function toggleMenu(menu){
+  document.querySelectorAll('.menu:not([hidden])').forEach(m=> m.hidden=true);
+  menu.hidden = false;
+}
+function setMenuChecked(menu, values){ const set=new Set(values||[]); menu.querySelectorAll('input[type="checkbox"]').forEach(i=>i.checked=set.has(i.value)); }
+function collectMenuChecked(menu){ return [...menu.querySelectorAll('input[type="checkbox"]:checked')].map(i=>i.value); }
+document.addEventListener('click',(e)=>{
+  document.querySelectorAll('.menu:not([hidden])').forEach(m=>{
+    const anchor=m.parentElement;
+    if(!anchor.contains(e.target)) m.hidden=true;
+  });
+});
+
+function updateRow(jobId){
+  const days=getDays(); const tr=document.querySelector(`tr[data-job="${jobId}"]`); if(!tr) return;
+  days.forEach((d,i)=>{ const val=cellValue(jobId,d); const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b) b.textContent=formatNum(val); });
+  const totalCell=tr.querySelector('.totalCell .totalVal'); if(totalCell) totalCell.textContent=formatNum(state.totalsAll[jobId]||0);
+  queueMicrotask(()=>updateSumRow());
+}
+function updateSumRow(visibleJobs){
+  const days=getDays(); const visible = visibleJobs || state.jobs;
+  const sums = days.map(d => visible.reduce((a,j)=> a + cellValue(j.id, d), 0));
+  const tds = document.querySelectorAll('#sumRow .sumCell');
+  tds.forEach((td,i)=>{
+    const h=sums[i]||0; const cls=h<=3?'sumRed':(h<=6?'sumOrange':'sumGreen');
+    td.innerHTML = `<span class="sumBubble ${cls}">${formatNum(h)}</span>`;
+  });
+}
+
+// změna hodin
+async function bump(jobId, dateISO, delta){
+  try{
+    const curr=cellValue(jobId,dateISO);
+    const next=Math.max(0, round05(curr+delta));
+    const eff=round05(next-curr); if(eff===0) return;
+
+    state.entries[jobId] ??= {}; state.entries[jobId][dateISO] = next; updateRow(jobId);
+
+    const ins={job_id:jobId,work_date:dateISO,hours:eff,user_id:state.session.user.id};
+    const {error}=await state.sb.from('time_entry').insert(ins);
+    if(error){ state.entries[jobId][dateISO]=curr; updateRow(jobId); return showErr(error.message); }
+
+    await refreshTotals(); updateRow(jobId);
+  }catch(e){ showErr(e); }
+}
+
+// mazání zakázky
+async function deleteJob(jobId){
+  if(!confirm('Opravdu odstranit zakázku?')) return;
+  await state.sb.from('job').delete().eq('id', jobId);
+  state.jobs=await loadJobs(); await refreshTotals(); renderTable();
+}
+
+// Pomocná funkce: najde zobrazované jméno podle e-mailu v existujících mapách.
+// Pokud žádná mapa neexistuje nebo e-mail v ní není, vezme se část před '@'.
+function resolveDisplayName(email) {
+  const candidates = [
+    // sem si dosaď jakoukoli tvou existující mapu, pokud máš jiný název
+    window.NAME_BY_EMAIL,
+    window.EXPORT_NAME_MAP,
+    state?.nameMap,
+    state?.userNameMap,
+  ].filter(Boolean);
+
+  for (const map of candidates) {
+    if (map && map[email]) return map[email];
+  }
+  return email ? email.split('@')[0] : 'Neznámý';
+}
+
+// Bezpečně vrátí zobrazované jméno z tvé mapy/funkce (fallback: část před '@')
+function resolveDisplayName(email) {
+  if (!email || typeof email !== 'string') return 'Neznámý';
+
+  // 1) pokud existuje tvoje funkce, použij ji
+  if (typeof nameFromEmail === 'function') {
+    const n = nameFromEmail(email);
+    if (n && typeof n === 'string' && n.trim()) return n.trim();
   }
 
-  const sb = (SB_URL && SB_KEY) ? window.supabase.createClient(SB_URL, SB_KEY) : null;
-
-  // ---------- Stav ----------
-  const state = {
-    weekStart: mondayOf(djs()),
-
-    // data cache
-    clients: [],
-    statuses: [], // {id, code, label}
-    jobs: [],     // aktuálně z DB podle filtrů
-    entries: [],  // time_entry pro týden (pouze pro viditelné joby)
-
-    // session
-    user: null,       // supabase.auth user
-    appUserId: null,  // UUID pro time_entry.user_id ( = auth user id )
-
-    // filtry
-    filterClient: 'ALL', // uuid nebo 'ALL'
-    filterStatus: 'ALL', // int nebo 'ALL'
-    totalsScope: 'ME',   // 'ME' | 'ALL'
-    filterAssignees: [], // ['Marek', 'Viki', 'Standa']
-
-    // add new job (sidebar/řádek nahoře)
-    newAssignees: [], // pro „Grafik: nikdo“ v add-row
-  };
-
-  // map jmen (pro export – můžeš libovolně upravit)
-  const USER_NAME_BY_EMAIL = {
-    'binder.marek@gmail.com': 'Marek',
-    'grafika@media-consult.cz': 'Viki',
-    'stanislav.hron@icloud.com': 'Standa',
-  };
-  const nameFromEmail = (email) => {
-    if (!email || typeof email !== 'string') return '';
+  // 2) pokud existuje mapa, zkus ji přímo
+  if (typeof USER_NAME_BY_EMAIL === 'object' && USER_NAME_BY_EMAIL) {
     const key = email.toLowerCase().trim();
-    return USER_NAME_BY_EMAIL[key] || key.split('@')[0];
-  };
-
-  // ---------- DOM odkazy ----------
-  const elWeek = $('#weekRange');
-  const elPrev = $('#prevWeek');
-  const elNext = $('#nextWeek');
-
-  const elFilterClient = $('#filterClient');
-  const elFilterStatus = $('#filterStatus');
-  const elTotals = $('#totalsScope');
-
-  const elAssigneeFilterBtn = $('#assigneeFilterBtn');
-  const elAssigneeFilterMenu = $('#assigneeFilterMenu');
-  const elAssigneeFilterClose = $('#assigneeFilterClose');
-  const elAssigneeFilterClear = $('#assigneeFilterClear');
-
-  const elNewClient = $('#newClientName');
-  const elAddClient = $('#addClientBtn');
-
-  const elNewJobClient = $('#newJobClient');
-  const elNewJobName = $('#newJobName');
-  const elNewJobStatus = $('#newJobStatus');
-  const elAssigneesNewBtn = $('#assigneesNewBtn');
-  const elAssigneesNewMenu = $('#assigneesNewMenu');
-  const elAssigneesNewClose = $('#assigneesNewClose');
-  const elAssigneesNewClear = $('#assigneesNewClear');
-
-  const elAddJob = $('#addJobBtn');
-
-  const elTbody = $('#tbody');
-  const elFooterCells = $$('#sumRow .sumCell');
-  const elExport = $('#exportXlsx');
-
-  // ---------- UI – týden ----------
-  const refreshWeekLabel = () => {
-    const days = rangeMonToFri(state.weekStart);
-    elWeek.textContent = `${niceD(days[0])} – ${niceD(days[4])}`;
-  };
-
-  elPrev.addEventListener('click', () => {
-    state.weekStart = state.weekStart.add(-7, 'day');
-    refreshWeekLabel();
-    loadAndRender();
-  });
-  elNext.addEventListener('click', () => {
-    state.weekStart = state.weekStart.add(7, 'day');
-    refreshWeekLabel();
-    loadAndRender();
-  });
-
-  // ---------- Načtení uživatele ----------
-  async function fetchUser() {
-    if (!sb) return;
-    try {
-      const { data } = await sb.auth.getUser();
-      state.user = data?.user || null;
-      state.appUserId = state.user?.id || null;
-      // není povinné pro čtení, ale hodí se pro „Součty: Já“ a zápis hodin
-    } catch (e) {
-      // ignoruj
-    }
+    if (USER_NAME_BY_EMAIL[key]) return USER_NAME_BY_EMAIL[key];
   }
 
-  // ---------- Základní číselníky ----------
-  async function fetchClientsStatuses() {
-    if (!sb) return;
-    const { data: clients, error: ce } = await sb
-      .from('client')
-      .select('id,name,is_active')
-      .order('name', { ascending: true });
-    if (ce) {
-      showToast('Nepodařilo se načíst klienty.');
-      return;
-    }
-    state.clients = clients || [];
+  // 3) fallback
+  return email.split('@')[0];
+}
 
-    const { data: statuses, error: se } = await sb
-      .from('job_status')
-      .select('id,code,label')
-      .order('id', { ascending: true });
-    if (se) {
-      showToast('Nepodařilo se načíst statusy.');
-      return;
-    }
-    state.statuses = statuses || [];
+// export do excelu (vynechá řádky bez hodin v týdnu) — bez "Celkem",
+// s prázdným řádkem a tučným součtem na konci + jméno v hlavičce i názvu souboru
+async function exportExcel() {
+  // --- Bezpečné určení zobrazovaného jména ---
+  function resolveDisplayName(rawEmail) {
+    const email = (rawEmail || '').trim();
+    if (!email) return 'Neznámý';
 
-    // naplnění filtrů / add-row selectů
-    elFilterClient.innerHTML = `<option value="ALL">Všichni klienti</option>` +
-      state.clients.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+    // 1) zkus tvoji funkci (lokální/globalThis/window – podle bundleru)
+    const fnCandidates = [
+      (typeof nameFromEmail !== 'undefined' && nameFromEmail) || null,
+      (typeof globalThis !== 'undefined' && globalThis.nameFromEmail) || null,
+      (typeof window !== 'undefined' && window.nameFromEmail) || null,
+    ].filter(f => typeof f === 'function');
 
-    elFilterStatus.innerHTML = `<option value="ALL">Všechny zakázky</option>` +
-      state.statuses.map(s => `<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
-
-    elNewJobClient.innerHTML =
-      state.clients.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-
-    elNewJobStatus.innerHTML =
-      state.statuses.map(s => `<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
-  }
-
-  // ---------- Filtry – change handlers ----------
-  elFilterClient.addEventListener('change', () => {
-    state.filterClient = elFilterClient.value || 'ALL';
-    loadAndRender();
-  });
-  elFilterStatus.addEventListener('change', () => {
-    state.filterStatus = elFilterStatus.value || 'ALL';
-    loadAndRender();
-  });
-  elTotals.addEventListener('change', () => {
-    state.totalsScope = elTotals.value || 'ME';
-    render(); // stačí přepočítat
-  });
-
-  // ---------- „Assignee“ filter menu ----------
-  // menu toggle
-  const toggleMenu = (btn, menu, open) => {
-    const show = open ?? menu.hasAttribute('hidden');
-    if (show) {
-      menu.removeAttribute('hidden');
-      // click outside -> close
-      const closeOnClick = (e) => {
-        if (!menu.contains(e.target) && !btn.contains(e.target)) {
-          menu.setAttribute('hidden', '');
-          document.removeEventListener('mousedown', closeOnClick, true);
-        }
-      };
-      setTimeout(() => document.addEventListener('mousedown', closeOnClick, true), 0);
-    } else {
-      menu.setAttribute('hidden', '');
-    }
-  };
-  elAssigneeFilterBtn.addEventListener('click', () =>
-    toggleMenu(elAssigneeFilterBtn, elAssigneeFilterMenu)
-  );
-  elAssigneeFilterClose.addEventListener('click', () =>
-    elAssigneeFilterMenu.setAttribute('hidden', '')
-  );
-  elAssigneeFilterClear.addEventListener('click', () => {
-    state.filterAssignees = [];
-    for (const cb of $$('input[type=checkbox]', elAssigneeFilterMenu)) cb.checked = false;
-    updateAssigneeFilterBtn();
-    loadAndRender();
-  });
-  // změny checkboxů
-  for (const cb of $$('input[type=checkbox]', elAssigneeFilterMenu)) {
-    cb.addEventListener('change', () => {
-      const vals = $$('input[type=checkbox]', elAssigneeFilterMenu)
-        .filter(x => x.checked)
-        .map(x => x.value);
-      state.filterAssignees = vals;
-      updateAssigneeFilterBtn();
-      loadAndRender();
-    });
-  }
-  const updateAssigneeFilterBtn = () => {
-    elAssigneeFilterBtn.textContent =
-      state.filterAssignees.length ? `Grafik: ${state.filterAssignees.join(', ')}` : 'Grafik: Všichni';
-  };
-
-  // ---------- „Assignees“ v přidávacím řádku ----------
-  elAssigneesNewBtn.addEventListener('click', () =>
-    toggleMenu(elAssigneesNewBtn, elAssigneesNewMenu)
-  );
-  elAssigneesNewClose.addEventListener('click', () =>
-    elAssigneesNewMenu.setAttribute('hidden', '')
-  );
-  elAssigneesNewClear.addEventListener('click', () => {
-    state.newAssignees = [];
-    for (const cb of $$('input[type=checkbox]', elAssigneesNewMenu)) cb.checked = false;
-    updateAssigneesNewLabel();
-  });
-  for (const cb of $$('input[type=checkbox]', elAssigneesNewMenu)) {
-    cb.addEventListener('change', () => {
-      state.newAssignees = $$('input[type=checkbox]', elAssigneesNewMenu)
-        .filter(x => x.checked).map(x => x.value);
-      updateAssigneesNewLabel();
-    });
-  }
-  const updateAssigneesNewLabel = () => {
-    elAssigneesNewBtn.textContent =
-      state.newAssignees.length ? `Grafik: ${state.newAssignees.join(', ')}` : 'Grafik: nikdo';
-  };
-
-  // ---------- Přidání klienta / zakázky ----------
-  elAddClient.addEventListener('click', async () => {
-    if (!sb) return;
-    const name = (elNewClient.value || '').trim();
-    if (!name) return;
-    const { error } = await sb.from('client').insert({ name, is_active: true });
-    if (error) return showToast('Nepodařilo se přidat klienta.');
-    elNewClient.value = '';
-    await fetchClientsStatuses();
-    showToast('Klient přidán.');
-  });
-
-  elAddJob.addEventListener('click', async () => {
-    if (!sb) return;
-    const client_id = elNewJobClient.value;
-    const name = (elNewJobName.value || '').trim();
-    const status_id = Number(elNewJobStatus.value);
-    if (!client_id || !name || !status_id) return;
-
-    const assignees = state.newAssignees.length ? JSON.stringify(state.newAssignees) : null;
-    const { error } = await sb.from('job').insert({
-      client_id, name, status_id, is_active: true, assignees
-    });
-    if (error) return showToast('Nepodařilo se přidat zakázku.');
-    elNewJobName.value = '';
-    state.newAssignees = [];
-    for (const cb of $$('input[type=checkbox]', elAssigneesNewMenu)) cb.checked = false;
-    updateAssigneesNewLabel();
-    await loadAndRender();
-    showToast('Zakázka přidána.');
-  });
-
-  // ---------- Načtení jobů + time_entry ----------
-  function visibleFilters(job) {
-    if (state.filterClient !== 'ALL' && String(job.client_id) !== String(state.filterClient))
-      return false;
-    if (state.filterStatus !== 'ALL' && String(job.status_id) !== String(state.filterStatus))
-      return false;
-    if (state.filterAssignees.length) {
-      const as = parseAssignees(job.assignees);
-      if (!as.length) return false;
-      // alespoň 1 shoda
-      if (!state.filterAssignees.some(a => as.includes(a))) return false;
-    }
-    return true;
-  }
-
-  async function loadJobs() {
-    if (!sb) return;
-    // joby – jen aktivní
-    const { data: jobs, error } = await sb
-      .from('job')
-      .select('id, client_id, name, status_id, is_active, assignees')
-      .eq('is_active', true)
-      .order('name', { ascending: true });
-
-    if (error) {
-      showToast('Nepodařilo se načíst zakázky.');
-      state.jobs = [];
-      state.entries = [];
-      return;
+    for (const fn of fnCandidates) {
+      try {
+        const n = fn(email);
+        if (n && typeof n === 'string' && n.trim()) return n.trim();
+      } catch (_) {}
     }
 
-    const filtered = (jobs || []).filter(visibleFilters);
-    state.jobs = filtered;
+    // 2) zkus tvoji mapu (lokální/globalThis/window)
+    const mapCandidates = [
+      (typeof USER_NAME_BY_EMAIL !== 'undefined' && USER_NAME_BY_EMAIL) || null,
+      (typeof globalThis !== 'undefined' && globalThis.USER_NAME_BY_EMAIL) || null,
+      (typeof window !== 'undefined' && window.USER_NAME_BY_EMAIL) || null,
+    ].filter(m => m && typeof m === 'object');
 
-    // načti time_entry pro tyto joby v týdnu
-    if (!filtered.length) {
-      state.entries = [];
-      return;
-    }
-    const jobIds = filtered.map(j => j.id);
-    const days = rangeMonToFri(state.weekStart).map(fmtD);
-    const { data: entries, error: e2 } = await sb
-      .from('time_entry')
-      .select('job_id, user_id, work_date, hours')
-      .in('job_id', jobIds)
-      .gte('work_date', days[0])
-      .lte('work_date', days[4]);
-
-    if (e2) {
-      showToast('Nepodařilo se načíst hodiny.');
-      state.entries = [];
-      return;
-    }
-    state.entries = entries || [];
-  }
-
-  // ---------- Render tabulky ----------
-  function parseAssignees(val) {
-    if (!val) return [];
-    if (Array.isArray(val)) return val;
-    try {
-      const v = JSON.parse(val);
-      return Array.isArray(v) ? v : [];
-    } catch {
-      return [];
-    }
-  }
-  const clientNameById = (id) => state.clients.find(c => String(c.id) === String(id))?.name || '';
-
-  const statusById = (id) => state.statuses.find(s => Number(s.id) === Number(id));
-
-  const daysISO = () => rangeMonToFri(state.weekStart).map(fmtD);
-
-  function valueFor(jobId, isoDate) {
-    const scope = state.totalsScope;
-    const all = state.entries.filter(e => String(e.job_id) === String(jobId) && e.work_date === isoDate);
-    if (scope === 'ALL') {
-      return sum(all.map(e => Number(e.hours) || 0));
-    }
-    // ME
-    if (!state.appUserId) return sum(all.map(e => Number(e.hours) || 0));
-    return sum(all.filter(e => String(e.user_id) === String(state.appUserId)).map(e => Number(e.hours) || 0));
-  }
-
-  function sum(arr) { return arr.reduce((a, b) => a + (Number(b) || 0), 0); }
-
-  function render() {
-    // týdenní štítek
-    refreshWeekLabel();
-
-    // vykreslení řádků
-    elTbody.innerHTML = '';
-    const dISO = daysISO();
-
-    for (const j of state.jobs) {
-      const tr = document.createElement('tr');
-
-      // Klient (pill-select by byl pěkný, ale zůstaneme u textu)
-      const tdClient = document.createElement('td');
-      tdClient.textContent = clientNameById(j.client_id);
-      tr.appendChild(tdClient);
-
-      // Zakázka + malý „Grafik“
-      const tdJob = document.createElement('td');
-      tdJob.className = 'jobCell';
-
-      const nm = document.createElement('div');
-      nm.className = 'jobNameIn';
-      nm.textContent = j.name;
-      tdJob.appendChild(nm);
-
-      const as = parseAssignees(j.assignees);
-      const btnAss = document.createElement('button');
-      btnAss.type = 'button';
-      btnAss.className = 'pill-btn assigneeIcon';
-      btnAss.textContent = as.length ? `Grafik` : 'Grafik';
-      btnAss.title = as.length ? `Grafik: ${as.join(', ')}` : 'Grafik: nikdo';
-      btnAss.addEventListener('click', () => openAssigneesInline(j, btnAss));
-      tdJob.appendChild(btnAss);
-
-      // „koš“ – smazání zakázky (deaktivace)
-      const del = document.createElement('button');
-      del.className = 'pill-btn jobDelete';
-      del.innerHTML = '🗑';
-      del.title = 'Smazat (deaktivovat) zakázku';
-      del.addEventListener('click', () => deleteJob(j));
-      tdJob.appendChild(del);
-
-      tr.appendChild(tdJob);
-
-      // 5 dnů
-      let total = 0;
-      for (const iso of dISO) {
-        const td = document.createElement('td');
-        td.style.textAlign = 'center';
-        const b = document.createElement('button');
-        b.className = 'bubble';
-        const v = valueFor(j.id, iso);
-        total += v;
-        b.textContent = String(v || 0);
-        b.addEventListener('click', () => editCellHours(j, iso, v));
-        td.appendChild(b);
-        tr.appendChild(td);
-      }
-
-      // celkem
-      const tdTot = document.createElement('td');
-      tdTot.className = 'totalCell';
-      const tv = document.createElement('div');
-      tv.className = 'totalVal';
-      tv.textContent = String(total || 0);
-      tdTot.appendChild(tv);
-      tr.appendChild(tdTot);
-
-      elTbody.appendChild(tr);
+    const key = email.toLowerCase();
+    for (const m of mapCandidates) {
+      if (m[key]) return m[key];
     }
 
-    // součty za dny (spodní řádek)
-    const sums = [0, 1, 2, 3, 4].map(i => {
-      const iso = dISO[i];
-      return sum(state.jobs.map(j => valueFor(j.id, iso)));
-    });
-    elFooterCells.forEach((cell, idx) => {
-      const v = sums[idx] || 0;
-      cell.innerHTML = '';
-      const div = document.createElement('div');
-      div.className = 'sumBubble ' + (v === 0 ? 'sumRed' : v < 7 ? 'sumOrange' : 'sumGreen');
-      div.textContent = String(v);
-      cell.appendChild(div);
-    });
-  }
-
-  async function deleteJob(job) {
-    if (!sb) return;
-    if (!confirm(`Opravdu smazat „${job.name}“?`)) return;
-    const { error } = await sb.from('job').update({ is_active: false }).eq('id', job.id);
-    if (error) return showToast('Nepodařilo se smazat zakázku.');
-    await loadAndRender();
-  }
-
-  // inline assignees menu pro jednotlivý job
-  function openAssigneesInline(job, anchorBtn) {
-    // vytvoříme jednoduché plovoucí menu (stejné checkboxy jako ve filtrech)
-    const menu = document.createElement('div');
-    menu.className = 'menu';
-    menu.style.minWidth = '200px';
-
-    const names = ['Viki', 'Standa', 'Marek'];
-    const pre = new Set(parseAssignees(job.assignees));
-    for (const n of names) {
-      const lab = document.createElement('label');
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.value = n;
-      cb.checked = pre.has(n);
-      lab.append(cb, document.createTextNode(' ' + n));
-      menu.appendChild(lab);
-    }
-    const row = document.createElement('div');
-    row.className = 'menuRow';
-    const cancel = document.createElement('button');
-    cancel.className = 'pill-btn small';
-    cancel.textContent = 'Zavřít';
-    const save = document.createElement('button');
-    save.className = 'pill-btn small';
-    save.textContent = 'Uložit';
-    row.append(cancel, save);
-    menu.appendChild(row);
-
-    document.body.appendChild(menu);
-    // pozice u tlačítka
-    const r = anchorBtn.getBoundingClientRect();
-    menu.style.position = 'fixed';
-    menu.style.left = `${r.left}px`;
-    menu.style.top = `${r.bottom + 8}px`;
-
-    const close = () => {
-      document.removeEventListener('mousedown', onOut, true);
-      menu.remove();
+    // 3) poslední záchrana – interní fallback, aby to VŽDY zobrazilo jméno
+    const FALLBACK = {
+      'binder.marek@gmail.com': 'Marek',
+      'grafika@media-consult.cz': 'Viki',
+      'stanislav.hron@icloud.com': 'Standa',
     };
-    const onOut = (e) => {
-      if (!menu.contains(e.target) && e.target !== anchorBtn) close();
-    };
-    setTimeout(() => document.addEventListener('mousedown', onOut, true), 0);
+    if (FALLBACK[key]) return FALLBACK[key];
 
-    cancel.addEventListener('click', close);
-    save.addEventListener('click', async () => {
-      const sel = [...menu.querySelectorAll('input[type=checkbox]:checked')].map(x => x.value);
-      const assignees = sel.length ? JSON.stringify(sel) : null;
-      const { error } = await sb.from('job').update({ assignees }).eq('id', job.id);
-      if (error) showToast('Nepodařilo se uložit grafika.');
-      close();
-      await loadAndRender();
+    // 4) úplný fallback: část před @
+    return email.split('@')[0];
+  }
+
+  const daysISO = getDays(); // 5 pracovních dní
+  const daysTxt = daysISO.map(d => dayjs(d).format('D. M. YYYY'));
+
+  // aplikované filtry
+  const visible = state.jobs
+    .filter(j => (state.filterClient === 'ALL' || String(j.client_id) === String(state.filterClient)))
+    .filter(j => (state.filterStatus === 'ALL' || String(j.status_id) === String(state.filterStatus)))
+    .filter(j => jobPassesAssigneeFilter(j));
+
+  // jen joby s hodinami v týdnu
+  const withHours = visible.filter(j => daysISO.some(d => (cellValue(j.id, d) || 0) > 0));
+
+  // jméno uživatele
+  const email = (state.session?.user?.email || '').trim();
+  const displayName = resolveDisplayName(email);
+
+  // rozsah týdne
+  const start = dayjs(state.weekStart);
+  const end = dayjs(addDays(state.weekStart, 4));
+  const rangeHuman = `${start.format('D. M. YYYY')} – ${end.format('D. M. YYYY')}`;
+
+  // Excel
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Výkaz');
+
+  // hlavička
+  ws.addRow([`Uživatel: ${displayName}`]);
+  ws.addRow([`Týden: ${rangeHuman}`]);
+  ws.addRow([]);
+
+  // záhlaví bez "Celkem"
+  const headerRow = ws.addRow(['Klient', 'Zakázka', ...daysTxt]);
+  headerRow.font = { bold: true };
+
+  // data
+  for (const j of withHours) {
+    const vals = daysISO.map(d => cellValue(j.id, d) || 0);
+    const row = ws.addRow([j.client, j.name, ...vals]);
+    // číselný formát hodin
+    for (let i = 0; i < vals.length; i++) {
+      row.getCell(3 + i).numFmt = '0.##';
+    }
+  }
+
+  // prázdný řádek + součtový řádek (tučně)
+  ws.addRow([]);
+  const totals = daysISO.map(d => withHours.reduce((sum, j) => sum + (cellValue(j.id, d) || 0), 0));
+  const sumRow = ws.addRow(['', 'Součet', ...totals]);
+  sumRow.font = { bold: true };
+  for (let i = 0; i < totals.length; i++) {
+    sumRow.getCell(3 + i).numFmt = '0.##';
+  }
+
+  // šířky sloupců
+  ws.columns = [
+    { width: 28 }, // Klient
+    { width: 36 }, // Zakázka
+    ...daysISO.map(() => ({ width: 12 })),
+  ];
+
+  // název souboru: Vykaz_{Jmeno}_{DD-MM-YYYY}–{DD-MM-YYYY}.xlsx
+  const safe = (s) =>
+    (s || '')
+      .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Za-z0-9._ -]/g, '')
+      .trim() || 'Uzivatel';
+
+  const fileName = `Vykaz_${safe(displayName)}_${start.format('DD-MM-YYYY')}–${end.format('DD-MM-YYYY')}.xlsx`;
+
+  // uložení
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+  if (window.saveAs) {
+    saveAs(blob, fileName);
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2500);
+  }
+}
+
+
+// ==== REFRESH ====
+async function refreshTotals(){ const ids=state.jobs.map(j=>j.id); state.totalsAll=await loadTotalsAll(ids); }
+async function refreshData(){ state.entries=await loadEntriesMine(); await refreshTotals(); renderTable(); }
+
+// ==== SHELL ====
+function setWeekHandlers(){
+  document.getElementById('prevWeek').onclick=()=>{ state.weekStart=addDays(state.weekStart,-7); setWeekRangeLabel(); refreshData(); };
+  document.getElementById('nextWeek').onclick=()=>{ state.weekStart=addDays(state.weekStart, 7); setWeekRangeLabel(); refreshData(); };
+  document.getElementById('exportXlsx').onclick=exportExcel;
+}
+function buildShellControls(){
+  // filtry klient / status
+  const fClient=document.getElementById('filterClient');
+  fClient.innerHTML = `<option value="ALL">Všichni klienti</option>` + state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  fClient.value=state.filterClient; fClient.onchange=(e)=>{ state.filterClient=e.target.value; renderTable(); };
+
+  const fStat=document.getElementById('filterStatus');
+  fStat.innerHTML = `<option value="ALL">Všechny zakázky</option>` + state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
+  fStat.value=state.filterStatus; fStat.onchange=(e)=>{ state.filterStatus=e.target.value; renderTable(); };
+
+  // scope součtů
+  const scope=document.getElementById('totalsScope');
+  scope.value=state.totalsScope; scope.onchange=async(e)=>{ state.totalsScope=e.target.value; await refreshTotals(); renderTable(); };
+
+  // filtr „Grafik“
+  const fBtn=document.getElementById('assigneeFilterBtn');
+  const fMenu=document.getElementById('assigneeFilterMenu');
+  const fClear=document.getElementById('assigneeFilterClear');
+  const fClose=document.getElementById('assigneeFilterClose');
+  fBtn.onclick=()=>{ setMenuChecked(fMenu,state.filterAssignees); toggleMenu(fMenu); };
+  fMenu.onchange=()=>{ state.filterAssignees=collectMenuChecked(fMenu); fBtn.textContent = state.filterAssignees.length? `Grafik: ${state.filterAssignees.join(', ')}` : 'Grafik: Všichni'; renderTable(); };
+  fClear.onclick=()=>{ state.filterAssignees=[]; fBtn.textContent='Grafik: Všichni'; setMenuChecked(fMenu,[]); renderTable(); };
+  fClose.onclick=()=> fMenu.hidden=true;
+
+  // přidávání
+  const jobClient=document.getElementById('newJobClient');
+  jobClient.innerHTML = state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  const jobStatus=document.getElementById('newJobStatus');
+  jobStatus.innerHTML = state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
+  colorizeStatus(jobStatus); jobStatus.onchange=()=>colorizeStatus(jobStatus);
+
+  document.getElementById('addClientBtn').onclick=async()=>{
+    const name=document.getElementById('newClientName').value.trim(); if(!name) return showErr('Zadej název klienta');
+    const {error}=await state.sb.from('client').insert({name}); if(error) return showErr(error.message);
+    document.getElementById('newClientName').value=''; state.clients=await loadClients(); buildShellControls();
+  };
+
+  // „Grafik“ u nové zakázky
+  const aBtn=document.getElementById('assigneesNewBtn');
+  const aMenu=document.getElementById('assigneesNewMenu');
+  const aClear=document.getElementById('assigneesNewClear');
+  const aClose=document.getElementById('assigneesNewClose');
+  aBtn.onclick=()=>{ setMenuChecked(aMenu,state.newJobAssignees); toggleMenu(aMenu); };
+  aMenu.onchange=()=>{ state.newJobAssignees=collectMenuChecked(aMenu); aBtn.textContent='Grafik: '+(state.newJobAssignees.length? renderAssigneeLabel(state.newJobAssignees): 'nikdo'); };
+  aClear.onclick=()=>{ state.newJobAssignees=[]; setMenuChecked(aMenu,[]); aBtn.textContent='Grafik: nikdo'; };
+  aClose.onclick=()=> aMenu.hidden=true;
+
+  document.getElementById('addJobBtn').onclick=async()=>{
+    const name=document.getElementById('newJobName').value.trim(); if(!name) return showErr('Zadej název zakázky');
+    const client_id=document.getElementById('newJobClient').value;
+    const status_id=+document.getElementById('newJobStatus').value;
+    const assignees=state.newJobAssignees.slice();
+    const {error}=await state.sb.from('job').insert({client_id,name,status_id,assignees});
+    if(error) return showErr(error.message);
+    document.getElementById('newJobName').value=''; state.newJobAssignees=[]; aBtn.textContent='Grafik: nikdo';
+    state.jobs=await loadJobs(); await refreshTotals(); renderTable();
+  };
+}
+async function buildShell(){
+  setWeekHandlers(); setWeekRangeLabel(); buildShellControls(); renderTable();
+}
+async function render(){
+  const ub=document.getElementById('userBoxTopRight'); ub.innerHTML='';
+  if(!state.session){
+    const b=document.createElement('button'); b.className='pill-btn'; b.textContent='Přihlásit'; b.onclick=showLogin; ub.append(b);
+    return showLogin();
+  }else{
+    const e=document.createElement('span'); e.className='pill-btn'; e.textContent=state.session.user.email; e.style.background='#ECEEF2';
+    const o=document.createElement('button'); o.className='pill-btn'; o.textContent='Odhlásit'; o.onclick=async()=>{ await state.sb.auth.signOut(); };
+    ub.append(e,o);
+  }
+  await ensureProfile();
+  state.clients=await loadClients(); state.statuses=await loadStatuses(); state.jobs=await loadJobs();
+  await buildShell(); await refreshData();
+}
+function showLogin(){
+  const app=document.getElementById('app');
+  app.innerHTML = `<div class="card" style="max-width:560px;margin:40px auto;text-align:center">
+    <h2>Přihlášení</h2>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+      <input id="email" class="pill-input" type="email" placeholder="name@example.com" style="min-width:260px">
+      <button id="send" class="pill-btn accent">Poslat přihlašovací odkaz</button>
+    </div>
+  </div>`;
+  document.getElementById('send').onclick=async()=>{
+    const email=document.getElementById('email').value.trim(); if(!email) return showErr('Zadej e-mail');
+    const {error}=await state.sb.auth.signInWithOtp({
+      email,
+      options:{ emailRedirectTo: window.location.origin + window.location.pathname + 'index.html' }
     });
-  }
+    if(error) return showErr(error.message);
+    alert('Zkontroluj si e-mail, poslal jsem odkaz.');
+  };
+}
 
-  // editace bubliny
-  async function editCellHours(job, isoDate, currentVal) {
-    if (!sb) return;
-    const txt = prompt(`Zadej hodiny pro ${niceD(djs(isoDate))} (zakázka: ${job.name})`, String(currentVal || 0));
-    if (txt == null) return;
-    const val = Number(txt.replace(',', '.'));
-    if (Number.isNaN(val) || val < 0) return;
-
-    // najdi existující záznam pro ME/ALL:
-    // zapisujeme pouze za aktuálního uživatele; pokud user není znám, zapisujeme bez user_id (nebo zkusíme default?)
-    let user_id = state.appUserId || null;
-
-    // existuje?
-    const { data: exist, error: e0 } = await sb
-      .from('time_entry')
-      .select('id')
-      .eq('job_id', job.id)
-      .eq('work_date', isoDate)
-      .eq('user_id', user_id)
-      .limit(1);
-
-    if (e0) return showToast('Chyba při čtení záznamu hodin.');
-
-    if (exist && exist.length) {
-      const id = exist[0].id;
-      const { error } = await sb.from('time_entry').update({ hours: val }).eq('id', id);
-      if (error) return showToast('Nepodařilo se uložit hodiny.');
-    } else {
-      const { error } = await sb.from('time_entry').insert({ user_id, job_id: job.id, work_date: isoDate, hours: val });
-      if (error) return showToast('Nepodařilo se vložit hodiny.');
-    }
-    await loadJobs(); // pouze jobs+entries
-    render();
-  }
-
-  // ---------- Export do Excelu ----------
-  elExport.addEventListener('click', async () => {
-    try {
-      const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Výkaz');
-
-      const days = rangeMonToFri(state.weekStart);
-      const daysTxt = days.map(niceD);
-
-      // hlavička
-      const range = `${niceD(days[0])} – ${niceD(days[4])}`;
-      const userEmail = state.user?.email || '';
-      const userNice = nameFromEmail(userEmail);
-      ws.addRow([`Uživatel: ${userNice}`]);
-      ws.addRow([`Týden: ${range}`]);
-      ws.addRow([]);
-
-      ws.addRow(['Klient', 'Zakázka', ...daysTxt]).font = { bold: true };
-
-      for (const j of state.jobs) {
-        const rowVals = days.map(d => valueFor(j.id, fmtD(d)));
-        ws.addRow([clientNameById(j.client_id), j.name, ...rowVals]);
-      }
-
-      // prázdný řádek + součet
-      ws.addRow([]);
-      const sumRow = ['Součet za den', ''];
-      for (const d of days) {
-        const v = sum(state.jobs.map(j => valueFor(j.id, fmtD(d))));
-        sumRow.push(v);
-      }
-      const r = ws.addRow(sumRow);
-      r.font = { bold: true };
-
-      const buf = await wb.xlsx.writeBuffer();
-      const a = document.createElement('a');
-      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      a.href = URL.createObjectURL(blob);
-      a.download = `vykaz_${days[0].format('YYYY-MM-DD')}_${days[4].format('YYYY-MM-DD')}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    } catch (e) {
-      showToast('Export se nepodařil.');
-    }
-  });
-
-  // ---------- Utility ----------
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (m) => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-    }[m]));
-  }
-
-  // ---------- Hlavní načtení ----------
-  async function loadAndRender() {
-    await loadJobs();
-    render();
-  }
-
-  async function boot() {
-    refreshWeekLabel();
-    updateAssigneeFilterBtn();
-    updateAssigneesNewLabel();
-
-    await fetchUser();
-    await fetchClientsStatuses();
-    await loadAndRender();
-  }
-
-  boot();
-})();
+// ==== BOOT ====
+init().then(render).catch(showErr);

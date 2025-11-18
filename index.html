@@ -14,12 +14,7 @@
 <body>
   <header class="topbar">
     <h1>Výkaz práce</h1>
-
-    <!-- (ponecháno kvůli stávajícímu app.js, ale skryto v CSS) -->
     <div id="userBoxTopRight" class="userbox"></div>
-
-    <!-- kulaté + (FAB) pro otevření panelu Nástroje -->
-    <button id="drawerOpenBtn" class="fab" aria-label="Otevřít nástroje">+</button>
   </header>
 
   <main id="app" class="wrap">
@@ -62,7 +57,32 @@
       </div>
     </section>
 
-    <!-- (řádek přidání byl přesunut do draweru) -->
+    <!-- přidání klienta/zakázky -->
+    <section class="addRow">
+      <div class="add-grid">
+        <input id="newClientName" class="pill-input" placeholder="Název klienta"/>
+        <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
+
+        <select id="newJobClient" class="pill-select"></select>
+        <input id="newJobName" class="pill-input" placeholder="Název zakázky"/>
+        <select id="newJobStatus" class="pill-select"></select>
+
+        <div class="menuAnchor">
+          <button id="assigneesNewBtn" class="pill-btn">Grafik: nikdo</button>
+          <div id="assigneesNewMenu" class="menu" hidden>
+            <label><input type="checkbox" value="Viki"> Viki</label>
+            <label><input type="checkbox" value="Standa"> Standa</label>
+            <label><input type="checkbox" value="Marek"> Marek</label>
+            <div class="menuRow">
+              <button id="assigneesNewClear" class="pill-btn small" type="button">Vymazat</button>
+              <button id="assigneesNewClose" class="pill-btn small" type="button">Zavřít</button>
+            </div>
+          </div>
+        </div>
+
+        <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
+      </div>
+    </section>
 
     <!-- tabulka -->
     <section class="tableWrap">
@@ -91,94 +111,7 @@
     </section>
   </main>
 
-  <!-- Overlay + Drawer (Nástroje) -->
-  <div id="drawerOverlay" class="drawer-overlay" aria-hidden="true"></div>
-  <aside id="drawer" class="drawer" aria-hidden="true">
-    <div class="drawer-head">
-      <h2>Nástroje</h2>
-      <button id="drawerCloseBtn" class="pill-btn small ghost" aria-label="Zavřít">✕</button>
-    </div>
-
-    <div class="drawer-body">
-      <!-- Přidání zakázky -->
-      <section class="drawer-sec">
-        <h3>Přidání zakázky</h3>
-        <div class="drawer-grid">
-          <select id="newJobClient" class="pill-select"></select>
-          <input id="newJobName" class="pill-input" placeholder="Název zakázky"/>
-          <select id="newJobStatus" class="pill-select"></select>
-
-          <div class="menuAnchor">
-            <button id="assigneesNewBtn" class="pill-btn">Grafik: nikdo</button>
-            <div id="assigneesNewMenu" class="menu" hidden>
-              <label><input type="checkbox" value="Viki"> Viki</label>
-              <label><input type="checkbox" value="Standa"> Standa</label>
-              <label><input type="checkbox" value="Marek"> Marek</label>
-              <div class="menuRow">
-                <button id="assigneesNewClear" class="pill-btn small" type="button">Vymazat</button>
-                <button id="assigneesNewClose" class="pill-btn small" type="button">Zavřít</button>
-              </div>
-            </div>
-          </div>
-
-          <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
-        </div>
-      </section>
-
-      <!-- Přidání klienta -->
-      <section class="drawer-sec">
-        <h3>Přidání klienta</h3>
-        <div class="drawer-grid">
-          <input id="newClientName" class="pill-input" placeholder="Název klienta"/>
-          <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
-        </div>
-      </section>
-    </div>
-  </aside>
-
   <div id="err" class="toast" style="display:none"></div>
-
-  <!-- === Plus FAB (pokud tvé tlačítko už existuje, jen mu přidej data-open-drawer) === -->
-<!--
-<button id="plusFab" class="fab-plus" data-open-drawer aria-label="Otevřít nástroje">+</button>
--->
-
-<!-- === Drawer / postranní nástroje === -->
-<div id="drawer" aria-hidden="true">
-  <div class="drawer__sheet" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
-    <div class="drawer__header">
-      <h2 id="drawerTitle" class="drawer__title">Nástroje</h2>
-      <button class="drawer__close" data-close-drawer aria-label="Zavřít">×</button>
-    </div>
-
-    <div class="drawer__body">
-      <section class="drawer__section" aria-labelledby="secJob">
-        <h3 id="secJob">Přidání zakázky</h3>
-
-        <div class="form-row">
-          <select id="newJobClient"></select>
-          <input id="newJobName" type="text" placeholder="Název zakázky" />
-          <select id="newJobStatus"></select>
-          <select id="newJobAssignee"></select>
-        </div>
-
-        <button id="addJobBtn" class="btn-primary">Přidat zakázku</button>
-      </section>
-
-      <section class="drawer__section" aria-labelledby="secClient">
-        <h3 id="secClient">Přidání klienta</h3>
-
-        <div class="form-row">
-          <input id="newClientName" type="text" placeholder="Název klienta" />
-        </div>
-
-        <button id="addClientBtn" class="btn-primary">Přidat klienta</button>
-      </section>
-    </div>
-  </div>
-
-  <div class="drawer__backdrop" data-close-drawer></div>
-</div>
 
   <script src="app.js"></script>
 </body>

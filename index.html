@@ -4,25 +4,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Výkaz práce</title>
+
     <link rel="stylesheet" href="style.css" />
 
-    <!-- Knihovny, na které app.js spoléhá (načtou se dřív díky pořadí) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <!-- Pomůže pro rychlejší navázání -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
 
-    <!-- Supabase UMD build => k dispozici window.supabase.createClient(...) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-
-    <!-- Fallback (kdyby CDN blokovalo CSP/adblock) – nahráje se jen když supabase chybí -->
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        if (!window.supabase) {
-          const s = document.createElement('script');
-          s.src = 'https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
-          document.head.appendChild(s);
-        }
-      });
-    </script>
+    <!-- Knihovny, které app.js používá (můžou být ready předem) -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   </head>
 
   <body>
@@ -34,10 +25,10 @@
 
     <div id="err" class="toast" style="display:none"></div>
 
-    <!-- FAB pro boční panel -->
+    <!-- FAB pro otevření nástrojů -->
     <button id="openDrawerBtn" class="fab" aria-label="Otevřít nástroje">+</button>
 
-    <!-- Overlay + Drawer -->
+    <!-- Overlay + Drawer (zůstává skrytý, ovládá drawer.js) -->
     <div id="drawerOverlay" aria-hidden="true"></div>
 
     <aside
@@ -83,8 +74,46 @@
       </section>
     </aside>
 
-    <!-- Až po knihovnách -->
-    <script src="app.js"></script>
-    <script src="drawer.js"></script>
+    <!-- BOOTSTRAP: načti Supabase a až POTOM app.js + drawer.js -->
+    <script>
+      (function bootstrap() {
+        function load(src) {
+          return new Promise(function (resolve, reject) {
+            var s = document.createElement('script');
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        }
+
+        // Zkus jsDelivr, při chybě unpkg
+        function loadSupabaseUMD() {
+          return load('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js')
+            .catch(function () {
+              return load('https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js');
+            });
+        }
+
+        // Po načtení Supabase injektuj app.js a až poté drawer.js (kvůli pořadí)
+        loadSupabaseUMD().then(function () {
+          if (!window.supabase || !window.supabase.createClient) {
+            console.error('Supabase UMD se nenačetl – zkusí se unpkg fallback.');
+          }
+
+          return load('app.js').then(function () {
+            return load('drawer.js');
+          });
+        }).catch(function (e) {
+          console.error('Nepodařilo se načíst Supabase:', e);
+          // Minimalistický toast do tvojí existující chybové vrstvy
+          var t = document.getElementById('err');
+          if (t) {
+            t.textContent = 'Nepodařilo se načíst knihovnu Supabase. Zkuste prosím obnovit stránku.';
+            t.style.display = 'block';
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

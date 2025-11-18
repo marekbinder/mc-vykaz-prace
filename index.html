@@ -105,5 +105,51 @@
   <script type="module" src="./drawer.js?v=1"></script>
   <!-- TVÁ APLIKACE – beze změny -->
   <script type="module" src="./app.js?v=10fix"></script>
+
+  <!-- === Drawer (Nástroje) ==================================== -->
+<button id="x-burger" class="x-burger" aria-label="Otevřít panel">
+  <span></span><span></span><span></span>
+</button>
+
+<div id="x-scrim" class="x-scrim" hidden></div>
+
+<aside id="x-drawer" class="x-drawer" aria-hidden="true">
+  <div class="x-drawer__head">
+    <h2>Nástroje</h2>
+    <button class="x-drawer__close" aria-label="Zavřít panel">✕</button>
+  </div>
+
+  <div class="x-drawer__body">
+    <!-- Přidání klienta -->
+    <div class="x-card">
+      <h3>Přidat klienta</h3>
+      <input id="newClientName" class="pill-input" type="text" placeholder="Název klienta" />
+      <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
+    </div>
+
+    <!-- Přidání zakázky -->
+    <div class="x-card">
+      <h3>Přidat zakázku</h3>
+      <select id="newJobClient" class="pill-select"></select>
+      <input id="newJobName" class="pill-input" type="text" placeholder="Název zakázky" />
+      <select id="newJobStatus" class="pill-select">
+        <option value="new">Nová</option>
+        <option value="in_progress">Probíhá</option>
+        <option value="done">Hotovo</option>
+      </select>
+      <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
+    </div>
+
+    <!-- Volitelně: odhlášení -->
+    <div class="x-card x-card--ghost">
+      <button id="logoutBtn" class="pill-btn ghost">Odhlásit</button>
+    </div>
+  </div>
+</aside>
+<!-- === /Drawer ============================================== -->
+
+<!-- přidejte nový JS soubor -->
+<script src="drawer.js"></script>
+  
 </body>
 </html>

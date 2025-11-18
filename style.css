@@ -315,3 +315,85 @@ button.pill-btn.jobDelete {
   }
 }
 
+/* ========== Drawer (namespaced) =================================== */
+.x-burger{
+  position:fixed; top:16px; right:16px; z-index:1100;
+  width:44px; height:44px; border-radius:12px; border:none;
+  background:#0d1522; display:flex; align-items:center; justify-content:center;
+  gap:4px; cursor:pointer;
+  box-shadow:0 4px 16px rgba(0,0,0,.15);
+}
+.x-burger span{
+  display:block; width:18px; height:2px; background:#fff; border-radius:2px;
+}
+@media (max-width:640px){ .x-burger{ top:12px; right:12px; } }
+
+.x-scrim{
+  position:fixed; inset:0; background:rgba(0,0,0,.35);
+  backdrop-filter:saturate(110%) blur(2px);
+  z-index:1090;
+}
+.x-scrim[hidden]{ display:none; }
+
+.x-drawer{
+  position:fixed; top:0; right:-380px; width:360px; max-width:90vw; height:100dvh;
+  background:#fff; z-index:1101; box-shadow: -20px 0 40px rgba(0,0,0,.18);
+  display:flex; flex-direction:column; transition:right .28s ease;
+  border-left:1px solid rgba(0,0,0,.06);
+}
+.x-drawer.is-open{ right:0; }
+
+.x-drawer__head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 18px; border-bottom:1px solid rgba(0,0,0,.06);
+}
+.x-drawer__head h2{ font-size:18px; margin:0; }
+.x-drawer__close{
+  border:none; background:#0d1522; color:#fff; width:36px; height:36px; border-radius:10px;
+  cursor:pointer;
+}
+
+.x-drawer__body{
+  padding:16px; overflow:auto; flex:1; display:flex; flex-direction:column; gap:12px;
+}
+
+.x-card{
+  background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:14px;
+  padding:14px; display:flex; flex-direction:column; gap:10px;
+}
+.x-card h3{ font-size:14px; margin:0 0 6px; color:#111827; }
+
+.x-card--ghost{ border-style:dashed; background:#fafafa; }
+
+/* drobné utilitky, navázané na váš vizuál */
+.pill-input,.pill-select{
+  width:100%; border:1px solid rgba(0,0,0,.12); border-radius:999px;
+  padding:10px 14px; font:inherit; background:#fff; outline:none;
+}
+.pill-input:focus,.pill-select:focus{ border-color:#0d1522; }
+
+.pill-btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:10px 16px; border-radius:999px; border:1px solid rgba(0,0,0,.1);
+  background:#f5f7fa; cursor:pointer; font-weight:600;
+}
+.pill-btn:hover{ background:#eef1f6; }
+
+.pill-btn.accent{
+  background:#0d1522; color:#fff; border-color:#0d1522;
+}
+.pill-btn.ghost{
+  background:transparent; border-color:rgba(0,0,0,.15); color:#0d1522;
+}
+
+/* Skrytí PŮVODNÍHO řádku "Přidat klienta/zakázku" (jen pokud je JS) */
+html.js .addRow, 
+html.js [data-add-row],
+html.js button#addRowBtn,
+html.js .addRowButton { display:none !important; }
+
+/* zarovnání hlavičky a filtrů – nezasahuje do původních stylů */
+.topbar h1, header h1, .wrap > h1{
+  text-align:center; margin-top:8px;
+}
+.filters{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }

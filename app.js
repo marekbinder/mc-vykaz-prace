@@ -252,90 +252,127 @@ function resolveDisplayName(email) {
   return email ? email.split('@')[0] : 'Neznámý';
 }
 
-// export do excelu (vynechá řádky bez hodin v týdnu)
+// Bezpečně vrátí zobrazované jméno z tvé mapy/funkce (fallback: část před '@')
+function resolveDisplayName(email) {
+  if (!email || typeof email !== 'string') return 'Neznámý';
+
+  // 1) pokud existuje tvoje funkce, použij ji
+  if (typeof nameFromEmail === 'function') {
+    const n = nameFromEmail(email);
+    if (n && typeof n === 'string' && n.trim()) return n.trim();
+  }
+
+  // 2) pokud existuje mapa, zkus ji přímo
+  if (typeof USER_NAME_BY_EMAIL === 'object' && USER_NAME_BY_EMAIL) {
+    const key = email.toLowerCase().trim();
+    if (USER_NAME_BY_EMAIL[key]) return USER_NAME_BY_EMAIL[key];
+  }
+
+  // 3) fallback
+  return email.split('@')[0];
+}
+
+// export do excelu (vynechá řádky bez hodin v týdnu) — s prázdným řádkem a tučným součtem, bez "Celkem"
 async function exportExcel() {
-  const daysISO = getDays(); // 5 pracovních dní týdne
+  // --- helper: vezme jméno z tvé mapy/funkce, jinak z části před '@' ---
+  function resolveDisplayName(email) {
+    if (!email || typeof email !== 'string') return 'Neznámý';
+    // 1) tvoje připravená funkce (pokud existuje)
+    if (typeof nameFromEmail === 'function') {
+      const n = nameFromEmail(email);
+      if (n && typeof n === 'string' && n.trim()) return n.trim();
+    }
+    // 2) tvoje mapa (pokud je dostupná)
+    if (typeof USER_NAME_BY_EMAIL === 'object' && USER_NAME_BY_EMAIL) {
+      const key = email.toLowerCase().trim();
+      if (USER_NAME_BY_EMAIL[key]) return USER_NAME_BY_EMAIL[key];
+    }
+    // 3) fallback
+    return email.split('@')[0];
+  }
+
+  const daysISO = getDays(); // 5 pracovních dní
   const daysTxt = daysISO.map(d => dayjs(d).format('D. M. YYYY'));
 
-  // filtrování jobů
+  // aplikované filtry
   const visible = state.jobs
     .filter(j => (state.filterClient === 'ALL' || String(j.client_id) === String(state.filterClient)))
     .filter(j => (state.filterStatus === 'ALL' || String(j.status_id) === String(state.filterStatus)))
     .filter(j => jobPassesAssigneeFilter(j));
 
   // jen joby, které mají v týdnu nějaké hodiny
-  const withHours = visible.filter(j => daysISO.some(d => cellValue(j.id, d) > 0));
+  const withHours = visible.filter(j => daysISO.some(d => (cellValue(j.id, d) || 0) > 0));
 
-  // zobrazené jméno (mapa už existuje jinde – jen ji chytneme a použijeme)
-  const email = state.session?.user?.email || '';
+  // jméno uživatele
+  const email = (state.session?.user?.email || '').trim();
   const displayName = resolveDisplayName(email);
 
-  // datumový rozsah
-  const from = dayjs(state.weekStart);
-  const to = dayjs(addDays(state.weekStart, 4));
-  const rangeHuman = `${from.format('D. M. YYYY')} – ${to.format('D. M. YYYY')}`;
+  // rozsah týdne
+  const start = dayjs(state.weekStart);
+  const end = dayjs(addDays(state.weekStart, 4));
+  const rangeHuman = `${start.format('D. M. YYYY')} – ${end.format('D. M. YYYY')}`;
 
   // Excel
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Výkaz');
 
-  // Hlavička (uživatel + rozsah)
+  // hlavička
   ws.addRow([`Uživatel: ${displayName}`]);
   ws.addRow([`Týden: ${rangeHuman}`]);
   ws.addRow([]);
 
-  // Header bez „Celkem“
-  const header = ws.addRow(['Klient', 'Zakázka', ...daysTxt]);
-  header.font = { bold: true };
+  // záhlaví bez "Celkem"
+  const headerRow = ws.addRow(['Klient', 'Zakázka', ...daysTxt]);
+  headerRow.font = { bold: true };
 
-  // Data
+  // data
   for (const j of withHours) {
     const vals = daysISO.map(d => cellValue(j.id, d) || 0);
     const row = ws.addRow([j.client, j.name, ...vals]);
-    // volitelně formát číselných buněk
+    // volitelně formát hodin
     for (let i = 0; i < vals.length; i++) {
       row.getCell(3 + i).numFmt = '0.##';
     }
   }
 
-  // Prázdný řádek + součtový řádek o řádek níž, celý tučně
+  // prázdný řádek + součtový řádek (tučně)
   ws.addRow([]);
-  const totals = daysISO.map(d =>
-    withHours.reduce((sum, j) => sum + (cellValue(j.id, d) || 0), 0)
-  );
+  const totals = daysISO.map(d => withHours.reduce((sum, j) => sum + (cellValue(j.id, d) || 0), 0));
   const sumRow = ws.addRow(['', 'Součet', ...totals]);
   sumRow.font = { bold: true };
   for (let i = 0; i < totals.length; i++) {
     sumRow.getCell(3 + i).numFmt = '0.##';
   }
 
-  // Šířky sloupců
+  // rozumné šířky sloupců
   ws.columns = [
     { width: 28 }, // Klient
     { width: 36 }, // Zakázka
-    ...daysISO.map(() => ({ width: 10 })),
+    ...daysISO.map(() => ({ width: 12 })), // jednotlivé dny
   ];
 
-  // Název souboru – ponecháme logiku z „poslední fungující“ verze,
-  // jen do ní dosadíme displayName z mapy.
+  // název souboru: Vykaz_{Jmeno}_{DD-MM-YYYY}–{DD-MM-YYYY}.xlsx
   const safe = (s) =>
-    s.normalize('NFKD')
-     .replace(/[\u0300-\u036f]/g, '')
-     .replace(/[^A-Za-z0-9._ -]/g, '')
-     .trim();
+    (s || '')
+      .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Za-z0-9._ -]/g, '')
+      .trim() || 'Uzivatel';
 
-  const fileName = `Vykaz_${safe(displayName)}_${from.format('DD-MM-YYYY')}–${to.format('DD-MM-YYYY')}.xlsx`;
+  const fileName = `Vykaz_${safe(displayName)}_${start.format('DD-MM-YYYY')}–${end.format('DD-MM-YYYY')}.xlsx`;
 
+  // uložení
   const buf = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buf], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  if (window.saveAs) {
+    saveAs(blob, fileName);
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2500);
+  }
 }
 
 

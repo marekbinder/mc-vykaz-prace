@@ -19,6 +19,19 @@ const state = {
 };
 
 
+// --- Jména do exportu (email -> zobrazované jméno) ---
+const USER_NAME_BY_EMAIL = {
+  'binder.marek@gmail.com': 'Marek',
+  'grafika@media-consult.cz': 'Viki',
+  'stanislav.hron@icloud.com': 'Standa',
+};
+
+// Vrátí hezké jméno k e-mailu (fallback: část před @)
+function nameFromEmail(email) {
+  if (!email || typeof email !== 'string') return '';
+  const key = email.toLowerCase().trim();
+  return USER_NAME_BY_EMAIL[key] || key.split('@')[0];
+}
 
 // ==== HELPERY ====
 function startOfISOWeek(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
@@ -222,16 +235,26 @@ async function deleteJob(jobId){
   state.jobs=await loadJobs(); await refreshTotals(); renderTable();
 }
 
-// Mapa e-mail -> zobrazované jméno pro export
-const NAME_BY_EMAIL = {
-  'binder.marek@gmail.com': 'Marek',
-  'grafika@media-consult.cz': 'Viki',
-  'stanislav.hron@icloud.com': 'Standa',
-};
+// Pomocná funkce: najde zobrazované jméno podle e-mailu v existujících mapách.
+// Pokud žádná mapa neexistuje nebo e-mail v ní není, vezme se část před '@'.
+function resolveDisplayName(email) {
+  const candidates = [
+    // sem si dosaď jakoukoli tvou existující mapu, pokud máš jiný název
+    window.NAME_BY_EMAIL,
+    window.EXPORT_NAME_MAP,
+    state?.nameMap,
+    state?.userNameMap,
+  ].filter(Boolean);
+
+  for (const map of candidates) {
+    if (map && map[email]) return map[email];
+  }
+  return email ? email.split('@')[0] : 'Neznámý';
+}
 
 // export do excelu (vynechá řádky bez hodin v týdnu)
 async function exportExcel() {
-  const daysISO = getDays();                               // 5 pracovních dní týdne
+  const daysISO = getDays(); // 5 pracovních dní týdne
   const daysTxt = daysISO.map(d => dayjs(d).format('D. M. YYYY'));
 
   // filtrování jobů
@@ -243,12 +266,14 @@ async function exportExcel() {
   // jen joby, které mají v týdnu nějaké hodiny
   const withHours = visible.filter(j => daysISO.some(d => cellValue(j.id, d) > 0));
 
-  // Zobrazené jméno uživatele (podle e-mailu), fallback na část před @
+  // zobrazené jméno (mapa už existuje jinde – jen ji chytneme a použijeme)
   const email = state.session?.user?.email || '';
-  const displayName = NAME_BY_EMAIL[email] || (email ? email.split('@')[0] : 'Neznámý');
+  const displayName = resolveDisplayName(email);
 
-  // Datumový rozsah
-  const rangeHuman = `${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart, 4)).format('D. M. YYYY')}`;
+  // datumový rozsah
+  const from = dayjs(state.weekStart);
+  const to = dayjs(addDays(state.weekStart, 4));
+  const rangeHuman = `${from.format('D. M. YYYY')} – ${to.format('D. M. YYYY')}`;
 
   // Excel
   const wb = new ExcelJS.Workbook();
@@ -259,22 +284,28 @@ async function exportExcel() {
   ws.addRow([`Týden: ${rangeHuman}`]);
   ws.addRow([]);
 
-  // Header řádek
+  // Header bez „Celkem“
   const header = ws.addRow(['Klient', 'Zakázka', ...daysTxt]);
   header.font = { bold: true };
 
   // Data
   for (const j of withHours) {
     const vals = daysISO.map(d => cellValue(j.id, d) || 0);
-    ws.addRow([j.client, j.name, ...vals]);
+    const row = ws.addRow([j.client, j.name, ...vals]);
+    // volitelně formát číselných buněk
+    for (let i = 0; i < vals.length; i++) {
+      row.getCell(3 + i).numFmt = '0.##';
+    }
   }
 
-  // Prázdný řádek + součty (tučné)
+  // Prázdný řádek + součtový řádek o řádek níž, celý tučně
   ws.addRow([]);
-  const totals = daysISO.map(d => withHours.reduce((sum, j) => sum + (cellValue(j.id, d) || 0), 0));
+  const totals = daysISO.map(d =>
+    withHours.reduce((sum, j) => sum + (cellValue(j.id, d) || 0), 0)
+  );
   const sumRow = ws.addRow(['', 'Součet', ...totals]);
   sumRow.font = { bold: true };
-  for (let i = 0; i < daysISO.length; i++) {
+  for (let i = 0; i < totals.length; i++) {
     sumRow.getCell(3 + i).numFmt = '0.##';
   }
 
@@ -285,14 +316,20 @@ async function exportExcel() {
     ...daysISO.map(() => ({ width: 10 })),
   ];
 
-  // Bezpečný název souboru: Vykaz_{Jmeno}_{DD-MM-YYYY}–{DD-MM-YYYY}.xlsx
-  const fromStr = dayjs(state.weekStart).format('DD-MM-YYYY');
-  const toStr   = dayjs(addDays(state.weekStart, 4)).format('DD-MM-YYYY');
-  const safeName = (s) => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9_-]/g, '');
-  const fileName = `Vykaz_${safeName(displayName)}_${fromStr}–${toStr}.xlsx`;
+  // Název souboru – ponecháme logiku z „poslední fungující“ verze,
+  // jen do ní dosadíme displayName z mapy.
+  const safe = (s) =>
+    s.normalize('NFKD')
+     .replace(/[\u0300-\u036f]/g, '')
+     .replace(/[^A-Za-z0-9._ -]/g, '')
+     .trim();
+
+  const fileName = `Vykaz_${safe(displayName)}_${from.format('DD-MM-YYYY')}–${to.format('DD-MM-YYYY')}.xlsx`;
 
   const buf = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const blob = new Blob([buf], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
 
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

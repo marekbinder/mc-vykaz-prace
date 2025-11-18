@@ -1,82 +1,82 @@
-/* drawer.js — kompletní verze */
+/* drawer.js — kompletní, samostatný ovladač bočního panelu */
 
-/* Helpers */
-const $ = (sel, root = document) => root.querySelector(sel);
-const on = (el, ev, fn, opts) => el && el.addEventListener(ev, fn, opts);
+/* Mini utilitky */
+const $  = (s, r = document) => r.querySelector(s);
+const on = (el, ev, fn, opt) => el && el.addEventListener(ev, fn, opt);
 
-/* DOM */
-const drawer    = $('#toolsDrawer');
-const overlay   = $('#drawerOverlay');
-const openBtn   = $('#openDrawerBtn');   // kulaté + vpravo nahoře
-const closeBtn  = $('#drawerCloseBtn');  // křížek v hlavičce panelu
+/* DOM reference */
+const drawer   = $('#toolsDrawer');
+const overlay  = $('#drawerOverlay');
+const openBtn  = $('#openDrawerBtn');
+const closeBtn = $('#drawerCloseBtn');
 
-/* Ovládací prvky uvnitř panelu */
-const selNewJobClient = $('#newJobClient');   // select klientů
-const selNewJobStatus = $('#newJobStatus');   // select statusu
-const inpNewJobName   = $('#newJobName');     // input názvu
+const selNewJobClient = $('#newJobClient');
+const selNewJobStatus = $('#newJobStatus');
+const inpNewJobName   = $('#newJobName');
 const btnAddJob       = $('#addJobBtn');
 
 const inpNewClientName = $('#newClientName');
 const btnAddClient     = $('#addClientBtn');
 
-/* Zdroj pro naplnění klientů – přebereme hotové options z horního filtru */
-const filterClient = $('#filterClient'); // existuje na stránce, plní ho app.js
+const logoutBtn        = $('#logoutBtn');
 
-/* Stav */
+/* Zdroj klientů: horní filtr plněný app.js */
+const filterClient = $('#filterClient');
+
 let isOpen = false;
 
-/* ---------- Populate ---------- */
+/* ------------ Naplnění polí v panelu ---------------- */
 
-/** Naplní <select> #newJobClient z horního filtru #filterClient (ignoruje ALL) */
 function populateClientsIntoDrawer() {
   if (!selNewJobClient) return;
-  if (!filterClient || !filterClient.options || filterClient.options.length === 0) return;
+
+  // Vezmeme hotové options z horního #filterClient (ignorujeme ALL)
+  const src = filterClient?.options;
+  if (!src || src.length === 0) return;
 
   const opts = [];
-  for (const opt of filterClient.options) {
+  for (const opt of src) {
     if (opt.value === 'ALL') continue;
     opts.push(`<option value="${opt.value}">${opt.textContent}</option>`);
   }
   selNewJobClient.innerHTML = opts.join('') || '<option disabled>— žádní klienti —</option>';
 }
 
-/** Volitelné: doplnění statusů, pokud nejsou v HTML napevno */
+/* Když nejsou statusy v HTML, doplníme defaulty */
 function ensureJobStatuses() {
   if (!selNewJobStatus) return;
-  if (selNewJobStatus.options.length > 0) return; // už je naplněno
+  if (selNewJobStatus.options.length) return;
+
   const statuses = [
-    { value: 'NEW',    label: 'Nová' },
-    { value: 'RUN',    label: 'Probíhá' },
-    { value: 'DONE',   label: 'Hotovo' }
+    { value: 'NEW',  label: 'Nová' },
+    { value: 'RUN',  label: 'Probíhá' },
+    { value: 'DONE', label: 'Hotovo' }
   ];
   selNewJobStatus.innerHTML = statuses.map(s => `<option value="${s.value}">${s.label}</option>`).join('');
 }
 
-/* ---------- Drawer toggle ---------- */
+/* ------------ Ovládání panelu ----------------------- */
 
 function openDrawer() {
   if (!drawer || !overlay) return;
 
-  // Naplníme klienty vždy při otevření (kdyby se mezitím změnili nahoře)
   populateClientsIntoDrawer();
   ensureJobStatuses();
 
-  // Viditelnost
   drawer.classList.add('open');
   overlay.classList.add('open');
 
-  // Správné ARIA
   drawer.removeAttribute('aria-hidden');
   overlay.setAttribute('aria-hidden', 'false');
 
-  // Zabraň scrollu pozadí
+  // Zamezíme scrollu na pozadí
   document.documentElement.style.overflow = 'hidden';
   document.body.style.overflow = 'hidden';
 
   isOpen = true;
 
-  // Fokus do prvního pole (bezpečné)
-  if (selNewJobClient) selNewJobClient.focus();
+  // Fokus do 1. ovládacího prvku
+  selNewJobClient?.focus();
 }
 
 function closeDrawer() {
@@ -85,57 +85,48 @@ function closeDrawer() {
   drawer.classList.remove('open');
   overlay.classList.remove('open');
 
-  // ARIA zpět
   drawer.setAttribute('aria-hidden', 'true');
   overlay.setAttribute('aria-hidden', 'true');
 
-  // Obnov scroll pozadí
   document.documentElement.style.overflow = '';
   document.body.style.overflow = '';
 
   isOpen = false;
 }
 
-/* ---------- Actions uvnitř panelu (drátování jen, logiku přidání má app.js) ---------- */
-
-on(btnAddJob, 'click', (e) => {
-  e.preventDefault();
-  // necháváme na app.js – tady jen sanity kontrola vstupů
-  if (!selNewJobClient?.value || !inpNewJobName?.value) {
-    showToast('Vyplňte klienta a název zakázky.');
-    return;
-  }
-  // Pokud app.js poslouchá #addJobBtn, necháme akci proběhnout normálně
-});
-
-on(btnAddClient, 'click', (e) => {
-  e.preventDefault();
-  if (!inpNewClientName?.value) {
-    showToast('Zadejte název klienta.');
-    return;
-  }
-  // Přenecháno app.js (listener na #addClientBtn)
-});
-
-/* ---------- Eventy otevření / zavření ---------- */
+/* ------------ Drátování akcí ------------------------ */
 
 on(openBtn,  'click', (e) => { e.preventDefault(); openDrawer(); });
 on(closeBtn, 'click', (e) => { e.preventDefault(); closeDrawer(); });
 on(overlay,  'click', () => { if (isOpen) closeDrawer(); });
-on(document, 'keydown', (e) => {
-  if (e.key === 'Escape' && isOpen) closeDrawer();
+on(document, 'keydown', (e) => { if (e.key === 'Escape' && isOpen) closeDrawer(); });
+
+/* Guardy pro tlačítka uvnitř – samotné přidání řeší app.js podle tvých listenerů */
+on(btnAddJob, 'click', (e) => {
+  if (!selNewJobClient?.value || !inpNewJobName?.value) {
+    e.preventDefault();
+    toast('Vyplňte klienta a název zakázky.');
+  }
 });
 
-/* ---------- Pomocné ---------- */
-function showToast(txt) {
-  try {
-    const toast = $('#err');
-    if (!toast) return;
-    toast.textContent = txt;
-    toast.style.display = 'block';
-    setTimeout(() => (toast.style.display = 'none'), 2200);
-  } catch (_) {}
+on(btnAddClient, 'click', (e) => {
+  if (!inpNewClientName?.value) {
+    e.preventDefault();
+    toast('Zadejte název klienta.');
+  }
+});
+
+/* Volitelné: nechávám i logout, pokud ho app.js obsluhuje – tady nic */
+on(logoutBtn, 'click', () => { /* app.js */ });
+
+/* ------------ Pomocné ------------------------------- */
+function toast(msg) {
+  const t = $('#err');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => (t.style.display = 'none'), 2000);
 }
 
-/* ---------- Expose pro self-check ---------- */
+/* Expose pro rychlý self-check v konzoli */
 window.toolsDrawer = { open: openDrawer, close: closeDrawer, populateClientsIntoDrawer };

@@ -28,7 +28,7 @@
   box-shadow: -24px 0 40px rgb(0 0 0 / 18%), -8px 0 24px rgb(0 0 0 / 12%);
   display: flex;
   flex-direction: column;
-  z-index: 1002;             /* panel nad scrimem */
+  z-index: 1002;
   pointer-events: auto;
 }
 
@@ -123,7 +123,7 @@
 /* Selecty musí být vždy klikatelně nad scrimem (i na iOS) */
 .drawer select { position: relative; z-index: 1004; }
 
-/* ===== Plovoucí „+“ (spouštěč) – extrémní z-index, aby šel vždy stisknout ===== */
+/* ===== Plovoucí „+“ – extrémní z-index, aby šlo vždy stisknout ===== */
 #openDrawerBtn {
   position: fixed;
   top: 16px;
@@ -144,4 +144,5 @@
 }
 #openDrawerBtn:focus { outline: 3px solid rgba(11,21,35,.25); }
 
-/* ŽÁDNÝ gradient/stín v zavřeném stavu – scrim je prostě neviditelný */
+/* ===== Tvrdé schování uživatelské krabičky vpravo nahoře ===== */
+#userBoxTopRight { display: none !important; visibility: hidden !important; pointer-events: none !important; }

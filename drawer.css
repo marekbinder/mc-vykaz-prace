@@ -1,110 +1,108 @@
-/* === Drawer (pravý postranní panel) === */
-#drawer {
+/* ===== FAB + BACKDROP + DRAWER ===== */
+
+/* schováme původní pravý uživatelský box a řádek "přidat zakázku" na hlavní ploše */
+#userBoxTopRight,
+section.addRow { display: none !important; }
+
+/* FAB (+) vpravo nahoře */
+#toolsFab{
+  position: fixed;
+  right: 24px;
+  top: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #0b1625;
+  color: #fff;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 44px;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+  z-index: 99998;
+  border: none;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+#toolsFab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
+
+/* backdrop */
+#toolsBackdrop{
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  background: rgba(10,14,20,.45);
+  opacity: 0;
   pointer-events: none;
+  transition: opacity .2s ease;
+  z-index: 99996;
 }
+#toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
 
-#drawer.open {
+/* panel – BEZ transform (kvůli nativním selectům) a s overflow přímo na panelu */
+#toolsDrawer{
+  position: fixed;
+  top: 0;
+  right: -100%;
+  height: 100vh;
+  width: min(420px, 92vw);
+  background: #fff;
+  box-shadow: -14px 0 30px rgba(0,0,0,.25);
+  transition: right .22s ease;
+  z-index: 99997;
+  display: flex;
+  flex-direction: column;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+
+  /* kritické: vlastní scroll kontejner */
+  overflow: auto;
+}
+#toolsDrawer.open{ right: 0; }
+
+.toolsHead{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 18px 10px 18px; border-bottom:1px solid rgba(0,0,0,.06);
+}
+.toolsTitle{ font-size:20px; font-weight:800; color:#0b1625; }
+#toolsClose{
+  width:36px; height:36px; border-radius:10px;
+  border:1px solid rgba(0,0,0,.08); background:#fff; cursor:pointer;
+}
+#toolsClose::after{ content:'✕'; font-size:16px; }
+
+.toolsBody{ padding:16px 18px 24px 18px; }
+.toolsSection{ margin-bottom:24px; }
+.toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
+
+/* pilly uvnitř zásuvky musí brát kliky a mít plnou šířku */
+.toolsBody .pill-input,
+.toolsBody .pill-select,
+.toolsBody .pill-btn{
+  width:100%;
+  margin:8px 0;
   pointer-events: auto;
 }
 
-.drawer__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0);         /* žádný viditelný stín, jak sis přál */
-  transition: background .2s ease;
+/* === nativní selecty uvnitř zásuvky – přebíjí globální "pill" vzhled === */
+#toolsDrawer select,
+#toolsDrawer .pill-select,
+#toolsDrawer select.pill-select{
+  -webkit-appearance: menulist-button !important;  /* Safari */
+  appearance: menulist !important;
+  background-image: none !important;
+  cursor: default;
+  pointer-events: auto !important;
+  min-height: 42px;
+  line-height: 1.2;
 }
 
-#drawer.open .drawer__backdrop {
-  background: rgba(0,0,0,0.18);      /* velmi jemné stmavení při otevření (klidně 0,0,0,0) */
+/* šipky/dekorace neblokují klik */
+#toolsDrawer .pill-select::after,
+#toolsDrawer .select-arrow,
+#toolsDrawer .pill-select + .select-arrow{
+  display: none !important;
+  pointer-events: none !important;
 }
 
-.drawer__sheet {
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: min(92vw, 480px);
-  max-width: 480px;
-  background: #fff;
-  border-radius: 16px 0 0 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.08);
-  transform: translateX(100%);
-  transition: transform .25s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-#drawer.open .drawer__sheet {
-  transform: translateX(0);
-}
-
-.drawer__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 20px;
-  border-bottom: 1px solid rgba(0,0,0,.06);
-}
-
-.drawer__title {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.drawer__close {
-  inline-size: 36px;
-  block-size: 36px;
-  border-radius: 50%;
-  border: 0;
-  background: #0e1623;
-  color: #fff;
-  font-size: 20px;
-  line-height: 1;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-
-.drawer__body {
-  padding: 18px 20px 24px 20px;
-  overflow: auto;
-  flex: 1;
-  display: grid;
-  gap: 22px;
-}
-
-.drawer__section h3 {
-  font-size: 15px;
-  font-weight: 700;
-  margin: 0 0 10px;
-}
-
-.form-row {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.form-row > input,
-.form-row > select {
-  appearance: none;
-  height: 44px;
-  border: 1px solid rgba(0,0,0,.12);
-  border-radius: 12px;
-  padding: 0 14px;
-  font-size: 14px;
-}
-
-.btn-primary {
-  height: 48px;
-  border-radius: 14px;
-  border: 0;
-  background: #0e1623;
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-}
+/* jistota – nic v zásuvce není „průhledný“ overlay */
+#toolsDrawer *{ pointer-events:auto; }

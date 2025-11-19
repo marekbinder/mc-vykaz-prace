@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const backdrop = document.getElementById('toolsBackdrop');
   const btnClose = document.getElementById('toolsClose');
 
-  // prvky v panelu (kvůli nativním selectům)
   const selClient = document.getElementById('newJobClient');
   const selStatus = document.getElementById('newJobStatus');
 
@@ -19,20 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const setDrawerWidthVar = () => {
     if (!drawer) return;
-    // reálná šířka (kvůli clip-path na backdropu)
     const w = Math.round(drawer.getBoundingClientRect().width || 420);
     document.documentElement.style.setProperty('--drawer-w', `${w}px`);
   };
 
   const openDrawer = () => {
-    if (!drawer) return;
     setDrawerWidthVar();
-
-    // vše najednou – žádné zdvojené animace
     body.classList.add('drawer-open');
     drawer.classList.add('open');
     drawer.setAttribute('aria-hidden', 'false');
-    backdrop?.classList.add('show');
+    backdrop.classList.add('show');
 
     enableNativeSelect(selClient);
     enableNativeSelect(selStatus);
@@ -40,23 +35,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const closeDrawer = () => {
     body.classList.remove('drawer-open');
-    drawer?.classList.remove('open');
-    drawer?.setAttribute('aria-hidden', 'true');
-    backdrop?.classList.remove('show');
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    backdrop.classList.remove('show');
     document.documentElement.style.removeProperty('--drawer-w');
   };
 
   fab?.addEventListener('click', openDrawer);
   btnClose?.addEventListener('click', closeDrawer);
-  backdrop?.addEventListener('click', () => drawer?.classList.contains('open') && closeDrawer());
+
+  // klik mimo panel zavře, klik vpravo (na pruh pro panel) už backdrop neinterceptuje
+  backdrop?.addEventListener('click', (e) => {
+    if (!drawer.classList.contains('open')) return;
+    closeDrawer();
+  });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && drawer?.classList.contains('open')) closeDrawer();
+    if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
   });
 
   let rAF;
   window.addEventListener('resize', () => {
-    if (!drawer?.classList.contains('open')) return;
+    if (!drawer.classList.contains('open')) return;
     cancelAnimationFrame(rAF);
     rAF = requestAnimationFrame(setDrawerWidthVar);
   });

@@ -5,7 +5,7 @@
       : fn());
 
   onReady(() => {
-    // 1) zajistíme CSS
+    // načti CSS, pokud už není
     if (!document.querySelector('link[href$="drawer.css"], link[href*="drawer.css"]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -13,7 +13,7 @@
       document.head.appendChild(link);
     }
 
-    // 2) FAB
+    // FAB
     let fab = document.getElementById('toolsFab');
     if (!fab) {
       fab = document.createElement('button');
@@ -24,7 +24,7 @@
       document.body.appendChild(fab);
     }
 
-    // 3) Backdrop (shield jen vlevo)
+    // Backdrop (štít)
     let backdrop = document.getElementById('toolsBackdrop');
     if (!backdrop) {
       backdrop = document.createElement('div');
@@ -32,7 +32,7 @@
       document.body.appendChild(backdrop);
     }
 
-    // 4) Drawer
+    // Drawer
     let drawer = document.getElementById('toolsDrawer');
     if (!drawer) {
       drawer = document.createElement('aside');
@@ -72,8 +72,7 @@
       document.body.appendChild(drawer);
     }
 
-    // ——————————————————————————————————
-    // UTIL: udržet z-indexy a šířku „díry“ v backdropu
+    // ————— util —————
     const forceZ = () => {
       backdrop.style.setProperty('z-index','2147483400','important');
       drawer  .style.setProperty('z-index','2147483600','important');
@@ -83,13 +82,13 @@
       });
     };
 
-    const setShieldGap = () => {
+    // vyřízni „díru“ pod zásuvkou – nastavíme inline right na backdrop
+    const setShieldRight = () => {
       const w = Math.round(drawer.getBoundingClientRect().width || 0);
-      document.documentElement.style.setProperty('--drawer-w', w + 'px');
+      backdrop.style.right = (w ? w + 'px' : '0px');
     };
-    // ——————————————————————————————————
 
-    // najde horní „Klient“ select mimo drawer (použijeme jeho options)
+    // najdi horní select s klienty (mimo drawer)
     const findTopClientSelect = () => {
       const selects = Array.from(document.querySelectorAll('select')).filter(s => !drawer.contains(s));
       for (const s of selects) {
@@ -118,23 +117,34 @@
       if (!target.value && target.options.length) target.selectedIndex = 0;
     };
 
-    // Otevření / Zavření
+    // ————— open/close —————
     let ro = null;
 
     const openDrawer = () => {
       document.body.classList.add('drawer-open');
-      drawer.classList.add('open');
-      setShieldGap();                  // vyřízni štít vlevo
+
+      // 1) nejdřív ukaž backdrop přes celou plochu (right: 0)
+      backdrop.style.right = '0px';
       backdrop.classList.add('show');
+
+      // 2) otevři drawer (začne slide)
+      drawer.classList.add('open');
       document.body.style.overflow = 'hidden';
+
+      // 3) po krátké chvíli (sync se slidováním) vyřízni díru
+      setTimeout(() => {
+        setShieldRight();        // teď už má drawer finální šířku
+      }, 120);
 
       // naplň klienty
       populateClients(document.getElementById('newJobClient'));
 
       forceZ();
       if (ro) ro.disconnect();
-      ro = new ResizeObserver(setShieldGap);
+      ro = new ResizeObserver(setShieldRight);
       ro.observe(drawer);
+
+      // focus
       setTimeout(() => document.getElementById('newJobClient')?.focus(), 0);
     };
 
@@ -143,18 +153,18 @@
       backdrop.classList.remove('show');
       document.body.style.overflow = '';
       document.body.classList.remove('drawer-open');
-      document.documentElement.style.removeProperty('--drawer-w');
+      backdrop.style.right = '0px';    // vrať štít zpět přes celé plátno
       if (ro) { ro.disconnect(); ro = null; }
       fab.focus();
     };
 
-    // Ovládání
+    // ovládání
     fab.addEventListener('click', openDrawer);
     drawer.querySelector('#toolsClose').addEventListener('click', closeDrawer);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeDrawer(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
 
-    // Akce – napoj na svoje funkce v app.js
+    // akce – napoj na app.js
     const val = (id) => (document.getElementById(id)?.value || '').trim();
 
     drawer.querySelector('#btnAddJob').addEventListener('click', () => {

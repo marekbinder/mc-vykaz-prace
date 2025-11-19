@@ -1,4 +1,4 @@
-// drawer.js – kompletní
+// drawer.js – bez závislostí
 document.addEventListener('DOMContentLoaded', () => {
   const body     = document.body;
   const fab      = document.getElementById('toolsFab');
@@ -16,19 +16,29 @@ document.addEventListener('DOMContentLoaded', () => {
     el.style.appearance = 'menulist';
   };
 
-  const setDrawerWidthVar = () => {
-    if (!drawer) return;
+  // Backdrop má reálnou šířku jen po levý okraj zásuvky
+  const setBackdropForDrawer = () => {
     const w = Math.round(drawer.getBoundingClientRect().width || 420);
-    document.documentElement.style.setProperty('--drawer-w', `${w}px`);
+    // clamping (pro malé viewporty) + vyhnout se negativním hodnotám
+    const right = Math.max(0, Math.min(window.innerWidth, w));
+    backdrop.style.right = right + 'px';
+    backdrop.style.left  = '0';
+  };
+
+  const resetBackdrop = () => {
+    // po zavření zase přes celou šířku
+    backdrop.style.right = '0';
+    backdrop.style.left  = '0';
   };
 
   const openDrawer = () => {
-    setDrawerWidthVar();                 // 1) stanov pruh vpravo
-    body.classList.add('drawer-open');   // 2) schovej FAB
-    backdrop.classList.add('show');      // 3) zapni backdrop (jen fade)
-    drawer.classList.add('open');        // 4) vyjeď zásuvku
+    setBackdropForDrawer();             // 1) vymezit prostor pro zásuvku
+    body.classList.add('drawer-open');  // 2) schovat FAB
+    backdrop.classList.add('show');     // 3) fade overlay
+    drawer.classList.add('open');       // 4) vyjet zásuvku
     drawer.setAttribute('aria-hidden', 'false');
 
+    // jistota pro Safari
     enableNativeSelect(selClient);
     enableNativeSelect(selStatus);
   };
@@ -38,13 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
     drawer.classList.remove('open');
     drawer.setAttribute('aria-hidden', 'true');
     backdrop.classList.remove('show');
-    document.documentElement.style.removeProperty('--drawer-w');
+    resetBackdrop();
   };
 
   fab?.addEventListener('click', openDrawer);
   btnClose?.addEventListener('click', closeDrawer);
 
-  // klik mimo panel zavře (backdrop NIKDY nepokrývá pruh zásuvky)
+  // klik mimo panel zavře (overlay NIKDY nepokrývá oblast zásuvky)
   backdrop?.addEventListener('click', () => {
     if (drawer.classList.contains('open')) closeDrawer();
   });
@@ -53,11 +63,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
   });
 
-  // přepočet pruhu při resize
+  // přepočet při změně velikosti okna
   let rAF;
   window.addEventListener('resize', () => {
     if (!drawer.classList.contains('open')) return;
     cancelAnimationFrame(rAF);
-    rAF = requestAnimationFrame(setDrawerWidthVar);
+    rAF = requestAnimationFrame(setBackdropForDrawer);
   });
 });

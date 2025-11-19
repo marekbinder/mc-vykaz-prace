@@ -19,7 +19,7 @@ section.addRow { display: none !important; }
   line-height: 44px;
   text-align: center;
   box-shadow: 0 6px 18px rgba(0,0,0,.18);
-  z-index: 1100;
+  z-index: 99998;
   border: none;
   cursor: pointer;
   transition: transform .15s ease, box-shadow .15s ease;
@@ -34,11 +34,11 @@ section.addRow { display: none !important; }
   opacity: 0;
   pointer-events: none;
   transition: opacity .2s ease;
-  z-index: 1098;
+  z-index: 99996;
 }
 #toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
 
-/* panel – POZOR: bez transformu (kvůli bugu nativních <select>) */
+/* panel – BEZ transform (kvůli nativním selectům) a s overflow přímo na panelu */
 #toolsDrawer{
   position: fixed;
   top: 0;
@@ -48,11 +48,14 @@ section.addRow { display: none !important; }
   background: #fff;
   box-shadow: -14px 0 30px rgba(0,0,0,.25);
   transition: right .22s ease;
-  z-index: 1101;
+  z-index: 99997;
   display: flex;
   flex-direction: column;
   border-top-left-radius: 12px;
   border-bottom-left-radius: 12px;
+
+  /* kritické: vlastní scroll kontejner */
+  overflow: auto;
 
   /* výchozí a11y stav – JS přepne na false */
   aria-hidden: true;
@@ -70,7 +73,8 @@ section.addRow { display: none !important; }
 }
 #toolsClose::after{ content:'✕'; font-size:16px; }
 
-.toolsBody{ padding:16px 18px 24px 18px; overflow:auto; }
+.toolsBody{ padding:16px 18px 24px 18px; /* už ne-scrolluje */ }
+
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
@@ -83,8 +87,18 @@ section.addRow { display: none !important; }
   pointer-events: auto;
 }
 
-/* pro některé WebKit implementace je dobré předepsat appearance (nezbytné jen někde) */
+/* === klíčové přepsání nativních selectů v panelu === */
 .toolsBody .pill-select{
-  -webkit-appearance: menulist;
-  appearance: menulist;
+  -webkit-appearance: menulist !important;
+  appearance: menulist !important;
+  background: #fff !important;
+  position: relative;
+  z-index: 2;                 /* nad případnou dekorativní šipkou */
+  cursor: default;
+}
+
+/* kdyby někde existovala dekorativní šipka, ať neblokuje klik */
+.toolsBody .select-arrow,
+.toolsBody .pill-select + .select-arrow{
+  pointer-events: none !important;
 }

@@ -102,3 +102,25 @@ section.addRow { display: none !important; }
 .toolsBody .pill-select + .select-arrow{
   pointer-events: none !important;
 }
+
+/* --- Enable native selects inside the tools drawer --- */
+#toolsDrawer select,
+#toolsDrawer .pill-select {
+  -webkit-appearance: menulist !important;
+  appearance: menulist !important;
+  background-image: none !important;   /* kdyby byla nastavená vlastní šipka */
+  cursor: default;
+  pointer-events: auto !important;
+}
+
+/* Pokud máš na .pill-select nějakou pseudo-šipku, ať nebere kliky */
+#toolsDrawer .pill-select::after,
+#toolsDrawer .pill-select:after {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* pro jistotu – žádné překryvy uvnitř zásuvky */
+#toolsDrawer * {
+  pointer-events: auto;
+}

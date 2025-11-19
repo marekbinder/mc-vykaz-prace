@@ -1,4 +1,4 @@
-// drawer.js – kompletní, bez <script> tagů
+// drawer.js – kompletní
 document.addEventListener('DOMContentLoaded', () => {
   const body     = document.body;
   const fab      = document.getElementById('toolsFab');
@@ -6,14 +6,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const backdrop = document.getElementById('toolsBackdrop');
   const btnClose = document.getElementById('toolsClose');
 
-  // selecty v panelu
+  // prvky v panelu (kvůli nativním selectům)
   const selClient = document.getElementById('newJobClient');
   const selStatus = document.getElementById('newJobStatus');
 
-  // --- util ---
   const enableNativeSelect = (el) => {
     if (!el) return;
-    // nativní UI (i na iOS Safari)
     el.style.pointerEvents = 'auto';
     el.style.webkitAppearance = 'menulist';
     el.style.appearance = 'menulist';
@@ -21,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const setDrawerWidthVar = () => {
     if (!drawer) return;
+    // reálná šířka (kvůli clip-path na backdropu)
     const w = Math.round(drawer.getBoundingClientRect().width || 420);
     document.documentElement.style.setProperty('--drawer-w', `${w}px`);
   };
@@ -28,43 +27,36 @@ document.addEventListener('DOMContentLoaded', () => {
   const openDrawer = () => {
     if (!drawer) return;
     setDrawerWidthVar();
-    body.classList.add('drawer-open');           // pro CSS (schování FAB, lock scrollu ap.)
+
+    // vše najednou – žádné zdvojené animace
+    body.classList.add('drawer-open');
     drawer.classList.add('open');
     drawer.setAttribute('aria-hidden', 'false');
-    if (backdrop) backdrop.classList.add('show');
+    backdrop?.classList.add('show');
 
-    // povolit nativní selecty
     enableNativeSelect(selClient);
     enableNativeSelect(selStatus);
   };
 
   const closeDrawer = () => {
-    if (!drawer) return;
     body.classList.remove('drawer-open');
-    drawer.classList.remove('open');
-    drawer.setAttribute('aria-hidden', 'true');
-    if (backdrop) backdrop.classList.remove('show');
+    drawer?.classList.remove('open');
+    drawer?.setAttribute('aria-hidden', 'true');
+    backdrop?.classList.remove('show');
     document.documentElement.style.removeProperty('--drawer-w');
   };
 
-  // --- listeners ---
   fab?.addEventListener('click', openDrawer);
   btnClose?.addEventListener('click', closeDrawer);
+  backdrop?.addEventListener('click', () => drawer?.classList.contains('open') && closeDrawer());
 
-  // klik mimo panel (na backdrop)
-  backdrop?.addEventListener('click', () => {
-    if (drawer.classList.contains('open')) closeDrawer();
-  });
-
-  // ESC zavře
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+    if (e.key === 'Escape' && drawer?.classList.contains('open')) closeDrawer();
   });
 
-  // po změně rozměru aktualizuj CSS var
   let rAF;
   window.addEventListener('resize', () => {
-    if (!drawer.classList.contains('open')) return;
+    if (!drawer?.classList.contains('open')) return;
     cancelAnimationFrame(rAF);
     rAF = requestAnimationFrame(setDrawerWidthVar);
   });

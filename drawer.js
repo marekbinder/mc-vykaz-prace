@@ -1,113 +1,53 @@
+<script>
 (() => {
-  const html     = document.documentElement;
-  const fab      = document.getElementById('toolsFab');
-  const drawer   = document.getElementById('toolsDrawer');
-  const backdrop = document.getElementById('toolsBackdrop');
-  const btnClose = document.getElementById('toolsClose');
+  const body      = document.body;
+  const fab       = document.getElementById('toolsFab');
+  const drawer    = document.getElementById('toolsDrawer');
+  const backdrop  = document.getElementById('toolsBackdrop');
+  const btnClose  = document.getElementById('toolsClose');
 
-  // formuláře
-  const selClient     = document.getElementById('newJobClient');
-  const inpJobName    = document.getElementById('newJobName');
-  const selStatus     = document.getElementById('newJobStatus');
-  const btnAddJob     = document.getElementById('btnAddJob');
-  const inpClientName = document.getElementById('newClientName');
-  const btnAddClient  = document.getElementById('btnAddClient');
-  const btnLogout     = document.getElementById('btnLogout');
+  const selClient = document.getElementById('newJobClient');
+  const selStatus = document.getElementById('newJobStatus');
 
-  const setVar = (n,v)=>html.style.setProperty(n,v);
+  function enableNativeSelect(el){
+    if (!el) return;
+    el.style.pointerEvents = 'auto';
+    el.style.webkitAppearance = 'menulist';
+    el.style.appearance = 'menulist';
+  }
 
-  // Bezpečnost: vyrážíme s backdropem bez „díry“ a bez kliků
-  function resetBackdrop() {
-    backdrop.removeAttribute('data-hole');
-    backdrop.style.pointerEvents = 'none'; // pojistka k CSS !important
+  function setBackdropWidthToDrawer(){
+    const w = Math.round(drawer.getBoundingClientRect().width || 420);
+    document.documentElement.style.setProperty('--drawer-w', w + 'px');
   }
 
   function openDrawer(){
-    // šířka panelu pro „díru“ v backdropu
-    const w = Math.round(drawer.getBoundingClientRect().width || 420);
-    setVar('--drawerW', w + 'px');
+    body.classList.add('drawer-open');
+    setBackdropWidthToDrawer();
 
-    // výchozí stav – backdrop bez díry, žádné kliky
-    resetBackdrop();
-
-    // 1) zviditelníme backdrop (fade)
+    drawer.setAttribute('aria-hidden','false');
+    drawer.classList.add('open');
     backdrop.classList.add('show');
-    html.classList.add('drawer-open');
 
-    // 2) necháme projít layout, pak otevřeme panel (slide)
-    requestAnimationFrame(() => {
-      drawer.classList.add('open');
-      drawer.setAttribute('aria-hidden','false');
-    });
-
-    // 3) po dokončení animace panelu teprve vyřežeme „díru“
-    const onDone = (e) => {
-      if (e.propertyName !== 'right') return;
-      drawer.removeEventListener('transitionend', onDone);
-      backdrop.setAttribute('data-hole','on');   // díra až teď → žádný problesk
-      // i kdyby prohlížeč ignoroval pointer-events v některých stavech,
-      // díra odhalí oblast zásuvky fyzicky.
-    };
-    drawer.addEventListener('transitionend', onDone, { once: true });
-
-    // fokus do panelu
-    setTimeout(() => (selClient || selStatus || btnClose)?.focus({preventScroll:true}), 60);
+    // pojistky pro nativní selecty
+    enableNativeSelect(selClient);
+    enableNativeSelect(selStatus);
   }
 
   function closeDrawer(){
-    // 1) nejdřív zacelíme „díru“, ať není vidět pozadí za panelem
-    resetBackdrop();
+    body.classList.remove('drawer-open');
 
-    // 2) necháme chvíli (1 frame) a zavřeme panel
-    requestAnimationFrame(() => {
-      drawer.classList.remove('open');
-      drawer.setAttribute('aria-hidden','true');
-    });
+    drawer.setAttribute('aria-hidden','true');
+    drawer.classList.remove('open');
+    backdrop.classList.remove('show');
 
-    // 3) po dokončení animace panelu teprve schováme backdrop
-    const onDone = (e) => {
-      if (e.propertyName !== 'right') return;
-      drawer.removeEventListener('transitionend', onDone);
-      backdrop.classList.remove('show');
-      html.classList.remove('drawer-open');
-      fab?.focus({preventScroll:true});
-    };
-    drawer.addEventListener('transitionend', onDone, { once: true });
+    document.documentElement.style.removeProperty('--drawer-w');
   }
 
-  // Ovládání
   fab?.addEventListener('click', openDrawer);
   btnClose?.addEventListener('click', closeDrawer);
-  backdrop?.addEventListener('click', closeDrawer); // pro případ, že bys někdy zapnul pointer-events
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && drawer.classList.contains('open')) closeDrawer(); });
-
-  // --- Fallback options, aby šel hned otestovat select ---
-  function ensureOptions(){
-    if (selClient && selClient.options.length === 0) {
-      selClient.innerHTML = `
-        <option value="">Vyber klienta…</option>
-        <option value="demo-1">ALKO</option>
-        <option value="demo-2">E.ON</option>
-      `;
-    }
-    if (selStatus && selStatus.options.length === 0) {
-      selStatus.innerHTML = `
-        <option value="NEW">Nová</option>
-        <option value="RUN">Probíhá</option>
-        <option value="DONE">Hotovo</option>
-      `;
-    }
-  }
-  ensureOptions();
-
-  // Hooky na akce – napoj si svoji logiku z app.js
-  btnAddJob?.addEventListener('click', () => {
-    // addJob(selClient.value, inpJobName.value, selStatus.value);
-  });
-  btnAddClient?.addEventListener('click', () => {
-    // addClient(inpClientName.value);
-  });
-  btnLogout?.addEventListener('click', () => {
-    // logout();
-  });
+  backdrop?.addEventListener('click', () => drawer.classList.contains('open') && closeDrawer());
+  window.addEventListener('resize', () => drawer.classList.contains('open') && setBackdropWidthToDrawer());
+  document.addEventListener('keydown', e => (e.key === 'Escape' && drawer.classList.contains('open')) && closeDrawer());
 })();
+</script>

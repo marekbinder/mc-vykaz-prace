@@ -1,8 +1,8 @@
 (() => {
   const DEFAULT_STATUS_CODE = 'NEW'; // nová zakázka se vytváří jako NEW
 
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const on = (el, ev, fn) => el && el.addEventListener(ev, fn, { passive: true });
+  const $  = (sel, root = document) => root.querySelector(sel);
+  const on = (el, ev, fn, opt) => el && el.addEventListener(ev, fn, opt || { passive: true });
 
   const fab       = $('#toolsFab');
   const backdrop  = $('#toolsBackdrop');
@@ -18,18 +18,20 @@
     signOut: $('#btnSignOut'),
   };
 
-  /** otevření / zavření **/
+  /* ---------- open / close ---------- */
   const openDrawer = () => {
+    if (drawer.classList.contains('open')) return;
     drawer.classList.add('open');
     drawer.setAttribute('aria-hidden', 'false');
     backdrop.classList.add('show');
     backdrop.setAttribute('aria-hidden','false');
     document.body.classList.add('tools-open');
-    // po otevření fokus do prvního pole – ale až po paintu (kvůli iOS)
-    requestAnimationFrame(() => inDrawer.client?.focus());
+    // fokus po repaintu (Safari/iOS)
+    requestAnimationFrame(() => inDrawer.client && inDrawer.client.focus());
   };
 
   const closeDrawer = () => {
+    if (!drawer.classList.contains('open')) return;
     drawer.classList.remove('open');
     drawer.setAttribute('aria-hidden', 'true');
     backdrop.classList.remove('show');
@@ -38,23 +40,33 @@
   };
 
   on(fab, 'click', openDrawer);
-  on(backdrop, 'click', closeDrawer);
   on(btnClose, 'click', closeDrawer);
   on(document, 'keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
 
-  /** odesílání – necháváme tvoje stávající funkce; jen doplníme status NEW */
+  // Backdrop je pouze vizuální (pointer-events:none), proto zavírání řešíme zde:
+  const outsideClose = (e) => {
+    if (!drawer.classList.contains('open')) return;
+    const target = e.target;
+    if (target.closest('#toolsDrawer')) return;     // klik uvnitř panelu
+    if (target.closest('#toolsFab')) return;        // klik na FAB nechte otevřít/ignorovat
+    closeDrawer();
+  };
+  on(document, 'mousedown', outsideClose, true);
+  on(document, 'touchstart', outsideClose, true);
+
+  /* ---------- create job (status NEW) ---------- */
   on(inDrawer.addJob, 'click', async () => {
     const clientId = inDrawer.client?.value || '';
     const jobName  = (inDrawer.name?.value || '').trim();
     if (!clientId || !jobName) return;
 
-    // Pokud máš v app.js globální funkci createJob -> použijeme ji.
+    // preferuj globální funkci, ať to sedí na tvoje app.js
     if (typeof window.createJob === 'function') {
       try {
         await window.createJob({
           client_id: clientId,
           name: jobName,
-          status_code: DEFAULT_STATUS_CODE, // <— důležité
+          status_code: DEFAULT_STATUS_CODE,
         });
         inDrawer.name.value = '';
         closeDrawer();
@@ -65,10 +77,9 @@
       return;
     }
 
-    // Fallback: pokud používáš Supabase klient jako window.supabase
+    // fallback: supabase
     if (window.supabase) {
       try {
-        // získej id statusu podle kódu
         const { data: st } = await window.supabase
           .from('job_status')
           .select('id,code')
@@ -85,8 +96,6 @@
 
         inDrawer.name.value = '';
         closeDrawer();
-
-        // ať si appka zrefrešne přehled, pokud máš globální načítání
         if (typeof window.reloadJobs === 'function') window.reloadJobs();
       } catch (e) {
         console.error('[drawer] supabase insert failed', e);
@@ -95,10 +104,10 @@
       return;
     }
 
-    // úplně nejzákladnější fallback
     alert('Chybí napojení na createJob / Supabase – zkontroluj app.js.');
   });
 
+  /* ---------- create client ---------- */
   on(inDrawer.addCli, 'click', async () => {
     const name = (inDrawer.newCli?.value || '').trim();
     if (!name) return;
@@ -130,6 +139,7 @@
     alert('Chybí napojení na createClient / Supabase – zkontroluj app.js.');
   });
 
+  /* ---------- sign out ---------- */
   on(inDrawer.signOut, 'click', async () => {
     if (typeof window.handleSignOut === 'function') return window.handleSignOut();
     if (window.supabase) {

@@ -1,17 +1,10 @@
-/* Drawer – autonomní + „kulometně odolné“ roletky:
-   - link na drawer.css doplní, pokud chybí
-   - postaví FAB, backdrop, zásuvku (když nejsou)
-   - při otevření: schová FAB, „odgumuje“ oba SELECTy, vyplní klienty,
-     a nasadí fallback, který se snaží roletku rozbalit přes showPicker/klik
-*/
-
 (function () {
   const ready = (fn) => (document.readyState === 'loading'
     ? document.addEventListener('DOMContentLoaded', fn)
     : fn());
 
   ready(() => {
-    // CSS link
+    // 1) Zajisti načtení CSS
     if (!document.querySelector('link[href$="drawer.css"], link[href*="drawer.css"]')) {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
@@ -19,7 +12,7 @@
       document.head.appendChild(l);
     }
 
-    // FAB
+    // 2) FAB
     let fab = document.getElementById('toolsFab');
     if (!fab) {
       fab = document.createElement('button');
@@ -30,7 +23,7 @@
       document.body.appendChild(fab);
     }
 
-    // Backdrop
+    // 3) Backdrop
     let backdrop = document.getElementById('toolsBackdrop');
     if (!backdrop) {
       backdrop = document.createElement('div');
@@ -38,7 +31,7 @@
       document.body.appendChild(backdrop);
     }
 
-    // Drawer
+    // 4) Drawer
     let drawer = document.getElementById('toolsDrawer');
     if (!drawer) {
       drawer = document.createElement('aside');
@@ -78,13 +71,19 @@
       document.body.appendChild(drawer);
     }
 
-    // refs
-    const btnClose   = drawer.querySelector('#toolsClose');
-    const btnAddJob  = drawer.querySelector('#btnAddJob');
-    const btnAddCl   = drawer.querySelector('#btnAddClient');
-    const btnLogout  = drawer.querySelector('#btnLogout');
+    // 5) Runtime pojistky – z-indexy s !important (přebijí cokoliv)
+    const forceTop = () => {
+      backdrop.style.setProperty('z-index','2147483400','important');
+      drawer  .style.setProperty('z-index','2147483600','important');
+      // i jednotlivé selecty nad vším
+      drawer.querySelectorAll('select').forEach(s=>{
+        s.style.setProperty('z-index','2147483700','important');
+        s.style.setProperty('position','relative','important');
+      });
+    };
+    forceTop();
 
-    // ===== helpery
+    /* ===== helpery ===== */
 
     // z „pilu“ udělat čistý nativní SELECT + nasadit „otevři se“ fallback
     const unlockSelect = (sel) => {
@@ -96,11 +95,10 @@
       clone.style.backgroundImage = 'none';
       clone.style.pointerEvents = 'auto';
       clone.style.position = 'relative';
-      clone.style.zIndex = '2147483600';
+      clone.style.zIndex = '2147483700';
       clone.style.minHeight = '44px';
       clone.style.width = '100%';
 
-      // fallback – pokus o otevření pickeru (Chrome/Edge), případně fokus/klik
       const openNative = (el) => {
         try {
           if (typeof el.showPicker === 'function') el.showPicker();
@@ -109,8 +107,7 @@
       };
       clone.addEventListener('pointerdown', () => openNative(clone));
       clone.addEventListener('mousedown',   () => openNative(clone));
-      clone.addEventListener('click', (e) => {
-        // když je to jen „focus click“, zkus ještě jednou
+      clone.addEventListener('click', () => {
         setTimeout(() => { if (document.activeElement === clone) openNative(clone); }, 0);
       });
 
@@ -120,14 +117,12 @@
 
     const findTopClientSelect = () => {
       const selects = Array.from(document.querySelectorAll('select'))
-        .filter(s => !drawer.contains(s)); // zásuvku ignorovat
+        .filter(s => !drawer.contains(s));
       for (const s of selects) {
         const n = s.options?.length || 0;
         const label = (s.getAttribute('aria-label') || s.id || '').toLowerCase();
         const first = (s.options?.[0]?.text || '').toLowerCase();
-        if (n >= 2 && (label.includes('klient') || first.includes('všichni'))) {
-          return s;
-        }
+        if (n >= 2 && (label.includes('klient') || first.includes('všichni'))) return s;
       }
       return null;
     };
@@ -149,11 +144,12 @@
       if (!targetSel.value && targetSel.options.length) targetSel.selectedIndex = 0;
     };
 
+    /* ===== otevření/zavření ===== */
+
     const openDrawer = () => {
-      // skryj FAB i záložně přes class
+      document.body.classList.add('drawer-open');
       fab.style.opacity = '0';
       fab.style.pointerEvents = 'none';
-      document.body.classList.add('drawer-open');
 
       // odgumuj selecty
       let selClient = unlockSelect(document.getElementById('newJobClient'));
@@ -166,7 +162,8 @@
       backdrop.classList.add('show');
       document.body.style.overflow = 'hidden';
 
-      // fokus do prvního pole
+      forceTop();
+
       setTimeout(() => {
         if (selClient.options.length) selClient.focus();
         else document.getElementById('newJobName')?.focus();
@@ -183,13 +180,19 @@
       fab.focus();
     };
 
-    // Handlery
+    /* ===== ovládání ===== */
+
+    const btnClose   = drawer.querySelector('#toolsClose');
+    const btnAddJob  = drawer.querySelector('#btnAddJob');
+    const btnAddCl   = drawer.querySelector('#btnAddClient');
+    const btnLogout  = drawer.querySelector('#btnLogout');
+
     fab.addEventListener('click', openDrawer);
     btnClose.addEventListener('click', closeDrawer);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeDrawer(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
 
-    // akce (napoj na tvoje funkce pokud existují)
+    // akce (napoj na své funkce)
     const getVal = (id) => (document.getElementById(id)?.value || '').trim();
 
     btnAddJob.addEventListener('click', () => {

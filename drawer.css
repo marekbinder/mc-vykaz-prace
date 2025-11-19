@@ -1,10 +1,10 @@
 /* ===== FAB + BACKDROP(SHIELD) + DRAWER ===== */
 
-/* Schováme starý user box a inline přidávání na hlavní stránce */
+/* schováme starý user box a inline přidávání na hlavní stránce */
 #userBoxTopRight,
 section.addRow { display: none !important; }
 
-/* FAB (+) */
+/* FAB (+) vpravo nahoře */
 #toolsFab{
   position: fixed;
   right: 24px;
@@ -19,21 +19,20 @@ section.addRow { display: none !important; }
   transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
 #toolsFab:hover{ transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
-body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
+body.drawer-open #toolsFab{ opacity:.0; pointer-events:none; }
 
-/* BACKDROP-SHIELD – pokrývá jen LEVOU část obrazovky (mimo drawer)  */
+/* BACKDROP – „štít“ jen vlevo; právo (u draweru) bude JS nastaveno inline přes style.right */
 #toolsBackdrop{
   position: fixed;
-  top:0; left:0; bottom:0;
-  right: var(--drawer-w, 0px);        /* díra na pravé straně = šířka draweru */
+  top:0; left:0; bottom:0; right:0;        /* start: zakryj celé plátno */
   background: rgba(10,14,20,.45);
   opacity: 0; pointer-events: none;
-  transition: opacity .2s ease;      /* žádná animace šířky, jen fade */
+  transition: opacity .2s ease;            /* žádná animace šířky -> žádné blikání */
   z-index: 2147483400 !important;
 }
 #toolsBackdrop.show{ opacity:1; pointer-events:auto; }
 
-/* DRAWER (bez transform, ať nativní selecty fungují všude) */
+/* DRAWER (bez transform, aby nativní selecty fungovaly i v Safari) */
 #toolsDrawer{
   position: fixed;
   top:0; right:-100%;
@@ -41,7 +40,7 @@ body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
   background:#fff;
   box-shadow:-14px 0 30px rgba(0,0,0,.25);
   transition:right .22s ease;
-  z-index: 2147483600 !important;    /* nad backdropem */
+  z-index: 2147483600 !important;
   display:flex; flex-direction:column;
   border-top-left-radius:12px; border-bottom-left-radius:12px;
   overflow:auto;
@@ -62,10 +61,10 @@ body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
-/* vstupy / tlačítka */
+/* vstupy / tlačítka v panelu */
 .toolsBody .pill-input, .toolsBody .pill-btn{ width:100%; margin:8px 0; }
 
-/* nativní SELECT uvnitř draweru */
+/* nativní SELECT uvnitř draweru – vynucený vzhled + nejvyšší pořadí */
 #toolsDrawer select{
   width:100%; min-height:44px;
   border-radius:24px; border:1px solid rgba(0,0,0,.1);

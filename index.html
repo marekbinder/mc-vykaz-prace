@@ -14,8 +14,8 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>Výkaz práce</h1>
-    <div id="userBoxTopRight" class="userbox"></div>
+  <h1 aria-hidden="true">&nbsp;</h1>
+  <div id="userBoxTopRight" class="userbox"></div>
   </header>
 
 <!-- AUTH PANEL (email + heslo) -->
@@ -31,15 +31,14 @@
 </div>
   
   <main id="app" class="wrap">
-    <!-- týden + export -->
-    <section class="weekbar">
-      <div class="weeknav">
-        <button id="prevWeek" class="navbtn" title="Předchozí týden">◀</button>
-        <div id="weekRange" class="weekpill">–</div>
-        <button id="nextWeek" class="navbtn" title="Další týden">▶</button>
-      </div>
-      <button id="exportXlsx" class="pill-btn export">Export do Excelu</button>
-    </section>
+   <!-- týden (export se vyvolá klikem na pill) -->
+<section class="weekbar">
+  <div class="weeknav">
+    <button id="prevWeek" class="navbtn" title="Předchozí týden">◀</button>
+    <div id="weekRange" class="weekpill" title="Klikni pro export do Excelu">–</div>
+    <button id="nextWeek" class="navbtn" title="Další týden">▶</button>
+  </div>
+</section>
 
     <!-- filtry -->
     <section class="filters">

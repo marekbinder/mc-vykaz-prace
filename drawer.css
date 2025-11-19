@@ -26,6 +26,9 @@ section.addRow { display: none !important; }
 }
 #toolsFab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
 
+/* záložně skryj FAB, když je zásuvka otevřená */
+body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
+
 /* backdrop */
 #toolsBackdrop{
   position: fixed;

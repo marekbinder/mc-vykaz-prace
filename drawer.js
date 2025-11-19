@@ -1,75 +1,91 @@
-/* ===== Drawer logic – bez klikacího backdropu ===== */
 (() => {
-  const $ = s => document.querySelector(s);
-
-  const root       = document.documentElement;
-  const fab        = $('#toolsFab');
-  const backdrop   = $('#toolsBackdrop');
-  const drawer     = $('#toolsDrawer');
-  const closeBtn   = $('#toolsClose');
+  const html          = document.documentElement;
+  const fab           = document.getElementById('toolsFab');
+  const drawer        = document.getElementById('toolsDrawer');
+  const backdrop      = document.getElementById('toolsBackdrop');
+  const btnClose      = document.getElementById('toolsClose');
 
   // formuláře
-  const selClient  = $('#newJobClient');
-  const selStatus  = $('#newJobStatus');
-  const inpName    = $('#newJobName');
-  const btnAddJob  = $('#btnAddJob');
-  const inpNewCli  = $('#newClientName');
-  const btnAddCli  = $('#btnAddClient');
-  const btnLogout  = $('#btnLogout');
+  const selClient     = document.getElementById('newJobClient');
+  const inpJobName    = document.getElementById('newJobName');
+  const selStatus     = document.getElementById('newJobStatus');
+  const btnAddJob     = document.getElementById('btnAddJob');
+  const inpClientName = document.getElementById('newClientName');
+  const btnAddClient  = document.getElementById('btnAddClient');
+  const btnLogout     = document.getElementById('btnLogout');
 
-  function openDrawer() {
-    drawer.classList.add('open');
+  // --- pomocné ---
+  const setVar = (name, val) => html.style.setProperty(name, val);
+
+  function openDrawer(){
+    // nastavíme skutečnou šířku panelu do CSS proměnné (pro výřez v backdropu)
+    const w = Math.round(drawer.getBoundingClientRect().width);
+    setVar('--drawerW', w + 'px');
+
     backdrop.classList.add('show');
-    root.classList.add('drawer-open');
-    // pojistka: drawer opravdu nad vším
-    drawer.style.zIndex = 2147483640;
-    // zapneme hlídání kliku mimo
-    enableOutsideClose();
+    drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    html.classList.add('drawer-open');
+
+    // zaměř první prvek (kvůli a11y)
+    setTimeout(() => {
+      (selClient || selStatus || btnClose).focus({preventScroll:true});
+    }, 0);
   }
 
-  function closeDrawer() {
-    drawer.classList.remove('open');
+  function closeDrawer(){
     backdrop.classList.remove('show');
-    root.classList.remove('drawer-open');
-    disableOutsideClose();
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    html.classList.remove('drawer-open');
+    // vrátíme fokus zpět na FAB
+    setTimeout(() => fab && fab.focus({preventScroll:true}), 0);
   }
 
-  fab?.addEventListener('click', openDrawer);
-  closeBtn?.addEventListener('click', closeDrawer);
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
-
-  /* Klik mimo panel – nahrazujeme klikací backdrop */
-  function onDocPointer(e){
-    if (!drawer.classList.contains('open')) return;
-    const inside = e.target.closest('#toolsDrawer') || e.target.closest('#toolsFab');
-    if (!inside) closeDrawer();
-  }
-  function enableOutsideClose(){
-    document.addEventListener('pointerdown', onDocPointer, true);
-    document.addEventListener('click', onDocPointer, true);
-  }
-  function disableOutsideClose(){
-    document.removeEventListener('pointerdown', onDocPointer, true);
-    document.removeEventListener('click', onDocPointer, true);
-  }
-
-  /* nativní vzhled selectů + jistota klikatelnosti (Safari/Chrome) */
-  [selClient, selStatus].forEach(el=>{
-    if(!el) return;
-    el.classList.add('pill-select');
-    el.style.webkitAppearance = 'menulist';
-    el.style.appearance = 'menulist';
-    el.style.pointerEvents = 'auto';
-    el.addEventListener('mousedown', () => {
-      // kdyby někde zůstaly masky/clip-path, zrušíme
-      backdrop.style.clipPath = 'none';
-      backdrop.style.right = '0';
-      drawer.style.zIndex = 2147483640;
-    });
+  // Ovládání
+  fab && fab.addEventListener('click', openDrawer);
+  btnClose && btnClose.addEventListener('click', closeDrawer);
+  // klik vedle zásuvky zavírá
+  backdrop && backdrop.addEventListener('click', closeDrawer);
+  // Esc zavírá
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && drawer.classList.contains('open')) {
+      closeDrawer();
+    }
   });
 
-  /* přeposíláme do existující app.js */
-  btnAddJob?.addEventListener('click', () => { if (typeof window.addJob === 'function') window.addJob(); });
-  btnAddCli?.addEventListener('click', () => { if (typeof window.addClient === 'function') window.addClient(); });
-  btnLogout?.addEventListener('click', () => { if (typeof window.signOut === 'function') window.signOut(); });
+  // === DEMO napojení – jen sloty; tvůj app.js plní data ===
+  // Ujisti se, že app.js po načtení doplňuje <option> do #newJobClient a #newJobStatus.
+  // Tady jen ohlídáme fallback, aby bylo s čím testovat:
+  function ensureOptions(){
+    if (selClient && selClient.options.length === 0) {
+      selClient.innerHTML = `
+        <option value="">Vyber klienta…</option>
+        <option value="demo-1">ALKO</option>
+        <option value="demo-2">E.ON</option>
+      `;
+    }
+    if (selStatus && selStatus.options.length === 0) {
+      selStatus.innerHTML = `
+        <option value="NEW">Nová</option>
+        <option value="RUN">Probíhá</option>
+        <option value="DONE">Hotovo</option>
+      `;
+    }
+  }
+  ensureOptions();
+
+  // Sem si zapojíš své existující handler funkce z app.js
+  btnAddJob && btnAddJob.addEventListener('click', () => {
+    // tvoje logika z app.js (pouze příklad):
+    // addJob(selClient.value, inpJobName.value, selStatus.value);
+  });
+  btnAddClient && btnAddClient.addEventListener('click', () => {
+    // tvoje logika z app.js
+    // addClient(inpClientName.value);
+  });
+  btnLogout && btnLogout.addEventListener('click', () => {
+    // tvoje logika z app.js
+    // logout();
+  });
 })();

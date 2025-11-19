@@ -10,7 +10,6 @@
 
   onReady(() => {
     const $  = (s, p = document) => p.querySelector(s);
-    const $$ = (s, p = document) => Array.from(p.querySelectorAll(s));
 
     const drawer   = $('#toolsDrawer');
     const backdrop = $('#toolsBackdrop');
@@ -59,19 +58,32 @@
       copyOptions(SRC_STATUS, DST_STATUS, { skipValues: ['ALL'] });
     }
 
-    // kdyby se filtry naplnily až po čase, sledujeme jejich změny
-    [SRC_CLIENT, SRC_STATUS].forEach(sel => {
-      const el = $(sel);
-      if (!el) return;
-      const mo = new MutationObserver(() => hydrateForm());
-      mo.observe(el, { childList: true });
-    });
-
-    // pro jistotu spustíme hydrataci i „pozdě“ (když by filtry přijely pozdě)
+    // „pozdní“ hydratace – když filtry dorazí až po fetchi
     function hydrateWithRetries() {
       hydrateForm();
       setTimeout(hydrateForm, 100);
-      setTimeout(hydrateForm, 400);
+      setTimeout(hydrateForm, 300);
+      setTimeout(hydrateForm, 800);
+    }
+
+    // Pomocné „nakopnutí“ selectu tam, kde Chrome/Safari trucuje
+    function nudgeSelectOpen(sel){
+      try {
+        // Alt+Down často nativní menu otevře
+        const e = new KeyboardEvent('keydown', { key:'ArrowDown', altKey:true, bubbles:true });
+        sel.dispatchEvent(e);
+      } catch {}
+    }
+    function attachNudge(id){
+      const s = $(id);
+      if (!s) return;
+      s.addEventListener('mousedown', () => {
+        // když by UI neotevřelo menu, zkusíme po krátké prodlevě „šťouchnout“
+        setTimeout(() => nudgeSelectOpen(s), 180);
+      });
+      // jistota, že select je nahoře
+      s.style.position = 'relative';
+      s.style.zIndex = '2';
     }
 
     function openDrawer() {
@@ -82,12 +94,16 @@
       drawer.setAttribute('aria-hidden', 'false');
       drawer.setAttribute('aria-modal', 'true');
 
-      // jemný scroll-lock (necháváme <html> být)
+      // jemný scroll-lock
       document.body.style.overflow = 'hidden';
 
       // fokus na první vstup
       const first = $(DST_CLIENT) || $('#newJobName');
-      if (first) setTimeout(() => first.focus(), 10);
+      if (first) setTimeout(() => first.focus(), 20);
+
+      // připojit „nudge“ až po otevření
+      attachNudge(DST_CLIENT);
+      attachNudge(DST_STATUS);
     }
 
     function closeDrawer() {

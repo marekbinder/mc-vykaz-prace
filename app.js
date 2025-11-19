@@ -42,7 +42,7 @@ function formatNum(x){ return (x%1===0) ? String(x) : x.toFixed(1); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 function showErr(msg){ console.error(msg); const e=document.getElementById('err'); e.textContent=(msg?.message)||String(msg); e.style.display='block'; setTimeout(()=>e.style.display='none',5200); }
 function getDays(){ return [0,1,2,3,4].map(i=>fmtDate(addDays(state.weekStart,i))); }
-function setWeekRangeLabel(){ document.getElementById('weekRange').textContent = `${dayjs(state.weekStart).format('10. 11. 2025')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`.replace(/^10\. 11\. 2025/, dayjs(state.weekStart).format('D. M. YYYY')); } // jen ochrana proti cache
+function setWeekRangeLabel(){ document.getElementById('weekRange').textContent = `${dayjs(state.weekStart).format('D. M. YYYY')} – ${dayjs(addDays(state.weekStart,4)).format('D. M. YYYY')}`; } // jen ochrana proti cache
 
 // ==== SUPABASE INIT ====
 async function loadConfig(){
@@ -87,7 +87,7 @@ async function loadTotalsAll(jobIds){
   if(state.totalsScope==='ME'){
     const {data,error}=await state.sb.from('time_entry').select('job_id,hours').in('job_id',jobIds).eq('user_id',state.session.user.id);
     if(error){ showErr(error); return {}; }
-    const m={}; for(const r of (data||[])){ m[r.job_id]=(m[r.job_id]||0)+Number(r.hours||0); } return m;
+    const m={}; for(const r of (data||[])){ m[r.job_id}=(m[r.job_id]||0)+Number(r.hours||0); } return m;
   }
   const {data:rpc,error:rpcErr}=await state.sb.rpc('fn_job_totals');
   if(!rpcErr && rpc){ const m={}; for(const r of rpc){ m[r.job_id]=Number(r.sum_hours||0); } return m; }
@@ -437,12 +437,17 @@ function buildShellControls(){
   fClear.onclick=()=>{ state.filterAssignees=[]; fBtn.textContent='Grafik: Všichni'; setMenuChecked(fMenu,[]); renderTable(); };
   fClose.onclick=()=> fMenu.hidden=true;
 
-  // přidávání
+  // přidávání klienta
   const jobClient=document.getElementById('newJobClient');
   jobClient.innerHTML = state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  
+  // Přidávání statusu jen v hlavní sekci (existuje-li)
   const jobStatus=document.getElementById('newJobStatus');
-  jobStatus.innerHTML = state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
-  colorizeStatus(jobStatus); jobStatus.onchange=()=>colorizeStatus(jobStatus);
+  if(jobStatus) {
+    jobStatus.innerHTML = state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
+    colorizeStatus(jobStatus); jobStatus.onchange=()=>colorizeStatus(jobStatus);
+  }
+
 
   document.getElementById('addClientBtn').onclick=async()=>{
     const name=document.getElementById('newClientName').value.trim(); if(!name) return showErr('Zadej název klienta');
@@ -460,10 +465,25 @@ function buildShellControls(){
   aClear.onclick=()=>{ state.newJobAssignees=[]; setMenuChecked(aMenu,[]); aBtn.textContent='Grafik: nikdo'; };
   aClose.onclick=()=> aMenu.hidden=true;
 
+  // Přidání zakázky (zde je úprava pro chybějící status)
   document.getElementById('addJobBtn').onclick=async()=>{
     const name=document.getElementById('newJobName').value.trim(); if(!name) return showErr('Zadej název zakázky');
     const client_id=document.getElementById('newJobClient').value;
-    const status_id=+document.getElementById('newJobStatus').value;
+    
+    // ZMĚNA: Zjištění statusu. 
+    let status_id;
+    const statusEl = document.getElementById('newJobStatus');
+    
+    if (statusEl) {
+        // 1. Pole existuje (z hlavní sekce .addRow)
+        status_id = +statusEl.value;
+    } else if (state.statuses.length > 0) {
+        // 2. Pole neexistuje (z draweru), použijeme ID prvního statusu (předpoklad: "Nová")
+        status_id = state.statuses[0].id;
+    } else {
+        return showErr('Nelze přidat zakázku: Chybí definice statusů.');
+    }
+
     const assignees=state.newJobAssignees.slice();
     const {error}=await state.sb.from('job').insert({client_id,name,status_id,assignees});
     if(error) return showErr(error.message);

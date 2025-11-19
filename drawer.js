@@ -4,7 +4,7 @@
     : fn());
 
   ready(() => {
-    // 1) Zajisti načtení CSS
+    // ——— CSS jistota
     if (!document.querySelector('link[href$="drawer.css"], link[href*="drawer.css"]')) {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
@@ -12,7 +12,7 @@
       document.head.appendChild(l);
     }
 
-    // 2) FAB
+    // ——— FAB
     let fab = document.getElementById('toolsFab');
     if (!fab) {
       fab = document.createElement('button');
@@ -23,7 +23,7 @@
       document.body.appendChild(fab);
     }
 
-    // 3) Backdrop
+    // ——— Backdrop
     let backdrop = document.getElementById('toolsBackdrop');
     if (!backdrop) {
       backdrop = document.createElement('div');
@@ -31,7 +31,7 @@
       document.body.appendChild(backdrop);
     }
 
-    // 4) Drawer
+    // ——— Drawer
     let drawer = document.getElementById('toolsDrawer');
     if (!drawer) {
       drawer = document.createElement('aside');
@@ -71,11 +71,10 @@
       document.body.appendChild(drawer);
     }
 
-    // 5) Runtime pojistky – z-indexy s !important (přebijí cokoliv)
+    // ——— Pojistky z-indexů (když by je něco přepsalo)
     const forceTop = () => {
       backdrop.style.setProperty('z-index','2147483400','important');
       drawer  .style.setProperty('z-index','2147483600','important');
-      // i jednotlivé selecty nad vším
       drawer.querySelectorAll('select').forEach(s=>{
         s.style.setProperty('z-index','2147483700','important');
         s.style.setProperty('position','relative','important');
@@ -83,41 +82,25 @@
     };
     forceTop();
 
-    /* ===== helpery ===== */
-
-    // z „pilu“ udělat čistý nativní SELECT + nasadit „otevři se“ fallback
+    // ——— Pomocné funkce
     const unlockSelect = (sel) => {
       if (!sel) return sel;
-      const clone = sel.cloneNode(true);
-      clone.classList.remove('pill-select');
-      clone.style.webkitAppearance = 'menulist-button';
-      clone.style.appearance = 'menulist';
-      clone.style.backgroundImage = 'none';
-      clone.style.pointerEvents = 'auto';
-      clone.style.position = 'relative';
-      clone.style.zIndex = '2147483700';
-      clone.style.minHeight = '44px';
-      clone.style.width = '100%';
-
-      const openNative = (el) => {
-        try {
-          if (typeof el.showPicker === 'function') el.showPicker();
-          else { el.focus(); el.click(); }
-        } catch { el.focus(); el.click(); }
-      };
-      clone.addEventListener('pointerdown', () => openNative(clone));
-      clone.addEventListener('mousedown',   () => openNative(clone));
-      clone.addEventListener('click', () => {
-        setTimeout(() => { if (document.activeElement === clone) openNative(clone); }, 0);
-      });
-
-      sel.replaceWith(clone);
-      return clone;
+      const c = sel.cloneNode(true);
+      c.classList.remove('pill-select');
+      c.style.webkitAppearance = 'menulist-button';
+      c.style.appearance = 'menulist';
+      c.style.backgroundImage = 'none';
+      c.style.pointerEvents = 'auto';
+      c.style.position = 'relative';
+      c.style.zIndex = '2147483700';
+      c.style.minHeight = '44px';
+      c.style.width = '100%';
+      sel.replaceWith(c);
+      return c;
     };
 
     const findTopClientSelect = () => {
-      const selects = Array.from(document.querySelectorAll('select'))
-        .filter(s => !drawer.contains(s));
+      const selects = Array.from(document.querySelectorAll('select')).filter(s => !drawer.contains(s));
       for (const s of selects) {
         const n = s.options?.length || 0;
         const label = (s.getAttribute('aria-label') || s.id || '').toLowerCase();
@@ -127,33 +110,37 @@
       return null;
     };
 
-    const populateClients = (targetSel) => {
+    const populateClients = (target) => {
       const top = findTopClientSelect();
       if (!top || !top.options) return;
-      const prev = targetSel.value;
-      targetSel.innerHTML = '';
+      const keep = target.value;
+      target.innerHTML = '';
       for (const o of top.options) {
         const txt = (o.text || '').trim();
         if (/všichni/i.test(txt) || /all/i.test(o.value || '')) continue;
         const opt = document.createElement('option');
         opt.value = o.value || txt;
         opt.text  = txt;
-        targetSel.appendChild(opt);
+        target.appendChild(opt);
       }
-      if (prev) targetSel.value = prev;
-      if (!targetSel.value && targetSel.options.length) targetSel.selectedIndex = 0;
+      if (keep) target.value = keep;
+      if (!target.value && target.options.length) target.selectedIndex = 0;
     };
 
-    /* ===== otevření/zavření ===== */
+    // ——— Backdrop „s dírou“
+    let resizeObserver;
+    const fitBackdropHole = () => {
+      // nastavíme pravý okraj backdropu na aktuální šířku draweru → oblast pod drawerem není zakrytá
+      const w = Math.round(drawer.getBoundingClientRect().width);
+      backdrop.style.right = w + 'px';
+    };
 
     const openDrawer = () => {
       document.body.classList.add('drawer-open');
-      fab.style.opacity = '0';
-      fab.style.pointerEvents = 'none';
 
-      // odgumuj selecty
-      let selClient = unlockSelect(document.getElementById('newJobClient'));
-      let selStatus = unlockSelect(document.getElementById('newJobStatus'));
+      // odemkni nativní selecty
+      const selClient = unlockSelect(document.getElementById('newJobClient'));
+      unlockSelect(document.getElementById('newJobStatus'));
 
       // naplň klienty
       populateClients(selClient);
@@ -163,6 +150,12 @@
       document.body.style.overflow = 'hidden';
 
       forceTop();
+      fitBackdropHole();                        // vytvoř „díru“ v backdropu pod drawerem
+
+      // reaguj i na změnu šířky (responsivně)
+      const ro = new ResizeObserver(fitBackdropHole);
+      ro.observe(drawer);
+      resizeObserver = ro;
 
       setTimeout(() => {
         if (selClient.options.length) selClient.focus();
@@ -175,44 +168,40 @@
       backdrop.classList.remove('show');
       document.body.style.overflow = '';
       document.body.classList.remove('drawer-open');
+      backdrop.style.right = '0px';             // vrátit backdrop přes celou šířku
+      if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null; }
       fab.style.opacity = '';
       fab.style.pointerEvents = '';
       fab.focus();
     };
 
-    /* ===== ovládání ===== */
-
-    const btnClose   = drawer.querySelector('#toolsClose');
-    const btnAddJob  = drawer.querySelector('#btnAddJob');
-    const btnAddCl   = drawer.querySelector('#btnAddClient');
-    const btnLogout  = drawer.querySelector('#btnLogout');
-
+    // ——— Ovládání
     fab.addEventListener('click', openDrawer);
-    btnClose.addEventListener('click', closeDrawer);
+    drawer.querySelector('#toolsClose') .addEventListener('click', closeDrawer);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeDrawer(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
 
-    // akce (napoj na své funkce)
-    const getVal = (id) => (document.getElementById(id)?.value || '').trim();
+    // ——— Akce (napoj si na svoje funkce)
+    const val = (id) => (document.getElementById(id)?.value || '').trim();
 
-    btnAddJob.addEventListener('click', () => {
+    drawer.querySelector('#btnAddJob').addEventListener('click', () => {
       const payload = {
-        client_id: getVal('newJobClient') || null,
-        name:      getVal('newJobName'),
-        status:    getVal('newJobStatus') || 'NEW'
+        client_id: val('newJobClient') || null,
+        name:      val('newJobName'),
+        status:    val('newJobStatus') || 'NEW'
       };
       if (typeof window.addJob === 'function') window.addJob(payload);
       else console.log('[drawer] Přidat zakázku:', payload);
     });
 
-    btnAddClient.addEventListener('click', () => {
-      const name = getVal('newClientName');
+    drawer.querySelector('#btnAddClient').addEventListener('click', () => {
+      const name = val('newClientName');
       if (!name) return;
       if (typeof window.addClient === 'function') window.addClient({ name });
       else console.log('[drawer] Přidat klienta:', name);
     });
 
-    btnLogout.addEventListener('click', () => {
+    drawer.querySelector('#btnLogout').addEventListener('click', () => {
       if (typeof window.logout === 'function') window.logout();
       else console.log('[drawer] Odhlásit');
     });

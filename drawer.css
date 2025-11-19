@@ -25,35 +25,29 @@ section.addRow { display: none !important; }
   transition: transform .15s ease, box-shadow .15s ease;
 }
 #toolsFab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
-
-/* při otevřeném panelu FAB schovej */
 body.drawer-open #toolsFab { display:none; }
 
-/* BACKDROP – žádná šířka, žádný clip-path.
-   Reálně kryje plochu: top 0 / right = šířka zásuvky / bottom 0 / left 0 */
+/* BACKDROP – žádné clip-path/inset triky.
+   Šířku nalevo od zásuvky nastaví JS přes style.right = <šířka zásuvky> */
 #toolsBackdrop{
   position: fixed;
-  inset: 0 var(--drawer-w, 0px) 0 0;  /* <<— TADY je vyříznutí pruhu vpravo */
+  top: 0; left: 0; bottom: 0; right: 0; /* výchozí: přes celou šířku */
   background: rgba(10,14,20,.45);
   opacity: 0;
   pointer-events: none;
   z-index: 99995;
   transition: opacity .22s ease;
 }
-#toolsBackdrop.show{
-  opacity: 1;
-  pointer-events: auto;
-}
+#toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
 
 /* DRAWER */
 #toolsDrawer{
   position: fixed;
-  top: 0;
-  right: 0;
+  top: 0; right: 0;
   height: 100dvh;
   width: min(420px, 92vw);
   background: #fff;
-  box-shadow: -14px 0 30px rgba(0,0,0,.25);
+  /* POZOR: stín jen když je otevřený (aby nebyl „duch“ ve zavřeném stavu) */
   z-index: 99997;
   display: flex;
   flex-direction: column;
@@ -65,7 +59,10 @@ body.drawer-open #toolsFab { display:none; }
   transition: transform .22s ease;
   aria-hidden: true;
 }
-#toolsDrawer.open{ transform: translateX(0); }
+#toolsDrawer.open{
+  transform: translateX(0);
+  box-shadow: -14px 0 30px rgba(0,0,0,.25);
+}
 
 .toolsHead{
   display:flex; align-items:center; justify-content:space-between;
@@ -83,9 +80,9 @@ body.drawer-open #toolsFab { display:none; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
 /* jistota pro ovladače uvnitř panelu */
-.toolsBody .pill-input,
-.toolsBody .pill-select,
-.toolsBody .pill-btn{
+#toolsDrawer .pill-input,
+#toolsDrawer .pill-select,
+#toolsDrawer .pill-btn{
   width:100%;
   margin:8px 0;
   pointer-events: auto;

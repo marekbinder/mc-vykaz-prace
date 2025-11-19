@@ -57,9 +57,7 @@ section.addRow { display: none !important; }
   /* kritické: vlastní scroll kontejner */
   overflow: auto;
 
-  /* výchozí a11y stav – JS přepne na false */
-  aria-hidden: true;
-}
+
 #toolsDrawer.open{ right: 0; }
 
 .toolsHead{
@@ -123,4 +121,15 @@ section.addRow { display: none !important; }
 /* pro jistotu – žádné překryvy uvnitř zásuvky */
 #toolsDrawer * {
   pointer-events: auto;
+}
+
+#toolsDrawer select,
+#toolsDrawer .pill-select {
+  -webkit-appearance: menulist-button !important; /* fallback pro Safari */
+  appearance: menulist !important;
+}
+
+#toolsDrawer .pill-select {
+  min-height: 42px;
+  line-height: 1.2;
 }

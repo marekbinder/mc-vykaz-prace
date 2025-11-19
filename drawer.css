@@ -22,7 +22,7 @@ section.addRow { display: none !important; }
   z-index: 99998;
   border: none;
   cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
 #toolsFab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
 
@@ -70,7 +70,11 @@ section.addRow { display: none !important; }
 }
 #toolsClose::after{ content:'✕'; font-size:16px; }
 
-.toolsBody{ padding:16px 18px 24px 18px; }
+.toolsBody{
+  padding:16px 18px 24px 18px;
+  position: relative;   /* pro z-index selectů níže */
+  z-index: 2;
+}
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
@@ -87,13 +91,15 @@ section.addRow { display: none !important; }
 #toolsDrawer select,
 #toolsDrawer .pill-select,
 #toolsDrawer select.pill-select{
-  -webkit-appearance: menulist-button !important;  /* Safari */
+  -webkit-appearance: menulist-button !important;  /* Safari/iOS */
   appearance: menulist !important;
   background-image: none !important;
   cursor: default;
   pointer-events: auto !important;
   min-height: 42px;
   line-height: 1.2;
+  position: relative;
+  z-index: 3;    /* nad případnými dekoracemi */
 }
 
 /* šipky/dekorace neblokují klik */

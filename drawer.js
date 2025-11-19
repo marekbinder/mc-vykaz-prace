@@ -1,148 +1,93 @@
-/* ===== Drawer – komplet JS (1:1) =====
-   - Backdrop je jen vizuální (pointer-events: none)
-   - Zavírání klikem mimo panel řešíme globálně
-   - FAB se při otevření skryje
-   - Staré překryvy (#toolsHit apod.) odstraníme
-*/
-
+/* ===== Drawer logic – plně izolované ===== */
 (() => {
-  const $ = (sel, root = document) => root.querySelector(sel);
+  const $ = s => document.querySelector(s);
 
-  // Odstranit případné staré překryvy
-  ['#toolsHit', '#hit', '#backHit'].forEach(id => { const n = $(id); if (n) n.remove(); });
+  const root       = document.documentElement;  // kvůli .drawer-open
+  const fab        = $('#toolsFab');
+  const backdrop   = $('#toolsBackdrop');
+  const drawer     = $('#toolsDrawer');
+  const closeBtn   = $('#toolsClose');
+  const hit        = $('#toolsHit');
 
-  // FAB
-  let fab = $('#toolsFab');
-  if (!fab) {
-    fab = document.createElement('button');
-    fab.id = 'toolsFab';
-    fab.type = 'button';
-    fab.setAttribute('aria-label', 'Nástroje');
-    fab.textContent = '+';
-    document.body.appendChild(fab);
-  }
+  // formuláře
+  const selClient  = $('#newJobClient');
+  const selStatus  = $('#newJobStatus');
+  const inpName    = $('#newJobName');
+  const btnAddJob  = $('#btnAddJob');
+  const inpNewCli  = $('#newClientName');
+  const btnAddCli  = $('#btnAddClient');
+  const btnLogout  = $('#btnLogout');
 
-  // Backdrop (jen vizuální)
-  let backdrop = $('#toolsBackdrop');
-  if (!backdrop) {
-    backdrop = document.createElement('div');
-    backdrop.id = 'toolsBackdrop';
-    document.body.appendChild(backdrop);
-  }
-
-  // Drawer (panel)
-  let drawer = $('#toolsDrawer');
-  if (!drawer) {
-    drawer = document.createElement('aside');
-    drawer.id = 'toolsDrawer';
-    drawer.setAttribute('role', 'dialog');
-    drawer.setAttribute('aria-label', 'Nástroje');
-    drawer.innerHTML = `
-      <div class="toolsHead">
-        <div class="toolsTitle">Nástroje</div>
-        <button id="toolsClose" type="button" aria-label="Zavřít"></button>
-      </div>
-      <div class="toolsBody">
-        <div class="toolsSection"><h3>Přidání zakázky</h3>
-          <select id="newJobClient" class="pill-select"></select>
-          <input id="newJobName" class="pill-input" placeholder="Název zakázky">
-          <select id="newJobStatus" class="pill-select"></select>
-          <button id="btnAddJob" class="pill-btn">Přidat zakázku</button>
-        </div>
-        <div class="toolsSection"><h3>Přidání klienta</h3>
-          <input id="newClientName" class="pill-input" placeholder="Název klienta">
-          <button id="btnAddClient" class="pill-btn">Přidat klienta</button>
-        </div>
-        <div class="toolsSection"><h3>Účet</h3>
-          <button id="btnLogout" class="pill-btn">Odhlásit</button>
-        </div>
-      </div>`;
-    document.body.appendChild(drawer);
-  }
-
-  const btnClose = $('#toolsClose', drawer);
-  const newJobClient = $('#newJobClient', drawer);
-  const newJobStatus = $('#newJobStatus', drawer);
-
-  // Zajisti, že backdrop NIKDY nechytá kliky (obrana i proti cizím stylům)
-  const ensureBackdropNoHit = () => {
-    backdrop.style.pointerEvents = 'none'; // inline
-    // navíc vložíme „pojistku“ s !important
-    if (!$('#_drawerNoHit')) {
-      const st = document.createElement('style');
-      st.id = '_drawerNoHit';
-      st.textContent = `
-        #toolsBackdrop{pointer-events:none !important;}
-        #toolsBackdrop.show{pointer-events:none !important;}
-      `;
-      document.head.appendChild(st);
-    }
-  };
-  ensureBackdropNoHit();
-
-  // nativní vzhled selectů (Safari-friendly)
-  const enforceNativeSelect = (sel) => {
-    if (!sel) return;
-    sel.style.webkitAppearance = 'menulist';
-    sel.style.appearance = 'menulist';
-    sel.style.backgroundImage = 'none';
-    sel.style.pointerEvents = 'auto';
-  };
-  enforceNativeSelect(newJobClient);
-  enforceNativeSelect(newJobStatus);
-
-  const openDrawer = () => {
-    ensureBackdropNoHit();
+  function openDrawer() {
     drawer.classList.add('open');
     backdrop.classList.add('show');
-    fab.classList.add('is-hidden');
-    drawer.setAttribute('aria-hidden', 'false');
+    root.classList.add('drawer-open');
+    // 100% klikatelný panel (nejvyšší z-index)
+    drawer.style.zIndex = 2147483640;
+  }
 
-    // Safari občas potřebuje malé zpoždění, aby selecty „ožily“
-    setTimeout(() => {
-      enforceNativeSelect(newJobClient);
-      enforceNativeSelect(newJobStatus);
-    }, 0);
-  };
-
-  const closeDrawer = () => {
+  function closeDrawer() {
     drawer.classList.remove('open');
     backdrop.classList.remove('show');
-    fab.classList.remove('is-hidden');
-    drawer.setAttribute('aria-hidden', 'true');
-  };
-
-  // Toggle přes FAB
-  fab.addEventListener('click', () => {
-    if (drawer.classList.contains('open')) closeDrawer();
-    else openDrawer();
-  });
-
-  // Křížek
-  btnClose?.addEventListener('click', closeDrawer);
-
-  // Esc zavírá
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
-  });
-
-  // Klik mimo panel zavírá (backdrop nechytá kliky, proto posloucháme dokument)
-  document.addEventListener('mousedown', (e) => {
-    if (!drawer.classList.contains('open')) return;
-    if (!drawer.contains(e.target) && !fab.contains(e.target)) closeDrawer();
-  });
-
-  // Pokud statusy neplní app.js, vložíme fallback
-  if (newJobStatus && newJobStatus.options.length === 0) {
-    const basic = [
-      { value: 'NEW', label: 'Nová' },
-      { value: 'WIP', label: 'Probíhá' },
-      { value: 'DONE', label: 'Hotovo' }
-    ];
-    for (const s of basic) {
-      const o = document.createElement('option');
-      o.value = s.value; o.textContent = s.label;
-      newJobStatus.appendChild(o);
-    }
+    root.classList.remove('drawer-open');
   }
+
+  // Toggle
+  fab?.addEventListener('click', openDrawer);
+  backdrop?.addEventListener('click', closeDrawer);
+  closeBtn?.addEventListener('click', closeDrawer);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDrawer();
+  });
+
+  /* --- SAFARI/CHROME: zajistíme nativní vzhled i klikatelnost selectů --- */
+  function forceNativeSelect(selectEl){
+    if (!selectEl) return;
+    selectEl.classList.add('pill-select'); // kvůli CSS pravidlům výš
+    selectEl.style.webkitAppearance = 'menulist';
+    selectEl.style.appearance = 'menulist';
+    selectEl.style.pointerEvents = 'auto';
+  }
+  forceNativeSelect(selClient);
+  forceNativeSelect(selStatus);
+
+  /* --- Pro jistotu: nic nad selecty nepřekrýváme --- */
+  [selClient, selStatus].forEach(el=>{
+    el?.addEventListener('mousedown', () => {
+      // zrušíme případné clip-pathy/„hity“, kdyby něco zůstalo z dřívějška
+      if (backdrop) {
+        backdrop.style.clipPath = 'none';
+        backdrop.style.right = '0';
+      }
+      if (hit) hit.style.pointerEvents = 'none';
+    });
+  });
+
+  /* --- Drátování akčních tlačítek (udrženo kompatibilní se stávajícím app.js) --- */
+  btnAddJob?.addEventListener('click', () => {
+    // Vyvoláme existující globální addJob, pokud ho app.js poskytuje
+    if (typeof window.addJob === 'function') {
+      window.addJob();
+    }
+  });
+
+  btnAddCli?.addEventListener('click', () => {
+    if (typeof window.addClient === 'function') {
+      window.addClient();
+    }
+  });
+
+  btnLogout?.addEventListener('click', () => {
+    if (typeof window.signOut === 'function') {
+      window.signOut();
+    }
+  });
+
+  /* --- ochrana: kdyby měl header nějaký vysoký z-index, drawer zvedneme --- */
+  const raise = () => { drawer.style.zIndex = 2147483640; };
+  ['focus','mousedown','touchstart'].forEach(evt => {
+    selClient?.addEventListener(evt, raise);
+    selStatus?.addEventListener(evt, raise);
+    drawer?.addEventListener(evt, raise, true);
+  });
 })();

@@ -508,5 +508,90 @@ function showLogin(){
   };
 }
 
+// auth.js — přepnutí na email+heslo bez zásahu do zbytku appky.
+// Využívá tvůj config.json a UMD supabase-js; po přihlášení/registraci udělá reload.
+
+(async function () {
+  const $ = (s, r = document) => r.querySelector(s);
+  const panel   = $('#authPanel');
+  const emailEl = $('#authEmail');
+  const passEl  = $('#authPassword');
+  const btnIn   = $('#authSignIn');
+  const btnUp   = $('#authSignUp');
+  const msg     = $('#authMsg');
+
+  function showAuth(show) {
+    if (!panel) return;
+    panel.style.display = show ? 'block' : 'none';
+  }
+  function setMsg(t, ok = false) {
+    if (!msg) return;
+    msg.textContent = t || '';
+    msg.style.display = t ? 'block' : 'none';
+    msg.style.color = ok ? '#0a7d2a' : '#c00';
+  }
+
+  // 1) načti config.json a vytvoř klienta (pokud už ho nemáš)
+  async function getSb() {
+    if (window.__sb) return window.__sb;
+    if (!window.supabase) { setMsg('Chybí supabase-js UMD skript.'); throw new Error('No supabase UMD'); }
+    const cfgRes = await fetch('config.json');
+    if (!cfgRes.ok) throw new Error('Nelze načíst config.json');
+    const cfg = await cfgRes.json();
+    window.__sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    return window.__sb;
+  }
+
+  // 2) zjisti, jestli je uživatel přihlášený
+  const sb = await getSb();
+  const { data: { session } } = await sb.auth.getSession();
+
+  if (session && session.user) {
+    // už přihlášen => schovej login a nech appku běžet
+    showAuth(false);
+  } else {
+    // nepřihlášen => zobraz login panel, zbytek appky může zůstat (nebo si to případně skryj sám)
+    showAuth(true);
+  }
+
+  // 3) přihlášení
+  btnIn?.addEventListener('click', async () => {
+    setMsg('');
+    const email = (emailEl?.value || '').trim();
+    const password = passEl?.value || '';
+
+    if (!email || !password) { setMsg('Vyplň e-mail i heslo.'); return; }
+
+    // sign in
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { setMsg(error.message || 'Přihlášení selhalo.'); return; }
+
+    setMsg('Přihlášeno, načítám…', true);
+    location.reload();
+  });
+
+  // 4) registrace (vytvoření účtu)
+  btnUp?.addEventListener('click', async () => {
+    setMsg('');
+    const email = (emailEl?.value || '').trim();
+    const password = passEl?.value || '';
+
+    if (!email || !password) { setMsg('Vyplň e-mail i heslo.'); return; }
+    if (password.length < 6) { setMsg('Heslo musí mít aspoň 6 znaků.'); return; }
+
+    const { error } = await sb.auth.signUp({ email, password });
+    if (error) { setMsg(error.message || 'Registrace selhala.'); return; }
+
+    // Pokud v Supabase vyžaduješ potvrzení e-mailem, uživatel dostane verifikační mail.
+    setMsg('Účet vytvořen. Zkontroluj e-mail (pokud je vyžadováno potvrzení).', true);
+  });
+
+  // (volitelné) 5) odhlášení — pokud máš někde tlačítko s id="logoutBtn"
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    await sb.auth.signOut().catch(() => {});
+    location.reload();
+  });
+})();
+
 // ==== BOOT ====
 init().then(render).catch(showErr);

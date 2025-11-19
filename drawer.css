@@ -19,7 +19,7 @@ section.addRow { display: none !important; }
   line-height: 44px;
   text-align: center;
   box-shadow: 0 6px 18px rgba(0,0,0,.18);
-  z-index: 2147483500; /* nad vším */
+  z-index: 2147483500 !important; /* nad vším */
   border: none;
   cursor: pointer;
   transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
@@ -37,11 +37,11 @@ body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
   opacity: 0;
   pointer-events: none;
   transition: opacity .2s ease;
-  z-index: 2147483200;
+  z-index: 2147483400 !important;
 }
 #toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
 
-/* panel – bez transform (kvůli nativním selectům), vlastní scroll, top z-index */
+/* panel – bez transform (kvůli nativním selectům), vlastní scroll */
 #toolsDrawer{
   position: fixed;
   top: 0;
@@ -51,7 +51,7 @@ body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
   background: #fff;
   box-shadow: -14px 0 30px rgba(0,0,0,.25);
   transition: right .22s ease;
-  z-index: 2147483400;            /* nad backdropem i appkou */
+  z-index: 2147483600 !important;   /* MUSÍ být větší než backdrop */
   display: flex;
   flex-direction: column;
   border-top-left-radius: 12px;
@@ -60,10 +60,8 @@ body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
 }
 #toolsDrawer.open{ right: 0; }
 
-/* jistota – v zásuvce žádný transform ani jiné stacking contexty */
-#toolsDrawer, #toolsDrawer *{
-  transform: none !important;
-}
+/* jistota – v zásuvce žádný transform ani overlay */
+#toolsDrawer, #toolsDrawer *{ transform: none !important; }
 
 /* hlavička */
 .toolsHead{
@@ -82,7 +80,7 @@ body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
-/* prvky uvnitř zásuvky */
+/* vstupy */
 .toolsBody .pill-input,
 .toolsBody .pill-btn{
   width:100%;
@@ -90,7 +88,7 @@ body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
   pointer-events: auto;
 }
 
-/* nativní SELECT uvnitř zásuvky – nativní vzhled + extrémní z-index */
+/* nativní SELECT v zásuvce – nativní vzhled + top z-index */
 #toolsDrawer select{
   width:100%;
   min-height: 44px;
@@ -103,7 +101,7 @@ body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
   line-height: 1.2;
   pointer-events: auto !important;
   position: relative;
-  z-index: 2147483600; /* nad všemi dekoracemi */
+  z-index: 2147483700 !important; /* nad všemi dekoracemi i backdropem */
   -webkit-appearance: menulist-button !important;
   appearance: menulist !important;
   background-image: none !important;

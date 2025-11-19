@@ -22,9 +22,9 @@
 
     // --- zdroje (filtry na hlavní stránce) a cíle (formulář v panelu)
     const SRC_CLIENT  = '#filterClient';
-    const SRC_STATUS  = '#filterStatus';
+    // const SRC_STATUS  = '#filterStatus'; // Odstraněno
     const DST_CLIENT  = '#newJobClient';
-    const DST_STATUS  = '#newJobStatus';
+    // const DST_STATUS  = '#newJobStatus'; // Odstraněno
 
     function copyOptions(srcSel, dstSel, { skipValues = [] } = {}) {
       const src = qs(srcSel);
@@ -34,43 +34,33 @@
       if (!dst)  { console.info('[drawer] Nenalezen cíl', dstSel);  return; }
 
       // Když už v cíli nějaké položky jsou, nepřepisujeme
-      if (dst.options && dst.options.length > 0) {
-        console.info('[drawer] Cíl už má položky:', dstSel, dst.options.length);
-        return;
-      }
+      if (dst.options && dst.options.length > 0) return;
 
-      const opts = Array.from(src.options || []);
-      if (!opts.length) {
-        console.info('[drawer] Zdroj nemá žádné položky:', srcSel);
-        return;
-      }
+      // Vyčistíme staré položky
+      dst.innerHTML = '';
 
-      const frag = document.createDocumentFragment();
-      opts.forEach(opt => {
-        const v = String(opt.value ?? '');
-        if (skipValues.includes(v)) return;
-        const o = document.createElement('option');
-        o.value = v;
-        o.textContent = opt.textContent || v;
-        frag.appendChild(o);
+      // Zkopírujeme nové
+      const srcOptions = qsa('option', src)
+        .filter(opt => !skipValues.includes(opt.value));
+
+      srcOptions.forEach(opt => {
+        const clone = opt.cloneNode(true);
+        dst.appendChild(clone);
       });
-
-      if (frag.childNodes.length > 0) {
-        dst.innerHTML = '';
-        dst.appendChild(frag);
-        console.info('[drawer] Doplněno do', dstSel, '→', dst.options.length, 'položek');
-      } else {
-        console.info('[drawer] Po odfiltrování nezbyly žádné položky pro', dstSel);
-      }
     }
 
     function hydrateAddForm() {
+      // 1. Klienti (z filterClient do newJobClient)
       copyOptions(SRC_CLIENT, DST_CLIENT, { skipValues: ['ALL'] });
-      copyOptions(SRC_STATUS, DST_STATUS, { skipValues: ['ALL'] });
+
+      // 2. Statusy (odstraněno)
+      // copyOptions(SRC_STATUS, DST_STATUS, { skipValues: ['ALL'] });
     }
 
-    // Sleduj, jestli se filtry nenaplní až později – jakmile se změní, zkus rehydratovat
-    [SRC_CLIENT, SRC_STATUS].forEach(sel => {
+
+    // Pokud se zdroje změní, zkus rehydratovat
+    // Původní: [SRC_CLIENT, SRC_STATUS]
+    [SRC_CLIENT].forEach(sel => { // Změněno: sledování pouze SRC_CLIENT
       const el = qs(sel);
       if (!el) return;
       const mo = new MutationObserver(() => hydrateAddForm());
@@ -110,10 +100,10 @@
     });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && drawer.classList.contains('open')) close();
+      if (e.key === 'Escape' && drawer.classList.contains('open')) {
+        close();
+      }
     });
 
-    // Expozice pro ruční test
-    window.drawer = { open, close, el: drawer };
   });
 })();

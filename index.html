@@ -6,7 +6,6 @@
   <title>Výkaz práce</title>
   <link rel="stylesheet" href="style.css"/>
 
-  <!-- knihovny -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -18,7 +17,6 @@
   </header>
 
   <main id="app" class="wrap">
-    <!-- týden + export -->
     <section class="weekbar">
       <div class="weeknav">
         <button id="prevWeek" class="navbtn" title="Předchozí týden">◀</button>
@@ -28,94 +26,50 @@
       <button id="exportXlsx" class="pill-btn export">Export do Excelu</button>
     </section>
 
-    <!-- filtry -->
     <section class="filters">
       <div class="filters-row">
-        <label class="lbl">Nastavení filtru:</label>
-
-        <select id="filterClient" class="pill-select"></select>
-        <select id="filterStatus" class="pill-select"></select>
-
-        <select id="totalsScope" class="pill-select">
-          <option value="ME">Součty: Já</option>
-          <option value="ALL">Součty: Všichni</option>
+        <label class="pill-label">Klient:</label>
+        <select id="filterClient" class="pill-select">
+          <option value="ALL">Vše</option>
         </select>
-
-        <!-- filtr „Grafik“ s ukotveným menu -->
-        <div class="menuAnchor">
-          <button id="assigneeFilterBtn" class="pill-btn">Grafik: Všichni</button>
-          <div id="assigneeFilterMenu" class="menu" hidden>
-            <label><input type="checkbox" value="Viki"> Viki</label>
-            <label><input type="checkbox" value="Standa"> Standa</label>
-            <label><input type="checkbox" value="Marek"> Marek</label>
-            <div class="menuRow">
-              <button id="assigneeFilterClear" class="pill-btn small" type="button">Vymazat</button>
-              <button id="assigneeFilterClose" class="pill-btn small" type="button">Zavřít</button>
-            </div>
-          </div>
+      </div>
+      <div class="filters-row">
+        <label class="pill-label">Stav:</label>
+        <select id="filterStatus" class="pill-select">
+          <option value="ALL">Vše</option>
+          <option value="NEW">Nová</option>
+          <option value="RUN">Probíhá</option>
+          <option value="DONE">Hotovo</option>
+        </select>
+      </div>
+      <div class="filters-row">
+        <label class="pill-label">Rozsah:</label>
+        <div class="pill-group">
+          <input type="radio" id="scopeMe" name="scope" value="ME" checked>
+          <label for="scopeMe" class="pill-radio-label">Moje</label>
+          <input type="radio" id="scopeAll" name="scope" value="ALL">
+          <label for="scopeAll" class="pill-radio-label">Vše</label>
         </div>
       </div>
     </section>
 
-    <!-- přidání klienta/zakázky -->
-    <section class="addRow">
-      <div class="add-grid">
-        <input id="newClientName" class="pill-input" placeholder="Název klienta"/>
-        <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
+    <div id="dataGrid"></div>
 
-        <select id="newJobClient" class="pill-select"></select>
-        <input id="newJobName" class="pill-input" placeholder="Název zakázky"/>
-        <select id="newJobStatus" class="pill-select"></select>
+    <button id="toolsFab" class="fab" data-open-drawer title="Nástroje">✚</button>
 
-        <div class="menuAnchor">
-          <button id="assigneesNewBtn" class="pill-btn">Grafik: nikdo</button>
-          <div id="assigneesNewMenu" class="menu" hidden>
-            <label><input type="checkbox" value="Viki"> Viki</label>
-            <label><input type="checkbox" value="Standa"> Standa</label>
-            <label><input type="checkbox" value="Marek"> Marek</label>
-            <div class="menuRow">
-              <button id="assigneesNewClear" class="pill-btn small" type="button">Vymazat</button>
-              <button id="assigneesNewClose" class="pill-btn small" type="button">Zavřít</button>
-            </div>
-          </div>
-        </div>
-
-        <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
-      </div>
-    </section>
-
-    <!-- tabulka -->
-    <section class="tableWrap">
-      <table class="grid">
-        <thead>
-          <tr class="headpill">
-            <th>Klient</th>
-            <th>Zakázka</th>
-            <th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th>
-            <th>Celkem</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-        <tfoot>
-          <tr id="sumRow">
-            <td colspan="2" class="sumLabel">Součet za den</td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
-    </section>
   </main>
 
-  <div id="err" class="toast" style="display:none"></div>
+  <footer>
+    <div class="wrap">
+      <p style="text-align:center;color:#999;font-size:12px;opacity:.7;padding-top:20px;">© 2024</p>
+    </div>
+  </footer>
 
- <!-- === FAB + DRAWER (Nástroje) ==================================== -->
-<button id="toolsFab" data-open-drawer title="Nástroje">+</button>
-<div id="toolsBackdrop" aria-hidden="true"></div>
+  <script src="config.json"></script>
+  <script src="drawer.js"></script>
+  <script src="app.js"></script>
+
+  <div id="toolsBackdrop" aria-hidden="true"></div>
 
 <aside id="toolsDrawer" aria-hidden="true" role="dialog" aria-label="Nástroje">
   <div class="toolsHead">
@@ -124,37 +78,27 @@
   </div>
 
   <div class="toolsBody">
-    <!-- Přidání zakázky -->
     <div class="toolsSection">
       <h3>Přidání zakázky</h3>
       <select id="newJobClient" class="pill-select"></select>
       <input  id="newJobName"   class="pill-input"  placeholder="Název zakázky" />
-      <select id="newJobStatus" class="pill-select">
-        <option value="NEW">Nová</option>
-        <option value="RUN">Probíhá</option>
-        <option value="DONE">Hotovo</option>
-      </select>
+      
       <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
     </div>
 
-    <!-- Přidání klienta -->
     <div class="toolsSection">
       <h3>Přidání klienta</h3>
       <input  id="newClientName" class="pill-input" placeholder="Název klienta" />
       <button id="addClientBtn"  class="pill-btn">Přidat klienta</button>
     </div>
 
-    <!-- Odhlášení -->
     <div class="toolsSection">
       <h3>Účet</h3>
       <button id="logoutBtn" class="pill-btn">Odhlásit</button>
     </div>
+
   </div>
 </aside>
-<!-- ================================================================ -->
 
-<!-- Scripts (order matters: app.js first, then drawer.js) -->
-<script src="app.js" defer></script>
-<script src="drawer.js" defer></script>
 </body>
 </html>

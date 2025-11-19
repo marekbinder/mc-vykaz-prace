@@ -1,6 +1,6 @@
 /* ===== FAB + BACKDROP + DRAWER ===== */
 
-/* schováme původní pravý uživatelský box a řádek "přidat zakázku" na hlavní ploše */
+/* schovat staré prvky na hlavní ploše */
 #userBoxTopRight,
 section.addRow { display: none !important; }
 
@@ -29,24 +29,20 @@ section.addRow { display: none !important; }
 /* při otevřeném panelu FAB schovej */
 body.drawer-open #toolsFab { display:none; }
 
-/* BACKDROP – bez clip-path; fyzicky nezakrývá pruh vpravo (= šířka zásuvky) */
+/* BACKDROP – žádná šířka, žádný clip-path.
+   Reálně kryje plochu: top 0 / right = šířka zásuvky / bottom 0 / left 0 */
 #toolsBackdrop{
   position: fixed;
-  top: 0;
-  left: 0;
-  height: 100dvh;
-  width: 0;                 /* zavřeno: nic nepřekrývá */
+  inset: 0 var(--drawer-w, 0px) 0 0;  /* <<— TADY je vyříznutí pruhu vpravo */
   background: rgba(10,14,20,.45);
   opacity: 0;
   pointer-events: none;
   z-index: 99995;
-  transition: opacity .22s ease, width .22s ease;
+  transition: opacity .22s ease;
 }
 #toolsBackdrop.show{
   opacity: 1;
   pointer-events: auto;
-  /* otevřeno: překryj vše vlevo, ale nech pruh vpravo pro zásuvku */
-  width: calc(100vw - var(--drawer-w, 0px));
 }
 
 /* DRAWER */
@@ -86,7 +82,7 @@ body.drawer-open #toolsFab { display:none; }
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
-/* ovladače uvnitř panelu */
+/* jistota pro ovladače uvnitř panelu */
 .toolsBody .pill-input,
 .toolsBody .pill-select,
 .toolsBody .pill-btn{
@@ -95,7 +91,7 @@ body.drawer-open #toolsFab { display:none; }
   pointer-events: auto;
 }
 
-/* nativní selecty – jistota pro Safari/Chrome */
+/* nativní selecty – Safari/Chrome */
 #toolsDrawer select,
 #toolsDrawer .pill-select{
   -webkit-appearance: menulist !important;
@@ -105,7 +101,7 @@ body.drawer-open #toolsFab { display:none; }
   pointer-events: auto !important;
 }
 
-/* případné dekorativní šipky ať neblokují kliky */
+/* dekorativní šipky (pokud někde jsou) nesmí chytat kliky */
 #toolsDrawer .select-arrow,
 #toolsDrawer .pill-select + .select-arrow,
 #toolsDrawer .pill-select::after{

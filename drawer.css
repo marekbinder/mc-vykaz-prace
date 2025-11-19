@@ -39,20 +39,17 @@ section.addRow { display: none !important; }
 #toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
 
 /* panel – BEZ transform (kvůli nativním selectům) a s overflow přímo na panelu */
-#toolsDrawer{
-  position: fixed;
-  top: 0;
-  right: -100%;
-  height: 100vh;
-  width: min(420px, 92vw);
-  background: #fff;
-  box-shadow: -14px 0 30px rgba(0,0,0,.25);
-  transition: right .22s ease;
-  z-index: 99997;
-  display: flex;
-  flex-direction: column;
-  border-top-left-radius: 12px;
-  border-bottom-left-radius: 12px;
+/* Backdrop */
+#toolsBackdrop { position: fixed; inset: 0; background: rgba(10,14,20,.45);
+  opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 99996; }
+#toolsBackdrop.show { opacity: 1; pointer-events: auto; }
+
+/* Drawer – VÝCHOZÍ mimo obrazovku a otevřený stav */
+#toolsDrawer { position: fixed; top: 0; right: -100%; height: 100vh;
+  width: min(420px, 92vw); background: #fff; box-shadow: -14px 0 30px rgba(0,0,0,.25);
+  transition: right .22s ease; z-index: 99997; display: flex; flex-direction: column;
+  border-top-left-radius: 12px; border-bottom-left-radius: 12px; overflow: auto; }
+#toolsDrawer.open { right: 0; }
 
   /* kritické: vlastní scroll kontejner */
   overflow: auto;

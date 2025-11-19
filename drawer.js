@@ -1,13 +1,17 @@
-/* ===== Drawer – kompletní JS =====
-   - backdrop je jen vizuální (nechytá kliky)
-   - mimo panel zavíráme globálním klikem na dokument
-   - FAB (+) skrýváme při otevření zásuvky
+/* ===== Drawer – komplet JS (1:1) =====
+   - Backdrop je jen vizuální (pointer-events: none)
+   - Zavírání klikem mimo panel řešíme globálně
+   - FAB se při otevření skryje
+   - Staré překryvy (#toolsHit apod.) odstraníme
 */
 
 (() => {
   const $ = (sel, root = document) => root.querySelector(sel);
 
-  // Vytvoř/nahraj FAB, Backdrop a Drawer (když už existují, jen je vezmeme)
+  // Odstranit případné staré překryvy
+  ['#toolsHit', '#hit', '#backHit'].forEach(id => { const n = $(id); if (n) n.remove(); });
+
+  // FAB
   let fab = $('#toolsFab');
   if (!fab) {
     fab = document.createElement('button');
@@ -18,6 +22,7 @@
     document.body.appendChild(fab);
   }
 
+  // Backdrop (jen vizuální)
   let backdrop = $('#toolsBackdrop');
   if (!backdrop) {
     backdrop = document.createElement('div');
@@ -25,10 +30,9 @@
     document.body.appendChild(backdrop);
   }
 
+  // Drawer (panel)
   let drawer = $('#toolsDrawer');
   if (!drawer) {
-    // očekáváme, že HTML panelu už v DOM máš (podle tvé verze ho tam máš).
-    // Pro jistotu vytvoříme minimalistický fallback, kdyby chyběl.
     drawer = document.createElement('aside');
     drawer.id = 'toolsDrawer';
     drawer.setAttribute('role', 'dialog');
@@ -60,14 +64,45 @@
   const newJobClient = $('#newJobClient', drawer);
   const newJobStatus = $('#newJobStatus', drawer);
 
-  // ——————————————————————————
-  // Otevření / zavření panelu
-  // ——————————————————————————
+  // Zajisti, že backdrop NIKDY nechytá kliky (obrana i proti cizím stylům)
+  const ensureBackdropNoHit = () => {
+    backdrop.style.pointerEvents = 'none'; // inline
+    // navíc vložíme „pojistku“ s !important
+    if (!$('#_drawerNoHit')) {
+      const st = document.createElement('style');
+      st.id = '_drawerNoHit';
+      st.textContent = `
+        #toolsBackdrop{pointer-events:none !important;}
+        #toolsBackdrop.show{pointer-events:none !important;}
+      `;
+      document.head.appendChild(st);
+    }
+  };
+  ensureBackdropNoHit();
+
+  // nativní vzhled selectů (Safari-friendly)
+  const enforceNativeSelect = (sel) => {
+    if (!sel) return;
+    sel.style.webkitAppearance = 'menulist';
+    sel.style.appearance = 'menulist';
+    sel.style.backgroundImage = 'none';
+    sel.style.pointerEvents = 'auto';
+  };
+  enforceNativeSelect(newJobClient);
+  enforceNativeSelect(newJobStatus);
+
   const openDrawer = () => {
+    ensureBackdropNoHit();
     drawer.classList.add('open');
     backdrop.classList.add('show');
     fab.classList.add('is-hidden');
     drawer.setAttribute('aria-hidden', 'false');
+
+    // Safari občas potřebuje malé zpoždění, aby selecty „ožily“
+    setTimeout(() => {
+      enforceNativeSelect(newJobClient);
+      enforceNativeSelect(newJobStatus);
+    }, 0);
   };
 
   const closeDrawer = () => {
@@ -91,44 +126,23 @@
     if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
   });
 
-  // Klik mimo panel zavírá (backdrop nechytá kliky, takže to řešíme globálně)
+  // Klik mimo panel zavírá (backdrop nechytá kliky, proto posloucháme dokument)
   document.addEventListener('mousedown', (e) => {
     if (!drawer.classList.contains('open')) return;
-    const inDrawer = drawer.contains(e.target);
-    const onFab = fab.contains(e.target);
-    if (!inDrawer && !onFab) closeDrawer();
+    if (!drawer.contains(e.target) && !fab.contains(e.target)) closeDrawer();
   });
 
-  // ——————————————————————————
-  // Nativní selecty – jistota, že nejsou maskované
-  // ——————————————————————————
-  const enforceNativeSelect = (sel) => {
-    if (!sel) return;
-    sel.style.webkitAppearance = 'menulist';
-    sel.style.appearance = 'menulist';
-    sel.style.backgroundImage = 'none';
-    sel.style.pointerEvents = 'auto';
-  };
-  enforceNativeSelect(newJobClient);
-  enforceNativeSelect(newJobStatus);
-
-  // ——————————————————————————
-  // (Volitelné) naplnění statusů, pokud to nemáš z app.js
-  // nechá se to klidně prázdné – tvůj app.js si to plní sám
-  // ——————————————————————————
+  // Pokud statusy neplní app.js, vložíme fallback
   if (newJobStatus && newJobStatus.options.length === 0) {
-    const fallbackStatuses = [
+    const basic = [
       { value: 'NEW', label: 'Nová' },
       { value: 'WIP', label: 'Probíhá' },
       { value: 'DONE', label: 'Hotovo' }
     ];
-    for (const s of fallbackStatuses) {
-      const opt = document.createElement('option');
-      opt.value = s.value;
-      opt.textContent = s.label;
-      newJobStatus.appendChild(opt);
+    for (const s of basic) {
+      const o = document.createElement('option');
+      o.value = s.value; o.textContent = s.label;
+      newJobStatus.appendChild(o);
     }
   }
-
-  // Hotovo
 })();

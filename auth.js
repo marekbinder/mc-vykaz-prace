@@ -1,11 +1,11 @@
-// auth.js — Login e-mail+heslo + reset/změna hesla (overlay)
-// - funguje v obou režimech: nejsem přihlášen (reset přes e-mail) / jsem přihlášen (rovnou změním heslo)
-// - používá config.json a UMD supabase-js (musí být načten před tímto souborem)
+// auth.js — Login e-mail+heslo + reset/změna hesla (overlay) + floating "Odhlásit" + "Změnit heslo"
+// - funguje s config.json (supabaseUrl, supabaseAnonKey)
+// - UMD supabase-js MUSÍ být načteno před tímto souborem
 
 (function () {
-  const $  = (s, r = document) => r.querySelector(s);
+  const $ = (s, r = document) => r.querySelector(s);
 
-  // ----------- UI: login panel (pokud ho máš v HTML), lehké helpery -----------
+  // ----------- UI: login panel (pokud ho máš v HTML) -----------
   const panel   = $('#authPanel');
   const emailEl = $('#authEmail');
   const passEl  = $('#authPassword');
@@ -13,9 +13,7 @@
   const btnUp   = $('#authSignUp');
   const msg     = $('#authMsg');
 
-  function showAuth(show) {
-    if (panel) panel.style.display = show ? 'block' : 'none';
-  }
+  function showAuth(show) { if (panel) panel.style.display = show ? 'block' : 'none'; }
   function setMsg(t, ok = false) {
     if (!msg) return;
     msg.textContent = t || '';
@@ -23,14 +21,14 @@
     msg.style.color = ok ? '#0a7d2a' : '#c00';
   }
 
-  // ----------- Overlay (vytvoříme dynamicky) -----------
+  // ----------- Overlay (reset/změna hesla) -----------
   let overlay, stepRequest, stepNew, reqEmail, reqBtn, reqInfo, reqErr, np1, np2, npBtn, npErr, ovClose;
 
   function ensureOverlay() {
     if (overlay) return overlay;
 
     overlay = document.createElement('div');
-    overlay.id = 'resetOverlay';
+    Object.assign(overlay, { id: 'resetOverlay' });
     Object.assign(overlay.style, {
       position:'fixed', inset:'0', background:'rgba(10,14,20,.45)', display:'none',
       zIndex:'99999', backdropFilter:'blur(1px)'
@@ -55,7 +53,7 @@
       borderRadius:'10px', border:'1px solid rgba(0,0,0,.08)', background:'#fff', cursor:'pointer'
     });
 
-    // Krok 1: požádat o reset e-mailem (nepřihlášený)
+    // Krok 1: odeslat reset e-mailem
     stepRequest = document.createElement('div');
     stepRequest.innerHTML = `
       <div style="display:grid;gap:10px;margin-top:8px">
@@ -69,7 +67,7 @@
       </div>
     `;
 
-    // Krok 2: nastavit nové heslo (jsem přihlášen / přišel jsem z e-mailu)
+    // Krok 2: nastavit nové heslo
     stepNew = document.createElement('div');
     stepNew.style.display = 'none';
     stepNew.innerHTML = `
@@ -85,12 +83,11 @@
       </div>
     `;
 
-    const inner = card;
-    inner.appendChild(title);
-    inner.appendChild(ovClose);
-    inner.appendChild(stepRequest);
-    inner.appendChild(stepNew);
-    overlay.appendChild(inner);
+    card.appendChild(title);
+    card.appendChild(ovClose);
+    card.appendChild(stepRequest);
+    card.appendChild(stepNew);
+    overlay.appendChild(card);
     document.body.appendChild(overlay);
 
     reqEmail = stepRequest.querySelector('#resetEmail');
@@ -135,14 +132,14 @@
   async function getSb() {
     if (window.__sb) return window.__sb;
     if (!window.supabase) { setMsg('Chybí supabase-js UMD.'); throw new Error('No supabase UMD'); }
-    const cfgRes = await fetch('config.json');
-    if (!cfgRes.ok) throw new Error('Nelze načíst config.json');
-    const cfg = await cfgRes.json();
+    const res = await fetch('config.json');
+    if (!res.ok) throw new Error('Nelze načíst config.json');
+    const cfg = await res.json();
     window.__sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
     return window.__sb;
   }
 
-  // ----------- URL helpers (pro návrat z e-mailu) -----------
+  // ----------- URL helpers (návrat z mailu) -----------
   function getHashParams() {
     const raw = (window.location.hash || '').replace(/^#/, '');
     const p = new URLSearchParams(raw);
@@ -154,12 +151,62 @@
     history.replaceState({}, document.title, window.location.pathname + window.location.search);
   }
 
+  // ----------- Floating tlačítka (změna hesla + odhlásit) -----------
+  function hideSignedInEmailUI() {
+    // Skryj typický box s e-mailem / odhlášením (pokud existuje)
+    const style = document.createElement('style');
+    style.textContent = `
+      #userBoxTopRight { display: none !important; }
+      /* přidej sem případně další selektory, pokud máš jiné umístění e-mailu */
+    `;
+    document.head.appendChild(style);
+  }
+
+  function ensureFloatingButtons(sb) {
+    // ZMĚNIT HESLO (výše)
+    if (!document.getElementById('authChangePwd')) {
+      const change = document.createElement('button');
+      change.id = 'authChangePwd';
+      change.type = 'button';
+      change.textContent = 'Nastavit/změnit heslo';
+      Object.assign(change.style, {
+        position:'fixed', right:'16px', bottom:'72px',
+        background:'#fff', border:'1px solid #e8eef7', borderRadius:'10px',
+        padding:'10px 12px', boxShadow:'0 6px 18px rgba(0,0,0,.08)',
+        cursor:'pointer', zIndex: 9999
+      });
+      change.addEventListener('click', () => openOverlay('new'));
+      document.body.appendChild(change);
+    }
+
+    // ODHlÁSIT (níž, červené orámování)
+    if (!document.getElementById('authLogoutFab')) {
+      const logout = document.createElement('button');
+      logout.id = 'authLogoutFab';
+      logout.type = 'button';
+      logout.textContent = 'Odhlásit';
+      Object.assign(logout.style, {
+        position:'fixed', right:'16px', bottom:'16px',
+        background:'#fff', border:'1px solid #f3c0c0', color:'#b00020',
+        borderRadius:'10px', padding:'10px 12px',
+        boxShadow:'0 6px 18px rgba(176,0,32,.12)', cursor:'pointer', zIndex: 9999,
+        fontWeight:'700'
+      });
+      logout.addEventListener('click', async () => {
+        try { await sb.auth.signOut(); } catch {}
+        cleanupUrl();
+        location.reload();
+      });
+      document.body.appendChild(logout);
+    }
+  }
+
   // ----------- Start -----------
   (async () => {
     const sb = await getSb();
     const { data: { session } } = await sb.auth.getSession();
 
-    // Přidám odkaz „Zapomněli jste heslo?“ pod login, pokud panel existuje
+    // Přidej "Zapomněli jste heslo?" do login panelu (pokud je vidět)
     if (panel && !$('#authForgot', panel)) {
       const forgot = document.createElement('button');
       forgot.id = 'authForgot';
@@ -173,22 +220,7 @@
       forgot.addEventListener('click', () => openOverlay('request'));
     }
 
-    // Pokud JSI přihlášený (třeba z Magic Linku), přidám nenápadný link pro přímou změnu hesla
-    if (session?.user && !document.getElementById('authChangePwd')) {
-      const change = document.createElement('button');
-      change.id = 'authChangePwd';
-      change.type = 'button';
-      change.textContent = 'Nastavit/změnit heslo';
-      Object.assign(change.style, {
-        position:'fixed', right:'16px', bottom:'16px',
-        background:'#fff', border:'1px solid #e8eef7', borderRadius:'10px',
-        padding:'10px 12px', boxShadow:'0 6px 18px rgba(0,0,0,.08)', cursor:'pointer', zIndex: 9999
-      });
-      document.body.appendChild(change);
-      change.addEventListener('click', () => openOverlay('new'));
-    }
-
-    // Režim návratu z e-mailu (Supabase může poslat code=... v query NEBO access_token v hash)
+    // Režim návratu z e-mailu (type=recovery / code=…)
     const hash = getHashParams();
     const urlQ = new URLSearchParams(window.location.search);
     const isRecovery = hash.type === 'recovery' || urlQ.get('type') === 'recovery' || urlQ.get('code');
@@ -201,17 +233,21 @@
         } else if (hash.access_token && hash.refresh_token) {
           await sb.auth.setSession({ access_token: hash.access_token, refresh_token: hash.refresh_token });
         }
-        // jsme přihlášeni v recovery režimu -> rovnou otevři „Nové heslo“
         showAuth(false);
         openOverlay('new');
       } catch (e) {
         console.warn('Recovery session set failed:', e);
-        // i tak ukážeme „Nové heslo“ – když nebude session, update selže a ukáže chybu
         openOverlay('new');
       }
     } else {
       // běžný režim – zobraz login jen když není session
       showAuth(!(session && session.user));
+    }
+
+    // Pokud JSI přihlášený → skryj e-mail v UI a přidej plovoucí knoflíky
+    if (session?.user) {
+      hideSignedInEmailUI();
+      ensureFloatingButtons(sb);
     }
 
     // ===== Login (email+heslo) =====
@@ -239,39 +275,35 @@
       setMsg('Účet vytvořen. Zkontroluj e-mail (pokud je vyžadováno potvrzení).', true);
     });
 
-    // ===== Reset – krok 1: poslat e-mail =====
+    // ===== Reset – krok 1 (poslat e-mail) =====
     ensureOverlay();
     const redirectTo = window.location.origin + window.location.pathname + '#type=recovery';
-    const resetSend = async () => {
-      const info = stepRequest.querySelector('#resetInfo');
-      const err  = stepRequest.querySelector('#resetErr');
-      info.style.display = 'none'; err.style.display = 'none';
+    reqBtn?.addEventListener('click', async () => {
+      reqInfo.style.display = 'none';
+      reqErr.style.display  = 'none';
 
-      const email = (stepRequest.querySelector('#resetEmail')?.value || '').trim();
-      if (!email) { err.textContent = 'Zadej e-mail.'; err.style.display = 'block'; return; }
+      const email = (reqEmail?.value || '').trim();
+      if (!email) { reqErr.textContent = 'Zadej e-mail.'; reqErr.style.display = 'block'; return; }
 
       try {
         const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
         if (error) throw error;
-        info.textContent = 'Odkaz byl odeslán. Zkontroluj schránku.';
-        info.style.display = 'block';
+        reqInfo.textContent = 'Odkaz byl odeslán. Zkontroluj schránku.';
+        reqInfo.style.display = 'block';
       } catch (e) {
-        err.textContent = e.message || 'Odeslání odkazu selhalo.';
-        err.style.display = 'block';
+        reqErr.textContent = e.message || 'Odeslání odkazu selhalo.';
+        reqErr.style.display = 'block';
       }
-    };
-    reqBtn?.addEventListener('click', resetSend);
+    });
 
-    // ===== Reset/Změna – krok 2: nastavit nové heslo =====
-    const confirmNew = async () => {
-      const err = stepNew.querySelector('#resetNewErr');
-      err.style.display = 'none';
-
-      const p1 = (stepNew.querySelector('#newPass1')?.value || '');
-      const p2 = (stepNew.querySelector('#newPass2')?.value || '');
-      if (!p1 || !p2) { err.textContent = 'Vyplň obě pole.'; err.style.display = 'block'; return; }
-      if (p1 !== p2)  { err.textContent = 'Hesla se neshodují.'; err.style.display = 'block'; return; }
-      if (p1.length < 6){ err.textContent = 'Heslo musí mít aspoň 6 znaků.'; err.style.display = 'block'; return; }
+    // ===== Reset/Změna – krok 2 (nové heslo) =====
+    npBtn?.addEventListener('click', async () => {
+      npErr.style.display = 'none';
+      const p1 = np1?.value || '';
+      const p2 = np2?.value || '';
+      if (!p1 || !p2) { npErr.textContent = 'Vyplň obě pole.'; npErr.style.display = 'block'; return; }
+      if (p1 !== p2)  { npErr.textContent = 'Hesla se neshodují.'; npErr.style.display = 'block'; return; }
+      if (p1.length < 6){ npErr.textContent = 'Heslo musí mít aspoň 6 znaků.'; npErr.style.display = 'block'; return; }
 
       try {
         const { error } = await sb.auth.updateUser({ password: p1 });
@@ -281,16 +313,16 @@
         alert('Heslo bylo změněno. Přihlašuju…');
         location.reload();
       } catch (e) {
-        err.textContent = e.message || 'Změna hesla selhala.';
-        err.style.display = 'block';
+        npErr.textContent = e.message || 'Změna hesla selhala.';
+        npErr.style.display = 'block';
       }
-    };
-    npBtn?.addEventListener('click', confirmNew);
+    });
 
-    // Exponuj ruční otevření (kdybys chtěl z konzole): Auth.openForgot(), Auth.openChangePassword()
-    window.Auth = {
-      openForgot: () => openOverlay('request'),
-      openChangePassword: () => openOverlay('new')
-    };
+    // (Volitelně) stále funguje i případný starý #logoutBtn, pokud ho někde máš
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+      await sb.auth.signOut().catch(() => {});
+      cleanupUrl();
+      location.reload();
+    });
   })();
 })();

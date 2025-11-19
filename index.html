@@ -10,6 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -17,6 +18,18 @@
     <div id="userBoxTopRight" class="userbox"></div>
   </header>
 
+<!-- AUTH PANEL (email + heslo) -->
+<div id="authPanel" style="display:none; max-width:420px; margin:48px auto; padding:20px 22px; border:1px solid #e8eef7; border-radius:12px; background:#fff;">
+  <h2 style="margin:0 0 12px; text-align:center;">Přihlášení</h2>
+  <div style="display:grid; gap:10px;">
+    <input id="authEmail" type="email" placeholder="E-mail" style="height:44px; border:1px solid #dfe7f3; border-radius:10px; padding:0 12px;">
+    <input id="authPassword" type="password" placeholder="Heslo" style="height:44px; border:1px solid #dfe7f3; border-radius:10px; padding:0 12px;">
+    <button id="authSignIn" style="height:44px; border-radius:10px; border:0; background:#0b1625; color:#fff; font-weight:700;">Přihlásit</button>
+    <button id="authSignUp" style="height:44px; border-radius:10px; border:1px solid #dfe7f3; background:#fff;">Vytvořit účet</button>
+  </div>
+  <p id="authMsg" style="margin:10px 0 0; color:#c00; text-align:center; display:none;"></p>
+</div>
+  
   <main id="app" class="wrap">
     <!-- týden + export -->
     <section class="weekbar">

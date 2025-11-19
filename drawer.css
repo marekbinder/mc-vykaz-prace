@@ -130,3 +130,27 @@ section.addRow { display: none !important; }
   min-height: 42px;
   line-height: 1.2;
 }
+
+/* ==== Nativní selecty uvnitř zásuvky – přebití "pill" stylu ==== */
+#toolsDrawer select,
+#toolsDrawer .pill-select,
+#toolsDrawer select.pill-select {
+  -webkit-appearance: menulist-button !important; /* Safari */
+  appearance: menulist !important;
+  background-image: none !important;
+  cursor: default;
+  pointer-events: auto !important;
+  min-height: 42px;
+  line-height: 1.2;
+}
+
+/* Dekorativní šipky (pokud nějaké máš) nesmí brát kliky ani překrývat */
+#toolsDrawer .pill-select::after,
+#toolsDrawer .select-arrow,
+#toolsDrawer .pill-select + .select-arrow {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Pro jistotu žádné "neviditelné" překryvy uvnitř zásuvky */
+#toolsDrawer * { pointer-events: auto; }

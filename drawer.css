@@ -1,6 +1,6 @@
 /* ===== FAB + BACKDROP + DRAWER ===== */
 
-/* skryj staré prvky z horní lišty (už jsou v menu) */
+/* schováme původní pravý uživatelský box a řádek "přidat zakázku" na hlavní ploše */
 #userBoxTopRight,
 section.addRow { display: none !important; }
 
@@ -38,31 +38,27 @@ section.addRow { display: none !important; }
 }
 #toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
 
-/* samotný panel */
+/* panel – POZOR: bez transformu (kvůli bugu nativních <select>) */
 #toolsDrawer{
   position: fixed;
   top: 0;
-  right: 0;
+  right: -100%;
   height: 100vh;
   width: min(420px, 92vw);
   background: #fff;
   box-shadow: -14px 0 30px rgba(0,0,0,.25);
-  transform: translateX(100%);
-  transition: transform .22s ease;
-  z-index: 1101;                 /* nad backdropem */
+  transition: right .22s ease;
+  z-index: 1101;
   display: flex;
   flex-direction: column;
   border-top-left-radius: 12px;
   border-bottom-left-radius: 12px;
-  will-change: transform;
-  /* a11y – ve výchozím stavu mimo čtení, JS přepne na false */
+
+  /* výchozí a11y stav – JS přepne na false */
   aria-hidden: true;
 }
+#toolsDrawer.open{ right: 0; }
 
-/* stav „otevřeno“ */
-#toolsDrawer.open{ transform: translateX(0); }
-
-/* hlavička panelu */
 .toolsHead{
   display:flex; align-items:center; justify-content:space-between;
   padding:18px 18px 10px 18px; border-bottom:1px solid rgba(0,0,0,.06);
@@ -74,10 +70,21 @@ section.addRow { display: none !important; }
 }
 #toolsClose::after{ content:'✕'; font-size:16px; }
 
-/* tělo panelu – použijeme existující „pill“ styly layoutu */
 .toolsBody{ padding:16px 18px 24px 18px; overflow:auto; }
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
+
+/* jistota, že formuláře v panelu opravdu berou kliky */
 .toolsBody .pill-input,
 .toolsBody .pill-select,
-.toolsBody .pill-btn{ width:100%; margin:8px 0; }
+.toolsBody .pill-btn{
+  width:100%;
+  margin:8px 0;
+  pointer-events: auto;
+}
+
+/* pro některé WebKit implementace je dobré předepsat appearance (nezbytné jen někde) */
+.toolsBody .pill-select{
+  -webkit-appearance: menulist;
+  appearance: menulist;
+}

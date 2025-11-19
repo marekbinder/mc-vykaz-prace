@@ -5,7 +5,7 @@
       : fn());
 
   onReady(() => {
-    // načti CSS, pokud už není
+    // načíst CSS, pokud chybí
     if (!document.querySelector('link[href$="drawer.css"], link[href*="drawer.css"]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -24,12 +24,23 @@
       document.body.appendChild(fab);
     }
 
-    // Backdrop (štít)
-    let backdrop = document.getElementById('toolsBackdrop');
-    if (!backdrop) {
-      backdrop = document.createElement('div');
-      backdrop.id = 'toolsBackdrop';
-      document.body.appendChild(backdrop);
+    // Původní backdrop přejmenuj na dim (pro kompatibilitu)
+    let dim = document.getElementById('toolsDim') || document.getElementById('toolsBackdrop');
+    if (!dim) {
+      dim = document.createElement('div');
+      dim.id = 'toolsDim';
+      document.body.appendChild(dim);
+    } else {
+      dim.id = 'toolsDim';
+    }
+    dim.style.pointerEvents = 'none';
+
+    // Klikací pás vlevo
+    let hit = document.getElementById('toolsHit');
+    if (!hit) {
+      hit = document.createElement('div');
+      hit.id = 'toolsHit';
+      document.body.appendChild(hit);
     }
 
     // Drawer
@@ -67,29 +78,33 @@
             <h3 id="sec-account">Účet</h3>
             <button id="btnLogout" class="pill-btn" type="button">Odhlásit</button>
           </section>
-        </div>
-      `;
+        </div>`;
       document.body.appendChild(drawer);
     }
 
-    // ————— util —————
+    // ——— utils ———
     const forceZ = () => {
-      backdrop.style.setProperty('z-index','2147483400','important');
-      drawer  .style.setProperty('z-index','2147483600','important');
+      dim .style.setProperty('z-index','2147483400','important');
+      hit .style.setProperty('z-index','2147483450','important');
+      drawer.style.setProperty('z-index','2147483600','important');
       drawer.querySelectorAll('select').forEach(s=>{
         s.style.setProperty('z-index','2147483700','important');
         s.style.setProperty('position','relative','important');
       });
     };
 
-    // vyřízni „díru“ pod zásuvkou – nastavíme inline right na backdrop
-    const setShieldRight = () => {
-      const w = Math.round(drawer.getBoundingClientRect().width || 0);
-      backdrop.style.right = (w ? w + 'px' : '0px');
+    const drawerWidth = () => {
+      // šířka je známá i offscreen – CSS width/min()
+      const cs = getComputedStyle(drawer);
+      const w  = parseFloat(cs.width) || drawer.getBoundingClientRect().width || 420;
+      return Math.round(w);
     };
 
-    // najdi horní select s klienty (mimo drawer)
-    const findTopClientSelect = () => {
+    const setHitRight = () => {
+      hit.style.right = drawerWidth() + 'px';
+    };
+
+    const topClientSelect = () => {
       const selects = Array.from(document.querySelectorAll('select')).filter(s => !drawer.contains(s));
       for (const s of selects) {
         const n = s.options?.length || 0;
@@ -101,11 +116,11 @@
     };
 
     const populateClients = (target) => {
-      const top = findTopClientSelect();
-      if (!top || !top.options) return;
+      const src = topClientSelect();
+      if (!src || !src.options) return;
       const keep = target.value;
       target.innerHTML = '';
-      for (const o of top.options) {
+      for (const o of src.options) {
         const txt = (o.text || '').trim();
         if (/všichni/i.test(txt) || /all/i.test(o.value || '')) continue;
         const opt = document.createElement('option');
@@ -117,54 +132,43 @@
       if (!target.value && target.options.length) target.selectedIndex = 0;
     };
 
-    // ————— open/close —————
+    // ——— open / close ———
     let ro = null;
 
     const openDrawer = () => {
       document.body.classList.add('drawer-open');
-
-      // 1) nejdřív ukaž backdrop přes celou plochu (right: 0)
-      backdrop.style.right = '0px';
-      backdrop.classList.add('show');
-
-      // 2) otevři drawer (začne slide)
+      // připrav klikací pás ještě před zobrazením – odstraní „dvojitou“ animaci
+      setHitRight();
+      // zapnout dim i hit, otevřít drawer najednou
+      dim.classList.add('show');
+      hit.classList.add('show');
       drawer.classList.add('open');
       document.body.style.overflow = 'hidden';
-
-      // 3) po krátké chvíli (sync se slidováním) vyřízni díru
-      setTimeout(() => {
-        setShieldRight();        // teď už má drawer finální šířku
-      }, 120);
-
-      // naplň klienty
+      // naplnit klienty
       populateClients(document.getElementById('newJobClient'));
-
       forceZ();
       if (ro) ro.disconnect();
-      ro = new ResizeObserver(setShieldRight);
+      ro = new ResizeObserver(setHitRight);
       ro.observe(drawer);
-
-      // focus
       setTimeout(() => document.getElementById('newJobClient')?.focus(), 0);
     };
 
     const closeDrawer = () => {
       drawer.classList.remove('open');
-      backdrop.classList.remove('show');
+      dim.classList.remove('show');
+      hit.classList.remove('show');
       document.body.style.overflow = '';
       document.body.classList.remove('drawer-open');
-      backdrop.style.right = '0px';    // vrať štít zpět přes celé plátno
       if (ro) { ro.disconnect(); ro = null; }
       fab.focus();
     };
 
-    // ovládání
     fab.addEventListener('click', openDrawer);
     drawer.querySelector('#toolsClose').addEventListener('click', closeDrawer);
-    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeDrawer(); });
+    hit.addEventListener('click', (e) => { if (e.target === hit) closeDrawer(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
 
-    // akce – napoj na app.js
+    // akce do app.js
     const val = (id) => (document.getElementById(id)?.value || '').trim();
 
     drawer.querySelector('#btnAddJob').addEventListener('click', () => {

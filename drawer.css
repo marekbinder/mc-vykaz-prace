@@ -102,3 +102,17 @@ section.addRow { display: none !important; }
 .drawer-open .wrap{
   pointer-events:none !important;
 }
+
+/* Zásuvka i všechny potomci MUSÍ mít povolené pointer-events,
+   ať nic v kaskádě nezablokuje první <select> (Safari) */
+#toolsDrawer,
+#toolsDrawer * {
+  pointer-events: auto !important;
+}
+
+/* První dva selecty explicitně nad vším (kdyby někde byla pseudo-šipka apod.) */
+#newJobClient,
+#newJobStatus {
+  position: relative;
+  z-index: 2147483646; /* jen pro jistotu – nativní menu si to stejně vezme */
+}

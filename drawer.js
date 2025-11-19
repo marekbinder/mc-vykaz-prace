@@ -71,7 +71,7 @@
       document.body.appendChild(drawer);
     }
 
-    // ——— Pojistky z-indexů (když by je něco přepsalo)
+    // ——— Z-index bezpečnost
     const forceTop = () => {
       backdrop.style.setProperty('z-index','2147483400','important');
       drawer  .style.setProperty('z-index','2147483600','important');
@@ -82,7 +82,7 @@
     };
     forceTop();
 
-    // ——— Pomocné funkce
+    // ——— Helpery
     const unlockSelect = (sel) => {
       if (!sel) return sel;
       const c = sel.cloneNode(true);
@@ -127,22 +127,21 @@
       if (!target.value && target.options.length) target.selectedIndex = 0;
     };
 
-    // ——— Backdrop „s dírou“
+    // ——— Backdrop s „dírou“ pomocí clip-path (funguje i v Safari)
     let resizeObserver;
     const fitBackdropHole = () => {
-      // nastavíme pravý okraj backdropu na aktuální šířku draweru → oblast pod drawerem není zakrytá
       const w = Math.round(drawer.getBoundingClientRect().width);
-      backdrop.style.right = w + 'px';
+      const inset = `inset(0 ${w}px 0 0)`; // top right bottom left → vyřízne pravou stranu o šířce draweru
+      backdrop.style.clipPath = inset;
+      backdrop.style.webkitClipPath = inset;
     };
 
     const openDrawer = () => {
       document.body.classList.add('drawer-open');
 
-      // odemkni nativní selecty
       const selClient = unlockSelect(document.getElementById('newJobClient'));
       unlockSelect(document.getElementById('newJobStatus'));
 
-      // naplň klienty
       populateClients(selClient);
 
       drawer.classList.add('open');
@@ -150,15 +149,14 @@
       document.body.style.overflow = 'hidden';
 
       forceTop();
-      fitBackdropHole();                        // vytvoř „díru“ v backdropu pod drawerem
+      fitBackdropHole();
 
-      // reaguj i na změnu šířky (responsivně)
       const ro = new ResizeObserver(fitBackdropHole);
       ro.observe(drawer);
       resizeObserver = ro;
 
       setTimeout(() => {
-        if (selClient.options.length) selClient.focus();
+        if (selClient?.options.length) selClient.focus();
         else document.getElementById('newJobName')?.focus();
       }, 0);
     };
@@ -168,8 +166,13 @@
       backdrop.classList.remove('show');
       document.body.style.overflow = '';
       document.body.classList.remove('drawer-open');
-      backdrop.style.right = '0px';             // vrátit backdrop přes celou šířku
+
+      // vrátíme backdrop bez výřezu
+      backdrop.style.clipPath = 'inset(0 0 0 0)';
+      backdrop.style.webkitClipPath = 'inset(0 0 0 0)';
+
       if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null; }
+
       fab.style.opacity = '';
       fab.style.pointerEvents = '';
       fab.focus();
@@ -181,7 +184,7 @@
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeDrawer(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
 
-    // ——— Akce (napoj si na svoje funkce)
+    // ——— Akce (napoj na svoje funkce v app.js, beze změn)
     const val = (id) => (document.getElementById(id)?.value || '').trim();
 
     drawer.querySelector('#btnAddJob').addEventListener('click', () => {

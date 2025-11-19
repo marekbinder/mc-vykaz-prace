@@ -409,9 +409,30 @@ async function refreshData(){ state.entries=await loadEntriesMine(); await refre
 
 // ==== SHELL ====
 function setWeekHandlers(){
-  document.getElementById('prevWeek').onclick=()=>{ state.weekStart=addDays(state.weekStart,-7); setWeekRangeLabel(); refreshData(); };
-  document.getElementById('nextWeek').onclick=()=>{ state.weekStart=addDays(state.weekStart, 7); setWeekRangeLabel(); refreshData(); };
-  document.getElementById('exportXlsx').onclick=exportExcel;
+  const prev   = document.getElementById('prevWeek');
+  const next   = document.getElementById('nextWeek');
+  const pill   = document.getElementById('weekRange');
+
+  prev.onclick = () => {
+    state.weekStart = addDays(state.weekStart, -7);
+    setWeekRangeLabel();
+    refreshData();
+  };
+
+  next.onclick = () => {
+    state.weekStart = addDays(state.weekStart,  7);
+    setWeekRangeLabel();
+    refreshData();
+  };
+
+  // místo tlačítka #exportXlsx pojede export na klik na pill s týdnem
+  if (pill) {
+    pill.style.cursor = 'pointer';
+    pill.onclick = () => {
+      // stejná funkce, kterou dřív používalo tlačítko „Export do Excelu“
+      exportExcel();
+    };
+  }
 }
 function buildShellControls(){
   // filtry klient / status

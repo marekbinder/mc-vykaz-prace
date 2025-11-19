@@ -89,10 +89,17 @@
     function openDrawer() {
       hydrateWithRetries();
 
-      drawer.classList.add('open');
-      backdrop.classList.add('show');
-      drawer.setAttribute('aria-hidden', 'false');
-      drawer.setAttribute('aria-modal', 'true');
+// otevření
+drawer.classList.add('open');
+backdrop.classList.add('show');
+drawer.setAttribute('aria-hidden', 'false');
+document.body.style.overflow = 'hidden';
+
+// zavření
+drawer.classList.remove('open');
+backdrop.classList.remove('show');
+drawer.setAttribute('aria-hidden', 'true');
+document.body.style.overflow = '';
 
       // jemný scroll-lock
       document.body.style.overflow = 'hidden';

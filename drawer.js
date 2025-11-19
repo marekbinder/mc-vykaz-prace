@@ -1,7 +1,6 @@
 // drawer.js – boční panel „Nástroje“ (otevření/zavření + hydratace selectů)
 (function () {
-  // --- utilita: spustit po načtení DOMu
-  const ready = (fn) => {
+  const onReady = (fn) => {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', fn, { once: true });
     } else {
@@ -9,127 +8,107 @@
     }
   };
 
-  ready(() => {
-    const qs  = (s, p = document) => p.querySelector(s);
-    const qsa = (s, p = document) => Array.from(p.querySelectorAll(s));
+  onReady(() => {
+    const $  = (s, p = document) => p.querySelector(s);
+    const $$ = (s, p = document) => Array.from(p.querySelectorAll(s));
 
-    const drawer   = qs('#toolsDrawer');
-    const backdrop = qs('#toolsBackdrop');
-    const fab      = qs('#toolsFab');
-    const btnClose = qs('#toolsClose');
+    const drawer   = $('#toolsDrawer');
+    const backdrop = $('#toolsBackdrop');
+    const fab      = $('#toolsFab');
+    const btnClose = $('#toolsClose');
 
-    if (!drawer || !backdrop) {
-      console.warn('[drawer] Missing #toolsDrawer or #toolsBackdrop.');
+    if (!drawer || !backdrop || !fab || !btnClose) {
+      console.warn('[drawer] Chybí jeden z prvků (drawer/backdrop/fab/close).');
       return;
     }
 
-    // --- zdroje (filtry na hlavní ploše) a cíle (formulář v panelu)
+    // zdroje (filtry na hlavní stránce) a cíle (selecty v panelu)
     const SRC_CLIENT = '#filterClient';
     const SRC_STATUS = '#filterStatus';
     const DST_CLIENT = '#newJobClient';
     const DST_STATUS = '#newJobStatus';
 
-    // bezpečné kopírování <option> mezi <selecty>
     function copyOptions(srcSel, dstSel, { skipValues = [] } = {}) {
-      const src = qs(srcSel);
-      const dst = qs(dstSel);
+      const src = $(srcSel);
+      const dst = $(dstSel);
+      if (!src || !dst) return;
 
-      if (!src)  { console.info('[drawer] Nenalezen zdroj', srcSel); return; }
-      if (!dst)  { console.info('[drawer] Nenalezen cíl', dstSel);  return; }
-
-      // když už v cíli něco je, nepřepisujeme (minimalizace blikání)
-      if (dst.options && dst.options.length > 0) {
-        return;
-      }
+      // když už jsou v cíli options, nepřepisuj
+      if (dst.options && dst.options.length > 0) return;
 
       const opts = Array.from(src.options || []);
       if (!opts.length) return;
 
       const frag = document.createDocumentFragment();
-      opts.forEach(opt => {
+      for (const opt of opts) {
         const v = String(opt.value ?? '');
-        if (skipValues.includes(v)) return;
+        if (skipValues.includes(v)) continue;
         const o = document.createElement('option');
         o.value = v;
         o.textContent = opt.textContent || v;
         frag.appendChild(o);
-      });
-
+      }
       if (frag.childNodes.length) {
         dst.innerHTML = '';
         dst.appendChild(frag);
       }
     }
 
-    // doplnit data do formuláře v panelu
-    function hydrateAddForm() {
+    function hydrateForm() {
       copyOptions(SRC_CLIENT, DST_CLIENT, { skipValues: ['ALL'] });
       copyOptions(SRC_STATUS, DST_STATUS, { skipValues: ['ALL'] });
     }
 
-    // kdyby filtry dorazily později, sledujeme jejich <option>
+    // kdyby se filtry naplnily až po čase, sledujeme jejich změny
     [SRC_CLIENT, SRC_STATUS].forEach(sel => {
-      const el = qs(sel);
+      const el = $(sel);
       if (!el) return;
-      const mo = new MutationObserver(() => hydrateAddForm());
+      const mo = new MutationObserver(() => hydrateForm());
       mo.observe(el, { childList: true });
     });
 
-    // --- otevření/zavření panelu
+    // pro jistotu spustíme hydrataci i „pozdě“ (když by filtry přijely pozdě)
+    function hydrateWithRetries() {
+      hydrateForm();
+      setTimeout(hydrateForm, 100);
+      setTimeout(hydrateForm, 400);
+    }
+
     function openDrawer() {
-      hydrateAddForm();
+      hydrateWithRetries();
 
       drawer.classList.add('open');
       backdrop.classList.add('show');
-
-      // a11y: panel je viditelný a modální
       drawer.setAttribute('aria-hidden', 'false');
       drawer.setAttribute('aria-modal', 'true');
 
-      // scroll lock
-      document.documentElement.style.overflow = 'hidden';
+      // jemný scroll-lock (necháváme <html> být)
       document.body.style.overflow = 'hidden';
 
       // fokus na první vstup
-      const first = qs(DST_CLIENT);
+      const first = $(DST_CLIENT) || $('#newJobName');
       if (first) setTimeout(() => first.focus(), 10);
     }
 
     function closeDrawer() {
       drawer.classList.remove('open');
       backdrop.classList.remove('show');
-
-      // a11y: po zavření je panel mimo čtení
       drawer.setAttribute('aria-hidden', 'true');
       drawer.removeAttribute('aria-modal');
-
-      document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
     }
 
-    // --- ovládání klikem
-    document.addEventListener('click', (e) => {
-      const openEl  = e.target.closest('#toolsFab, [data-open-drawer]');
-      const closeEl = e.target.closest('#toolsClose, [data-close-drawer]');
-
-      if (openEl)  { e.preventDefault(); openDrawer(); }
-      if (closeEl) { e.preventDefault(); closeDrawer(); }
-
-      // klik do backdropu zavírá
-      if (drawer.classList.contains('open') && e.target === backdrop) {
-        closeDrawer();
-      }
+    // ovládání
+    fab.addEventListener('click', (e) => { e.preventDefault(); openDrawer(); });
+    btnClose.addEventListener('click', (e) => { e.preventDefault(); closeDrawer(); });
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop && drawer.classList.contains('open')) closeDrawer();
     });
-
-    // klávesa Esc zavře
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && drawer.classList.contains('open')) {
-        e.preventDefault();
-        closeDrawer();
-      }
+      if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
     });
 
-    // expozice pro ruční testování v konzoli
+    // export pro rychlé ladění
     window.drawer = { open: openDrawer, close: closeDrawer, el: drawer };
   });
 })();

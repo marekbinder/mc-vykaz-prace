@@ -39,22 +39,24 @@ section.addRow { display: none !important; }
 #toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
 
 /* panel – BEZ transform (kvůli nativním selectům) a s overflow přímo na panelu */
-/* Backdrop */
-#toolsBackdrop { position: fixed; inset: 0; background: rgba(10,14,20,.45);
-  opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 99996; }
-#toolsBackdrop.show { opacity: 1; pointer-events: auto; }
-
-/* Drawer – VÝCHOZÍ mimo obrazovku a otevřený stav */
-#toolsDrawer { position: fixed; top: 0; right: -100%; height: 100vh;
-  width: min(420px, 92vw); background: #fff; box-shadow: -14px 0 30px rgba(0,0,0,.25);
-  transition: right .22s ease; z-index: 99997; display: flex; flex-direction: column;
-  border-top-left-radius: 12px; border-bottom-left-radius: 12px; overflow: auto; }
-#toolsDrawer.open { right: 0; }
+#toolsDrawer{
+  position: fixed;
+  top: 0;
+  right: -100%;
+  height: 100vh;
+  width: min(420px, 92vw);
+  background: #fff;
+  box-shadow: -14px 0 30px rgba(0,0,0,.25);
+  transition: right .22s ease;
+  z-index: 99997;
+  display: flex;
+  flex-direction: column;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
 
   /* kritické: vlastní scroll kontejner */
   overflow: auto;
-
-
+}
 #toolsDrawer.open{ right: 0; }
 
 .toolsHead{
@@ -68,12 +70,11 @@ section.addRow { display: none !important; }
 }
 #toolsClose::after{ content:'✕'; font-size:16px; }
 
-.toolsBody{ padding:16px 18px 24px 18px; /* už ne-scrolluje */ }
-
+.toolsBody{ padding:16px 18px 24px 18px; }
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
-/* jistota, že formuláře v panelu opravdu berou kliky */
+/* pilly uvnitř zásuvky musí brát kliky a mít plnou šířku */
 .toolsBody .pill-input,
 .toolsBody .pill-select,
 .toolsBody .pill-btn{
@@ -82,60 +83,11 @@ section.addRow { display: none !important; }
   pointer-events: auto;
 }
 
-/* === klíčové přepsání nativních selectů v panelu === */
-.toolsBody .pill-select{
-  -webkit-appearance: menulist !important;
-  appearance: menulist !important;
-  background: #fff !important;
-  position: relative;
-  z-index: 2;                 /* nad případnou dekorativní šipkou */
-  cursor: default;
-}
-
-/* kdyby někde existovala dekorativní šipka, ať neblokuje klik */
-.toolsBody .select-arrow,
-.toolsBody .pill-select + .select-arrow{
-  pointer-events: none !important;
-}
-
-/* --- Enable native selects inside the tools drawer --- */
-#toolsDrawer select,
-#toolsDrawer .pill-select {
-  -webkit-appearance: menulist !important;
-  appearance: menulist !important;
-  background-image: none !important;   /* kdyby byla nastavená vlastní šipka */
-  cursor: default;
-  pointer-events: auto !important;
-}
-
-/* Pokud máš na .pill-select nějakou pseudo-šipku, ať nebere kliky */
-#toolsDrawer .pill-select::after,
-#toolsDrawer .pill-select:after {
-  display: none !important;
-  pointer-events: none !important;
-}
-
-/* pro jistotu – žádné překryvy uvnitř zásuvky */
-#toolsDrawer * {
-  pointer-events: auto;
-}
-
-#toolsDrawer select,
-#toolsDrawer .pill-select {
-  -webkit-appearance: menulist-button !important; /* fallback pro Safari */
-  appearance: menulist !important;
-}
-
-#toolsDrawer .pill-select {
-  min-height: 42px;
-  line-height: 1.2;
-}
-
-/* ==== Nativní selecty uvnitř zásuvky – přebití "pill" stylu ==== */
+/* === nativní selecty uvnitř zásuvky – přebíjí globální "pill" vzhled === */
 #toolsDrawer select,
 #toolsDrawer .pill-select,
-#toolsDrawer select.pill-select {
-  -webkit-appearance: menulist-button !important; /* Safari */
+#toolsDrawer select.pill-select{
+  -webkit-appearance: menulist-button !important;  /* Safari */
   appearance: menulist !important;
   background-image: none !important;
   cursor: default;
@@ -144,13 +96,13 @@ section.addRow { display: none !important; }
   line-height: 1.2;
 }
 
-/* Dekorativní šipky (pokud nějaké máš) nesmí brát kliky ani překrývat */
+/* šipky/dekorace neblokují klik */
 #toolsDrawer .pill-select::after,
 #toolsDrawer .select-arrow,
-#toolsDrawer .pill-select + .select-arrow {
+#toolsDrawer .pill-select + .select-arrow{
   display: none !important;
   pointer-events: none !important;
 }
 
-/* Pro jistotu žádné "neviditelné" překryvy uvnitř zásuvky */
-#toolsDrawer * { pointer-events: auto; }
+/* jistota – nic v zásuvce není „průhledný“ overlay */
+#toolsDrawer *{ pointer-events:auto; }

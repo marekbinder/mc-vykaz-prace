@@ -1,18 +1,19 @@
 (function () {
-  const ready = (fn) => (document.readyState === 'loading'
-    ? document.addEventListener('DOMContentLoaded', fn)
-    : fn());
+  const onReady = (fn) =>
+    (document.readyState === 'loading'
+      ? document.addEventListener('DOMContentLoaded', fn)
+      : fn());
 
-  ready(() => {
-    // ——— CSS jistota
+  onReady(() => {
+    // 1) zajistíme CSS
     if (!document.querySelector('link[href$="drawer.css"], link[href*="drawer.css"]')) {
-      const l = document.createElement('link');
-      l.rel = 'stylesheet';
-      l.href = 'drawer.css';
-      document.head.appendChild(l);
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'drawer.css';
+      document.head.appendChild(link);
     }
 
-    // ——— FAB
+    // 2) FAB
     let fab = document.getElementById('toolsFab');
     if (!fab) {
       fab = document.createElement('button');
@@ -23,7 +24,7 @@
       document.body.appendChild(fab);
     }
 
-    // ——— Backdrop
+    // 3) Backdrop (shield jen vlevo)
     let backdrop = document.getElementById('toolsBackdrop');
     if (!backdrop) {
       backdrop = document.createElement('div');
@@ -31,7 +32,7 @@
       document.body.appendChild(backdrop);
     }
 
-    // ——— Drawer
+    // 4) Drawer
     let drawer = document.getElementById('toolsDrawer');
     if (!drawer) {
       drawer = document.createElement('aside');
@@ -47,7 +48,7 @@
           <section class="toolsSection" aria-labelledby="sec-add-job">
             <h3 id="sec-add-job">Přidání zakázky</h3>
             <select id="newJobClient" class="pill-select" aria-label="Klient"></select>
-            <input  id="newJobName"   class="pill-input" type="text" placeholder="Název zakázky">
+            <input  id="newJobName"   class="pill-input"  type="text" placeholder="Název zakázky">
             <select id="newJobStatus" class="pill-select" aria-label="Stav">
               <option value="NEW">Nová</option>
               <option value="INPROGRESS">Probíhá</option>
@@ -71,8 +72,9 @@
       document.body.appendChild(drawer);
     }
 
-    // ——— Z-index bezpečnost
-    const forceTop = () => {
+    // ——————————————————————————————————
+    // UTIL: udržet z-indexy a šířku „díry“ v backdropu
+    const forceZ = () => {
       backdrop.style.setProperty('z-index','2147483400','important');
       drawer  .style.setProperty('z-index','2147483600','important');
       drawer.querySelectorAll('select').forEach(s=>{
@@ -80,25 +82,14 @@
         s.style.setProperty('position','relative','important');
       });
     };
-    forceTop();
 
-    // ——— Helpery
-    const unlockSelect = (sel) => {
-      if (!sel) return sel;
-      const c = sel.cloneNode(true);
-      c.classList.remove('pill-select');
-      c.style.webkitAppearance = 'menulist-button';
-      c.style.appearance = 'menulist';
-      c.style.backgroundImage = 'none';
-      c.style.pointerEvents = 'auto';
-      c.style.position = 'relative';
-      c.style.zIndex = '2147483700';
-      c.style.minHeight = '44px';
-      c.style.width = '100%';
-      sel.replaceWith(c);
-      return c;
+    const setShieldGap = () => {
+      const w = Math.round(drawer.getBoundingClientRect().width || 0);
+      document.documentElement.style.setProperty('--drawer-w', w + 'px');
     };
+    // ——————————————————————————————————
 
+    // najde horní „Klient“ select mimo drawer (použijeme jeho options)
     const findTopClientSelect = () => {
       const selects = Array.from(document.querySelectorAll('select')).filter(s => !drawer.contains(s));
       for (const s of selects) {
@@ -127,38 +118,24 @@
       if (!target.value && target.options.length) target.selectedIndex = 0;
     };
 
-    // ——— Backdrop s „dírou“ pomocí clip-path (funguje i v Safari)
-    let resizeObserver;
-    const fitBackdropHole = () => {
-      const w = Math.round(drawer.getBoundingClientRect().width);
-      const inset = `inset(0 ${w}px 0 0)`; // top right bottom left → vyřízne pravou stranu o šířce draweru
-      backdrop.style.clipPath = inset;
-      backdrop.style.webkitClipPath = inset;
-    };
+    // Otevření / Zavření
+    let ro = null;
 
     const openDrawer = () => {
       document.body.classList.add('drawer-open');
-
-      const selClient = unlockSelect(document.getElementById('newJobClient'));
-      unlockSelect(document.getElementById('newJobStatus'));
-
-      populateClients(selClient);
-
       drawer.classList.add('open');
+      setShieldGap();                  // vyřízni štít vlevo
       backdrop.classList.add('show');
       document.body.style.overflow = 'hidden';
 
-      forceTop();
-      fitBackdropHole();
+      // naplň klienty
+      populateClients(document.getElementById('newJobClient'));
 
-      const ro = new ResizeObserver(fitBackdropHole);
+      forceZ();
+      if (ro) ro.disconnect();
+      ro = new ResizeObserver(setShieldGap);
       ro.observe(drawer);
-      resizeObserver = ro;
-
-      setTimeout(() => {
-        if (selClient?.options.length) selClient.focus();
-        else document.getElementById('newJobName')?.focus();
-      }, 0);
+      setTimeout(() => document.getElementById('newJobClient')?.focus(), 0);
     };
 
     const closeDrawer = () => {
@@ -166,25 +143,18 @@
       backdrop.classList.remove('show');
       document.body.style.overflow = '';
       document.body.classList.remove('drawer-open');
-
-      // vrátíme backdrop bez výřezu
-      backdrop.style.clipPath = 'inset(0 0 0 0)';
-      backdrop.style.webkitClipPath = 'inset(0 0 0 0)';
-
-      if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null; }
-
-      fab.style.opacity = '';
-      fab.style.pointerEvents = '';
+      document.documentElement.style.removeProperty('--drawer-w');
+      if (ro) { ro.disconnect(); ro = null; }
       fab.focus();
     };
 
-    // ——— Ovládání
+    // Ovládání
     fab.addEventListener('click', openDrawer);
-    drawer.querySelector('#toolsClose') .addEventListener('click', closeDrawer);
+    drawer.querySelector('#toolsClose').addEventListener('click', closeDrawer);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeDrawer(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
 
-    // ——— Akce (napoj na svoje funkce v app.js, beze změn)
+    // Akce – napoj na svoje funkce v app.js
     const val = (id) => (document.getElementById(id)?.value || '').trim();
 
     drawer.querySelector('#btnAddJob').addEventListener('click', () => {

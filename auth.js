@@ -108,7 +108,7 @@
   }
 
   function openOverlay(step) {
-    ensureOverlay();
+    Overlay();
     overlay.style.display = 'block';
     if (step === 'new') {
       stepRequest.style.display = 'none';
@@ -162,44 +162,43 @@
     document.head.appendChild(style);
   }
 
-  function ensureFloatingButtons(sb) {
-    // ZMĚNIT HESLO (výše)
-    if (!document.getElementById('authChangePwd')) {
-      const change = document.createElement('button');
-      change.id = 'authChangePwd';
-      change.type = 'button';
-      change.textContent = 'Nastavit/změnit heslo';
-      Object.assign(change.style, {
-        position:'fixed', right:'16px', bottom:'72px',
-        background:'#fff', border:'1px solid #e8eef7', borderRadius:'10px',
-        padding:'10px 12px', boxShadow:'0 6px 18px rgba(0,0,0,.08)',
-        cursor:'pointer', zIndex: 9999
-      });
-      change.addEventListener('click', () => openOverlay('new'));
-      document.body.appendChild(change);
-    }
-
-    // ODHlÁSIT (níž, červené orámování)
-    if (!document.getElementById('authLogoutFab')) {
-      const logout = document.createElement('button');
-      logout.id = 'authLogoutFab';
-      logout.type = 'button';
-      logout.textContent = 'Odhlásit';
-      Object.assign(logout.style, {
-        position:'fixed', right:'16px', bottom:'16px',
-        background:'#fff', border:'1px solid #f3c0c0', color:'#b00020',
-        borderRadius:'10px', padding:'10px 12px',
-        boxShadow:'0 6px 18px rgba(176,0,32,.12)', cursor:'pointer', zIndex: 9999,
-        fontWeight:'700'
-      });
-      logout.addEventListener('click', async () => {
-        try { await sb.auth.signOut(); } catch {}
-        cleanupUrl();
-        location.reload();
-      });
-      document.body.appendChild(logout);
-    }
+function ensureFloatingButtons(sb) {
+  // ZMĚNIT HESLO (nahoře)
+  if (!document.getElementById('authChangePwd')) {
+    const change = document.createElement('button');
+    change.id = 'authChangePwd';
+    change.type = 'button';
+    change.textContent = 'Nastavit/změnit heslo';
+    Object.assign(change.style, {
+      position:'fixed', right:'16px', bottom:'72px',
+      background:'#fff', border:'1px solid #e8eef7', borderRadius:'10px',
+      padding:'10px 12px', boxShadow:'0 6px 18px rgba(0,0,0,.08)',
+      cursor:'pointer', zIndex: 9999, color:'#0b1625', fontWeight:'700'
+    });
+    change.addEventListener('click', () => openOverlay('new'));
+    document.body.appendChild(change);
   }
+
+  // ODHlÁSIT (níž) – stejný styl jako výše
+  if (!document.getElementById('authLogoutFab')) {
+    const logout = document.createElement('button');
+    logout.id = 'authLogoutFab';
+    logout.type = 'button';
+    logout.textContent = 'Odhlásit';
+    Object.assign(logout.style, {
+      position:'fixed', right:'16px', bottom:'16px',
+      background:'#fff', border:'1px solid #e8eef7', borderRadius:'10px',
+      padding:'10px 12px', boxShadow:'0 6px 18px rgba(0,0,0,.08)',
+      cursor:'pointer', zIndex: 9999, color:'#0b1625', fontWeight:'700'
+    });
+    logout.addEventListener('click', async () => {
+      try { await sb.auth.signOut(); } catch {}
+      cleanupUrl();
+      location.reload();
+    });
+    document.body.appendChild(logout);
+  }
+}
 
   // ----------- Start -----------
   (async () => {

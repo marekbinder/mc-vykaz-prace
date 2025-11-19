@@ -1,203 +1,181 @@
-/* Drawer – plně autonomní:
-   - sám vloží <link href="drawer.css"> pokud chybí
-   - vytvoří FAB (+), backdrop i zásuvku, pokud chybí
-   - otevření/zavření, ESC, klik mimo
-   - při otevření naklonuje možnosti z horního filtru klientů do #newJobClient
-*/
-
 (function () {
-  const onReady = (fn) => (document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', fn) : fn());
+  const qs  = (s, r=document) => r.querySelector(s);
+  const qsa = (s, r=document) => [...r.querySelectorAll(s)];
 
-  onReady(() => {
-    // 1) přidej drawer.css, pokud není
-    if (!document.querySelector('link[href$="drawer.css"], link[href*="drawer.css"]')) {
-      const l = document.createElement('link');
-      l.rel = 'stylesheet';
-      l.href = 'drawer.css';
-      document.head.appendChild(l);
-    }
+  const $fab       = qs('#toolsFab');
+  const $backdrop  = qs('#toolsBackdrop');
+  const $drawer    = qs('#toolsDrawer');
+  const $close     = qs('#toolsClose');
 
-    // 2) FAB
-    let fab = document.getElementById('toolsFab');
-    if (!fab) {
-      fab = document.createElement('button');
-      fab.id = 'toolsFab';
-      fab.type = 'button';
-      fab.setAttribute('aria-label', 'Nástroje');
-      fab.textContent = '+';
-      document.body.appendChild(fab);
-    }
+  const $selClient = qs('#newJobClient');
+  const $inpJob    = qs('#newJobName');
+  const $btnJob    = qs('#btnAddJob');
 
-    // 3) Backdrop
-    let backdrop = document.getElementById('toolsBackdrop');
-    if (!backdrop) {
-      backdrop = document.createElement('div');
-      backdrop.id = 'toolsBackdrop';
-      document.body.appendChild(backdrop);
-    }
+  const $inpClient = qs('#newClientName');
+  const $btnClient = qs('#btnAddClient');
 
-    // 4) Drawer
-    let drawer = document.getElementById('toolsDrawer');
-    if (!drawer) {
-      drawer = document.createElement('aside');
-      drawer.id = 'toolsDrawer';
-      drawer.setAttribute('role', 'dialog');
-      drawer.setAttribute('aria-label', 'Nástroje');
+  // ---------- otevření / zavření ----------
+  const open = () => {
+    document.body.classList.add('drawer-open');
+    $drawer.setAttribute('aria-hidden', 'false');
+    $drawer.classList.add('open');
 
-      drawer.innerHTML = `
-        <div class="toolsHead">
-          <div class="toolsTitle">Nástroje</div>
-          <button id="toolsClose" type="button" aria-label="Zavřít"></button>
-        </div>
-        <div class="toolsBody">
+    $backdrop.classList.add('show');
+    $backdrop.setAttribute('aria-hidden', 'false');
 
-          <section class="toolsSection" aria-labelledby="sec-add-job">
-            <h3 id="sec-add-job">Přidání zakázky</h3>
-            <select id="newJobClient" class="pill-select" aria-label="Klient"></select>
-            <input  id="newJobName"   class="pill-input"  type="text" placeholder="Název zakázky">
-            <select id="newJobStatus" class="pill-select" aria-label="Stav">
-              <option value="NEW">Nová</option>
-              <option value="INPROGRESS">Probíhá</option>
-              <option value="DONE">Hotovo</option>
-            </select>
-            <button id="btnAddJob" class="pill-btn" type="button">Přidat zakázku</button>
-          </section>
+    // naplnění klientů (klon z #filterClient)
+    hydrateClientsFromFilter();
+  };
 
-          <section class="toolsSection" aria-labelledby="sec-add-client">
-            <h3 id="sec-add-client">Přidání klienta</h3>
-            <input id="newClientName" class="pill-input" type="text" placeholder="Název klienta">
-            <button id="btnAddClient" class="pill-btn" type="button">Přidat klienta</button>
-          </section>
+  const close = () => {
+    document.body.classList.remove('drawer-open');
+    $drawer.setAttribute('aria-hidden', 'true');
+    $drawer.classList.remove('open');
 
-          <section class="toolsSection" aria-labelledby="sec-account">
-            <h3 id="sec-account">Účet</h3>
-            <button id="btnLogout" class="pill-btn" type="button">Odhlásit</button>
-          </section>
+    $backdrop.classList.remove('show');
+    $backdrop.setAttribute('aria-hidden', 'true');
+  };
 
-        </div>
-      `;
-      document.body.appendChild(drawer);
-    }
+  $fab?.addEventListener('click', open);
+  $close?.addEventListener('click', close);
+  $backdrop?.addEventListener('click', close);
 
-    const btnClose   = drawer.querySelector('#toolsClose');
-    const btnAddJob  = drawer.querySelector('#btnAddJob');
-    const btnAddCl   = drawer.querySelector('#btnAddClient');
-    const btnLogout  = drawer.querySelector('#btnLogout');
-    const selClient  = drawer.querySelector('#newJobClient');
-    const selStatus  = drawer.querySelector('#newJobStatus');
-    const inpJobName = drawer.querySelector('#newJobName');
-    const inpClName  = drawer.querySelector('#newClientName');
+  // ---------- výplň klientů z tvého filtru ----------
+  function hydrateClientsFromFilter() {
+    const filter = qs('#filterClient');     // existuje v horním filtru appky
+    if (!filter) return;
 
-    // ===== Helpery
-    const openDrawer = () => {
-      populateClients();                 // naplníme klienty až při otevření
-      // jistota: nativní vzhled selectů (přebíjí případné globální pilly)
-      fixNativeSelect(selClient);
-      fixNativeSelect(selStatus);
+    // zachovej výběr, pokud uživatel něco vybral dřív
+    const selected = $selClient.value || '';
 
-      drawer.classList.add('open');
-      backdrop.classList.add('show');
-      drawer.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-      // přeneseme focus
-      setTimeout(() => { (selClient.options.length ? selClient : inpJobName).focus(); }, 0);
-    };
-
-    const closeDrawer = () => {
-      drawer.classList.remove('open');
-      backdrop.classList.remove('show');
-      drawer.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
-      fab.focus();
-    };
-
-    const fixNativeSelect = (el) => {
-      if (!el) return;
-      el.style.webkitAppearance = 'menulist-button';
-      el.style.appearance = 'menulist';
-      el.style.backgroundImage = 'none';
-      el.style.pointerEvents = 'auto';
-    };
-
-    // Naklonuje možnosti z horního filtru klientů (id může být #filterClient nebo podobné)
-    const populateClients = () => {
-      // najdeme první select nahoře, který vypadá jako filtr klientů
-      const cand = document.querySelector('#filterClient, select[aria-label="Všichni klienti"], select[aria-label="Klient"], .filters select');
-      // Pokud máme více selectů ve filtrech, vezmeme ten, kde je > 1 option a první má hodnotu typu "ALL" nebo placeholder
-      let topClientSelect = null;
-      const allSelects = Array.from(document.querySelectorAll('select'));
-      for (const s of allSelects) {
-        const n = s.options?.length || 0;
-        const txt = (s.options?.[0]?.text || '').toLowerCase();
-        if (n >= 2 && /klient/i.test(s.getAttribute('aria-label') || '') || /klient/i.test(s.id)) {
-          topClientSelect = s; break;
-        }
-        if (!topClientSelect && n >= 2 && /(klient|všichni)/i.test(txt)) topClientSelect = s;
-      }
-      if (!topClientSelect) topClientSelect = cand;
-
-      // pokud nic, necháme jak je (uživatel může dopsat ručně)
-      if (!topClientSelect || !topClientSelect.options) return;
-
-      const prev = selClient.value;
-      selClient.innerHTML = ''; // reset
-      for (const opt of topClientSelect.options) {
-        // přeskoč případné "Všichni klienti"/"ALL"
-        const t = (opt.text || '').trim();
-        if (/všichni/i.test(t) || /all/i.test(opt.value || '') ) continue;
-        const o = document.createElement('option');
-        o.value = opt.value || t;
-        o.text  = t;
-        selClient.appendChild(o);
-      }
-      // pokus o zachování volby
-      if (prev) selClient.value = prev;
-      // fallback: vyber první
-      if (!selClient.value && selClient.options.length) selClient.selectedIndex = 0;
-    };
-
-    // ===== Události
-    fab.addEventListener('click', openDrawer);
-    btnClose.addEventListener('click', closeDrawer);
-    backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) closeDrawer();
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+    // smaž a znovu naplň (bez ALL)
+    $selClient.innerHTML = '';
+    qsa('option', filter).forEach(opt => {
+      const v = String(opt.value || '').trim();
+      const t = String(opt.textContent || '').trim();
+      if (!v || v === 'ALL') return;
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = t;
+      $selClient.appendChild(o);
     });
 
-    // Placeholder akce (ponechávám volání na tvoje existující funkce, pokud v app.js jsou)
-    btnAddJob.addEventListener('click', () => {
-      const payload = {
-        client_id: selClient.value || null,
-        name: (inpJobName.value || '').trim(),
-        status: selStatus.value || 'NEW'
-      };
-      // Pokud máš v app.js metodu addJob(payload), zavolej ji:
-      if (typeof window.addJob === 'function') {
-        window.addJob(payload);
+    // když nic, nech první; jinak obnov původní volbu
+    if (selected) {
+      const has = qsa('option', $selClient).some(o => o.value === selected);
+      if (has) $selClient.value = selected;
+    }
+  }
+
+  // ---------- helper: toast přes tvůj #err ----------
+  function toast(msg, ms = 2400) {
+    const t = qs('#err');
+    if (!t) return alert(msg);
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, ms);
+  }
+
+  // ---------- API hooky do app.js, pokud existují ----------
+  const callApp = (fnName, ...args) => {
+    const fn = window && typeof window[fnName] === 'function' ? window[fnName] : null;
+    return fn ? fn(...args) : null;
+  };
+
+  // ---------- přidání zakázky (bez statusu – DB dá default „Nová“) ----------
+  $btnJob?.addEventListener('click', async () => {
+    const clientId = ($selClient.value || '').trim();
+    const name = ($inpJob.value || '').trim();
+
+    if (!clientId) { toast('Vyber klienta.'); return; }
+    if (!name)     { toast('Zadej název zakázky.'); return; }
+
+    // 1) zkus využít funkci z app.js (pokud ji máš)
+    try {
+      const viaApp = await callApp('createJob', { client_id: clientId, name });
+      if (viaApp !== null && viaApp !== undefined) {
+        toast('Zakázka přidána.');
+        $inpJob.value = '';
+        close();
+        return;
+      }
+    } catch (e) {
+      // pád ignore – zkusíme fallback
+    }
+
+    // 2) fallback – Supabase (pouze pokud máš globálně window.supabase / klíče uvnitř app.js)
+    try {
+      if (window.supabase && window.__SUPABASE) {
+        const { url, key, schema } = window.__SUPABASE; // očekáváno, že sis to v app.js nastavil
+        const sb = window.supabase.createClient(url, key, { db: { schema: schema || 'public' } });
+        const { error } = await sb.from('job').insert([{ client_id: clientId, name }]);
+        if (error) throw error;
+        toast('Zakázka přidána.');
+        $inpJob.value = '';
+        close();
       } else {
-        console.log('[drawer] Přidat zakázku:', payload);
+        toast('Zakázku se nepodařilo přidat (není dostupné API).');
       }
-    });
+    } catch (err) {
+      console.error(err);
+      toast('Chyba při přidání zakázky.');
+    }
+  });
 
-    btnAddCl.addEventListener('click', () => {
-      const name = (inpClName.value || '').trim();
-      if (!name) return;
-      if (typeof window.addClient === 'function') {
-        window.addClient({ name });
+  // ---------- přidání klienta ----------
+  $btnClient?.addEventListener('click', async () => {
+    const name = ($inpClient.value || '').trim();
+    if (!name) { toast('Zadej název klienta.'); return; }
+
+    // 1) zkus app.js
+    try {
+      const viaApp = await callApp('createClient', { name });
+      if (viaApp !== null && viaApp !== undefined) {
+        toast('Klient přidán.');
+        $inpClient.value = '';
+        hydrateClientsFromFilter(); // po přidání zkus klienty obnovit
+        return;
+      }
+    } catch (e) {}
+
+    // 2) fallback – Supabase
+    try {
+      if (window.supabase && window.__SUPABASE) {
+        const { url, key, schema } = window.__SUPABASE;
+        const sb = window.supabase.createClient(url, key, { db: { schema: schema || 'public' } });
+        const { error } = await sb.from('client').insert([{ name }]);
+        if (error) throw error;
+        toast('Klient přidán.');
+        $inpClient.value = '';
+        hydrateClientsFromFilter();
       } else {
-        console.log('[drawer] Přidat klienta:', name);
+        toast('Klienta se nepodařilo přidat (není dostupné API).');
       }
-    });
+    } catch (err) {
+      console.error(err);
+      toast('Chyba při přidání klienta.');
+    }
+  });
 
-    btnLogout.addEventListener('click', () => {
-      if (typeof window.logout === 'function') {
-        window.logout();
-      } else {
-        console.log('[drawer] Odhlásit');
+  // ---------- odhlášení ----------
+  qs('#btnLogout')?.addEventListener('click', async () => {
+    try {
+      const viaApp = await callApp('logout');
+      if (viaApp !== null && viaApp !== undefined) { close(); return; }
+    } catch (e) {}
+
+    try {
+      if (window.supabase && window.__SUPABASE) {
+        const { url, key, schema } = window.__SUPABASE;
+        const sb = window.supabase.createClient(url, key, { db: { schema: schema || 'public' } });
+        await sb.auth.signOut();
       }
-    });
+    } catch (e) {}
+    close();
+  });
 
+  // Malý komfort: ESC zavře
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && $drawer.classList.contains('open')) close();
   });
 })();

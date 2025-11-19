@@ -1,67 +1,58 @@
-/* ===== FAB + BACKDROP + DRAWER (komplet) ================================== */
+/* ===== FAB + BACKDROP + DRAWER =========================================== */
 
-/* Schovej starý pravý user box a řádek "přidat zakázku" na hlavní stránce */
+/* schovej starý pravý uživatelský box a řádek "přidat zakázku" na hlavní ploše */
 #userBoxTopRight,
 section.addRow { display: none !important; }
 
+/* fallback šířky zásuvky – JS při otevření přepíše */
+:root { --drawerW: 420px; }
+
 /* ---- FAB (+) ------------------------------------------------------------- */
 #toolsFab{
-  position: fixed;
-  right: 24px;
-  top: 16px;
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
-  background: #0b1625;
-  color: #fff;
-  font-weight: 700;
-  font-size: 24px;
-  line-height: 44px;
-  text-align: center;
+  position: fixed; right: 24px; top: 16px;
+  width: 44px; height: 44px; border-radius: 999px;
+  background:#0b1625; color:#fff; font-weight:700; font-size:24px; line-height:44px;
+  text-align:center; border:none; cursor:pointer;
   box-shadow: 0 6px 18px rgba(0,0,0,.18);
-  border: none;
-  cursor: pointer;
   transition: transform .15s ease, box-shadow .15s ease;
   z-index: 2147483643; /* pod backdropem a zásuvkou */
 }
-#toolsFab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
-.drawer-open #toolsFab { display: none !important; } /* ať se nepere s křížkem */
+#toolsFab:hover{ transform: translateY(-1px); box-shadow:0 8px 22px rgba(0,0,0,.22); }
+.drawer-open #toolsFab{ display:none !important; }
 
-/* ---- Backdrop ------------------------------------------------------------ */
-:root { --drawerW: 420px; }  /* fallback, JS při otevření přepíše na reálnou šířku */
-
+/* ---- BACKDROP ------------------------------------------------------------ */
 #toolsBackdrop{
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background: rgba(10,14,20,.45);
   opacity: 0;
-  pointer-events: none;              /* kliky jdou skrz */
-  transition: opacity .2s ease;
-  z-index: 2147483644;               /* pod zásuvkou */
-  /* výřez pro zásuvku – viz proměnná --drawerW */
-  clip-path: inset(0 var(--drawerW) 0 0);
+  /* KLÍČOVÉ: nikdy neber kliky, Safari/Chrome */
+  pointer-events: none !important;
+  transition: opacity .20s ease;
+  z-index: 2147483644; /* pod zásuvkou */
+  /* výchozí – bez díry (žádný problesk) */
+  clip-path: inset(0 0 0 0);
 }
 #toolsBackdrop.show{ opacity: 1; }
-
-/* ---- Drawer -------------------------------------------------------------- */
-#toolsDrawer{
-  position: fixed;
-  top: 0;
-  right: -100%;
-  height: 100vh;
-  width: min(420px, 92vw);
-  background: #fff;
-  box-shadow: -14px 0 30px rgba(0,0,0,.25);
-  transition: right .22s ease;
-  z-index: 2147483645;               /* nejvýš ze všech */
-  display: flex;
-  flex-direction: column;
-  border-top-left-radius: 12px;
-  border-bottom-left-radius: 12px;
-  overflow: auto;                    /* vlastní scroll uvnitř panelu */
-  aria-hidden: true;                 /* výchozí stav pro a11y */
+/* zapnutí díry – až po dokončení animace zásuvky (přepíná JS) */
+#toolsBackdrop[data-hole="on"]{
+  /* pravá „díra“ o šířce zásuvky */
+  clip-path: inset(0 var(--drawerW) 0 0);
 }
-#toolsDrawer.open{ right: 0; }
+
+/* ---- ZÁSUVKA ------------------------------------------------------------- */
+#toolsDrawer{
+  position: fixed; top:0; right:-100%;
+  height: 100vh; width: min(420px, 92vw);
+  background:#fff; color:#0b1625;
+  box-shadow:-14px 0 30px rgba(0,0,0,.25);
+  border-top-left-radius:12px; border-bottom-left-radius:12px;
+  display:flex; flex-direction:column;
+  overflow:auto; /* vlastní scroll uvnitř */
+  transition:right .22s ease;
+  z-index: 2147483645; /* nejvyšší */
+  aria-hidden: true;
+}
+#toolsDrawer.open{ right:0; }
 
 .toolsHead{
   display:flex; align-items:center; justify-content:space-between;
@@ -75,42 +66,39 @@ section.addRow { display: none !important; }
 #toolsClose::after{ content:'✕'; font-size:16px; }
 
 .toolsBody{ padding:16px 18px 24px 18px; }
-
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
-/* jistota, že prvky v panelu berou kliky */
+/* prvky uvnitř panelu berou kliky */
 .toolsBody .pill-input,
 .toolsBody .pill-select,
 .toolsBody .pill-btn{
-  width:100%;
-  margin:8px 0;
-  pointer-events: auto;
+  width:100%; margin:8px 0; pointer-events:auto;
 }
 
-/* Nativní select v zásuvce (Safari/Chrome) */
+/* nativní select uvnitř zásuvky (Safari/Chrome) */
 .toolsBody .pill-select,
 #toolsDrawer select{
   -webkit-appearance: menulist !important;
   appearance: menulist !important;
-  background: #fff !important;
-  background-image: none !important;
+  background:#fff !important;
+  background-image:none !important;
   cursor: default;
 }
 
-/* Pokud máš pseudo-šipky, ať neberou kliky */
+/* pseudo-šipky (pokud existují) ať neblokují klik */
 .toolsBody .select-arrow,
 .toolsBody .pill-select::after,
 .toolsBody .pill-select:after{
-  pointer-events: none !important;
-  display: none !important;
+  pointer-events:none !important;
+  display:none !important;
 }
 
-/* ---- Když je zásuvka otevřená, vypneme kliky okolí ---------------------- */
+/* Když je zásuvka otevřená, vypneme kliky okolí (aby nic nekradlo fokus) */
 .drawer-open .topbar,
 .drawer-open header.topbar,
 .drawer-open #app,
 .drawer-open main.wrap,
-.drawer-open .wrap {
-  pointer-events: none !important;
+.drawer-open .wrap{
+  pointer-events:none !important;
 }

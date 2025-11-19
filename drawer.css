@@ -1,8 +1,8 @@
-/* ===== skryj starý pravý box + řádek "přidat zakázku" na hlavní ploše ===== */
+/* ===== schovej starý pravý box + řádek "přidat zakázku" ===== */
 #userBoxTopRight,
 section.addRow { display: none !important; }
 
-/* ===== FAB (+) vpravo nahoře ===== */
+/* ===== FAB (+) ===== */
 #toolsFab{
   position: fixed;
   right: 24px;
@@ -14,8 +14,8 @@ section.addRow { display: none !important; }
   color: #fff;
   font-weight: 800;
   font-size: 26px;
-  display: grid;             /* perfektní centrování i v Safari */
-  place-items: center;
+  display: grid;
+  place-items: center;       /* perfektně vycentrované i v Safari */
   line-height: 1;
   box-shadow: 0 10px 26px rgba(0,0,0,.15);
   z-index: 99998;
@@ -26,19 +26,19 @@ section.addRow { display: none !important; }
 #toolsFab:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(0,0,0,.2); }
 body.tools-open #toolsFab{ opacity:.0; pointer-events:none; }
 
-/* ===== Backdrop ===== */
+/* ===== Backdrop – čistě vizuální, NECHYTÁ kliky ===== */
 #toolsBackdrop{
   position: fixed;
   inset: 0;
   background: rgba(10,14,20,.45);
   opacity: 0;
-  pointer-events: none;
+  pointer-events: none !important;   /* <— klíčové */
   transition: opacity .2s ease;
   z-index: 99996;
 }
-#toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
+#toolsBackdrop.show{ opacity: 1; }
 
-/* ===== Drawer (bez transform hacků pro selecty) ===== */
+/* ===== Drawer ===== */
 #toolsDrawer{
   position: fixed;
   top: 0;
@@ -48,7 +48,7 @@ body.tools-open #toolsFab{ opacity:.0; pointer-events:none; }
   background: #fff;
   box-shadow: -18px 0 36px rgba(0,0,0,.25);
   transition: right .22s ease;
-  z-index: 99997;            /* nad backdropem */
+  z-index: 99997;                   /* nad backdropem */
   display: flex;
   flex-direction: column;
   border-top-left-radius: 12px;
@@ -73,7 +73,7 @@ body.tools-open #toolsFab{ opacity:.0; pointer-events:none; }
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:10px 2px; color:#0b1625; opacity:.75; }
 
-/* ===== sjednocené „pill“ prvky v panelu ===== */
+/* sjednocené „pill“ prvky v panelu */
 #toolsDrawer .pill-input,
 #toolsDrawer .pill-select,
 #toolsDrawer .pill-btn{
@@ -83,7 +83,7 @@ body.tools-open #toolsFab{ opacity:.0; pointer-events:none; }
   border-radius:14px;
 }
 
-/* vstup */
+/* input */
 #toolsDrawer .pill-input{
   border:2px solid #e7edf7;
   padding:0 16px;
@@ -91,7 +91,7 @@ body.tools-open #toolsFab{ opacity:.0; pointer-events:none; }
   background:#fff;
 }
 
-/* nativní select – zachováme „menulist“ kvůli Safari, ale styl sjednotíme */
+/* nativní select – menulist kvůli Safari, vizuálně sjednocený */
 #toolsDrawer .pill-select{
   -webkit-appearance: menulist !important;
   appearance: menulist !important;

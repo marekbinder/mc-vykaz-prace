@@ -19,40 +19,29 @@ section.addRow { display: none !important; }
   line-height: 44px;
   text-align: center;
   box-shadow: 0 6px 18px rgba(0,0,0,.18);
-  z-index: 2147483636;               /* hodně vysoko, ale pod zásuvkou */
+  z-index: 2147483636;
   border: none;
   cursor: pointer;
   transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
 #toolsFab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
+.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
 
-/* při otevřeném panelu FAB zmizí */
-.drawer-open #toolsFab{
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* backdrop */
+/* backdrop = VIZUÁLNÍ jen pro stmavení; NIKDY NECHYTÁ KLIKY */
 #toolsBackdrop{
   position: fixed;
   inset: 0;
   background: rgba(10,14,20,.45);
   opacity: 0;
-  pointer-events: none;
+  pointer-events: none !important;     /* ← klíčové */
   transition: opacity .22s ease;
   z-index: 2147483637;
+  clip-path: none !important;
+  right: 0 !important;
 }
-#toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
+#toolsBackdrop.show{ opacity: 1; }
 
-/* pro jistotu – klikatelné okno do „děr“ nad drawerem (teď beztak nekryje nic) */
-#toolsHit{
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2147483638;
-}
-
-/* DRAWER – bez transform, jen „right“ kvůli nativním selectům */
+/* DRAWER (bez transform, jen "right" – kvůli nativním selectům) */
 #toolsDrawer{
   position: fixed;
   top: 0;
@@ -62,12 +51,12 @@ section.addRow { display: none !important; }
   background: #fff;
   box-shadow: -14px 0 30px rgba(0,0,0,.25);
   transition: right .22s ease;
-  z-index: 2147483640;               /* NAD vším (header, FAB…) */
+  z-index: 2147483640;                 /* NAD vším (header, backdrop, FAB) */
   display: flex;
   flex-direction: column;
   border-top-left-radius: 12px;
   border-bottom-left-radius: 12px;
-  overflow: auto;                    /* vlastní scroll uvnitř */
+  overflow: auto;                      /* vlastní scroll uvnitř */
 }
 #toolsDrawer.open{ right: 0; }
 
@@ -83,14 +72,13 @@ section.addRow { display: none !important; }
 #toolsClose::after{ content:'✕'; font-size:16px; }
 
 .toolsBody{ padding:16px 18px 28px 18px; }
-
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
-/* jistota, že formuláře v panelu opravdu berou kliky */
+/* jistota, že vše uvnitř panelu bere kliky */
 #toolsDrawer, #toolsDrawer * { pointer-events: auto; }
 
-/* === nativní selecty v panelu (Safari/Chrome) */
+/* nativní selecty v panelu */
 #toolsDrawer select.pill-select,
 #toolsDrawer .pill-select{
   -webkit-appearance: menulist !important;
@@ -100,10 +88,10 @@ section.addRow { display: none !important; }
   cursor: default;
 }
 
-/* dekorativní šipky (pokud někde jsou) ať neodebírají kliky */
+/* dekorativní šipky (pokud by někde byly) ať nekradou kliky */
 #toolsDrawer .select-arrow,
 #toolsDrawer .pill-select + .select-arrow,
-#toolsDrawer .pill-select::after { pointer-events: none !important; display: none !important; }
-
-/* vypnutí kliků přes backdrop „dírkami“ – žádné clip-pathy, jen plný overlay */
-#toolsBackdrop { clip-path: none !important; right: 0 !important; }
+#toolsDrawer .pill-select::after {
+  pointer-events: none !important;
+  display: none !important;
+}

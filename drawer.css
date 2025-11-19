@@ -1,109 +1,110 @@
-/* ===== FAB + BACKDROP + DRAWER ===== */
-
-/* schovat “uživatelský box” a staré “přidat zakázku” na hlavní ploše */
-#userBoxTopRight,
-section.addRow { display: none !important; }
-
-/* --- FAB (kulaté plus) --- */
-#toolsFab{
-  position: fixed;
-  right: 24px;
-  top: 16px;
-  width: 46px;
-  height: 46px;
-  border-radius: 999px;
-  background: #0b1625;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 6px 18px rgba(0,0,0,.18);
-  z-index: 99998;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
-}
-#toolsFab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
-#toolsFab .fabPlus{ font-weight: 900; font-size: 22px; line-height: 1; }
-
-/* při otevřeném panelu FAB zmizí (a nebrání křížku) */
-body.drawer-open #toolsFab{ opacity: 0; pointer-events: none; }
-
-/* --- Backdrop --- */
-#toolsBackdrop{
+/* === Drawer (pravý postranní panel) === */
+#drawer {
   position: fixed;
   inset: 0;
-  background: rgba(10,14,20,.45);
-  opacity: 0;
+  z-index: 1000;
   pointer-events: none;
-  transition: opacity .2s ease;
-  z-index: 99996;
 }
-#toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
 
-/* --- Drawer: POUŽIJEME SLIDING přes right, ne transform (kvůli nativním selectům) --- */
-#toolsDrawer{
-  position: fixed;
+#drawer.open {
+  pointer-events: auto;
+}
+
+.drawer__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0);         /* žádný viditelný stín, jak sis přál */
+  transition: background .2s ease;
+}
+
+#drawer.open .drawer__backdrop {
+  background: rgba(0,0,0,0.18);      /* velmi jemné stmavení při otevření (klidně 0,0,0,0) */
+}
+
+.drawer__sheet {
+  position: absolute;
   top: 0;
-  right: -100%;
-  height: 100vh;
-  width: min(420px, 92vw);
+  right: 0;
+  height: 100%;
+  width: min(92vw, 480px);
+  max-width: 480px;
   background: #fff;
-  box-shadow: -14px 0 30px rgba(0,0,0,.25);
-  transition: right .22s ease;
-  z-index: 99997;
+  border-radius: 16px 0 0 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  transform: translateX(100%);
+  transition: transform .25s ease;
   display: flex;
   flex-direction: column;
-  border-top-left-radius: 12px;
-  border-bottom-left-radius: 12px;
-  overflow: auto; /* vlastní scroll kontejner */
-}
-#toolsDrawer.open{ right: 0; }
-
-/* Hlavička zásuvky */
-.toolsHead{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:18px; border-bottom:1px solid rgba(0,0,0,.06);
-}
-.toolsTitle{ font-size:20px; font-weight:800; color:#0b1625; }
-#toolsClose{
-  width:36px; height:36px; border-radius:10px;
-  border:1px solid rgba(0,0,0,.08); background:#fff; cursor:pointer;
-}
-#toolsClose::after{ content:'✕'; font-size:16px; }
-
-/* Tělo */
-.toolsBody{ padding:16px 18px 24px 18px; }
-.toolsSection{ margin-bottom:24px; }
-.toolsSection h3{
-  font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.75;
 }
 
-/* Základní “pill” prvky – sjednocení vzhledu */
-.pill-input, .pill-select, .pill-btn{
-  width:100%; margin:8px 0; border-radius:999px; border:1px solid rgba(0,0,0,.12);
-  padding:14px 16px; font: inherit;
-}
-.pill-input{ background:#fff; }
-.pill-btn{ background:#fff; cursor:pointer; }
-.pill-btn.btn-primary{ background:#0b1625; color:#fff; border-color:#0b1625; }
-
-/* Native selecty musí být opravdu nativní (kvůli iOS/Safari) */
-.pill-select{
-  -webkit-appearance: menulist !important;
-  appearance: menulist !important;
-  background:#fff !important;
-  background-image:none !important;
-  cursor: default;
+#drawer.open .drawer__sheet {
+  transform: translateX(0);
 }
 
-/* Zajistit, že uvnitř panelu nic neblokuje pointer events */
-#toolsDrawer, #toolsDrawer * { pointer-events: auto; }
+.drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
 
-/* Backdrop nesmí překrývat panel – panel má vyšší z-index, ale pro jistotu: */
-#toolsBackdrop { z-index: 99996; }
-#toolsDrawer   { z-index: 99997; }
+.drawer__title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
 
-/* Když je panel zavřený, ať jeho stín není vidět */
-#toolsDrawer{ box-shadow: none; }
-#toolsDrawer.open{ box-shadow: -14px 0 30px rgba(0,0,0,.25); }
+.drawer__close {
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: 50%;
+  border: 0;
+  background: #0e1623;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.drawer__body {
+  padding: 18px 20px 24px 20px;
+  overflow: auto;
+  flex: 1;
+  display: grid;
+  gap: 22px;
+}
+
+.drawer__section h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.form-row {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.form-row > input,
+.form-row > select {
+  appearance: none;
+  height: 44px;
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.btn-primary {
+  height: 48px;
+  border-radius: 14px;
+  border: 0;
+  background: #0e1623;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}

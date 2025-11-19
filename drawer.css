@@ -1,58 +1,65 @@
-/* ===== FAB + BACKDROP + DRAWER =========================================== */
+/* ===== FAB + BACKDROP + DRAWER ===== */
 
-/* schovej starý pravý uživatelský box a řádek "přidat zakázku" na hlavní ploše */
+/* schovat staré prvky na hlavní ploše */
 #userBoxTopRight,
 section.addRow { display: none !important; }
 
-/* fallback šířky zásuvky – JS při otevření přepíše */
-:root { --drawerW: 420px; }
-
-/* ---- FAB (+) ------------------------------------------------------------- */
-#toolsFab{
-  position: fixed; right: 24px; top: 16px;
-  width: 44px; height: 44px; border-radius: 999px;
-  background:#0b1625; color:#fff; font-weight:700; font-size:24px; line-height:44px;
-  text-align:center; border:none; cursor:pointer;
+/* FAB (+) vpravo nahoře */
+#toolsFab {
+  position: fixed;
+  right: 24px;
+  top: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #0b1625;
+  color: #fff;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 44px;
+  text-align: center;
   box-shadow: 0 6px 18px rgba(0,0,0,.18);
+  z-index: 99998;
+  border: none;
+  cursor: pointer;
   transition: transform .15s ease, box-shadow .15s ease;
-  z-index: 2147483643; /* pod backdropem a zásuvkou */
 }
-#toolsFab:hover{ transform: translateY(-1px); box-shadow:0 8px 22px rgba(0,0,0,.22); }
-.drawer-open #toolsFab{ display:none !important; }
+#toolsFab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
+body.drawer-open #toolsFab { display: none !important; }
 
-/* ---- BACKDROP ------------------------------------------------------------ */
+/* backdrop – při otevření NEKRYJE oblast zásuvky */
 #toolsBackdrop{
-  position: fixed; inset: 0;
+  position: fixed;
+  inset: 0;
   background: rgba(10,14,20,.45);
   opacity: 0;
-  /* KLÍČOVÉ: nikdy neber kliky, Safari/Chrome */
-  pointer-events: none !important;
-  transition: opacity .20s ease;
-  z-index: 2147483644; /* pod zásuvkou */
-  /* výchozí – bez díry (žádný problesk) */
-  clip-path: inset(0 0 0 0);
+  pointer-events: none;
+  transition: opacity .2s ease;
+  z-index: 99996;
 }
-#toolsBackdrop.show{ opacity: 1; }
-/* zapnutí díry – až po dokončení animace zásuvky (přepíná JS) */
-#toolsBackdrop[data-hole="on"]{
-  /* pravá „díra“ o šířce zásuvky */
-  clip-path: inset(0 var(--drawerW) 0 0);
-}
+#toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
+/* zmenšíme šířku backdropu o skutečnou šířku draweru */
+body.drawer-open #toolsBackdrop { right: var(--drawer-w, 420px); }
 
-/* ---- ZÁSUVKA ------------------------------------------------------------- */
+/* panel */
 #toolsDrawer{
-  position: fixed; top:0; right:-100%;
-  height: 100vh; width: min(420px, 92vw);
-  background:#fff; color:#0b1625;
-  box-shadow:-14px 0 30px rgba(0,0,0,.25);
-  border-top-left-radius:12px; border-bottom-left-radius:12px;
-  display:flex; flex-direction:column;
-  overflow:auto; /* vlastní scroll uvnitř */
-  transition:right .22s ease;
-  z-index: 2147483645; /* nejvyšší */
+  position: fixed;
+  top: 0;
+  right: -100%;
+  height: 100vh;
+  width: min(420px, 92vw);
+  background: #fff;
+  box-shadow: -14px 0 30px rgba(0,0,0,.25);
+  transition: right .22s ease;
+  z-index: 99997;
+  display: flex;
+  flex-direction: column;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  overflow: auto;            /* vlastní scroll kontejner */
   aria-hidden: true;
 }
-#toolsDrawer.open{ right:0; }
+#toolsDrawer.open{ right: 0; }
 
 .toolsHead{
   display:flex; align-items:center; justify-content:space-between;
@@ -69,50 +76,27 @@ section.addRow { display: none !important; }
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
-/* prvky uvnitř panelu berou kliky */
-.toolsBody .pill-input,
-.toolsBody .pill-select,
-.toolsBody .pill-btn{
-  width:100%; margin:8px 0; pointer-events:auto;
-}
+/* jistota, že prvky v panelu berou kliky */
+#toolsDrawer, #toolsDrawer * { pointer-events: auto !important; }
 
-/* nativní select uvnitř zásuvky (Safari/Chrome) */
-.toolsBody .pill-select,
-#toolsDrawer select{
+/* nativní selecty v zásuvce – vynucení vzhledu a hit-testu */
+#toolsDrawer select,
+#toolsDrawer .pill-select {
   -webkit-appearance: menulist !important;
   appearance: menulist !important;
-  background:#fff !important;
-  background-image:none !important;
+  background-image: none !important;
   cursor: default;
-}
-
-/* pseudo-šipky (pokud existují) ať neblokují klik */
-.toolsBody .select-arrow,
-.toolsBody .pill-select::after,
-.toolsBody .pill-select:after{
-  pointer-events:none !important;
-  display:none !important;
-}
-
-/* Když je zásuvka otevřená, vypneme kliky okolí (aby nic nekradlo fokus) */
-.drawer-open .topbar,
-.drawer-open header.topbar,
-.drawer-open #app,
-.drawer-open main.wrap,
-.drawer-open .wrap{
-  pointer-events:none !important;
-}
-
-/* Zásuvka i všechny potomci MUSÍ mít povolené pointer-events,
-   ať nic v kaskádě nezablokuje první <select> (Safari) */
-#toolsDrawer,
-#toolsDrawer * {
   pointer-events: auto !important;
 }
 
-/* První dva selecty explicitně nad vším (kdyby někde byla pseudo-šipka apod.) */
-#newJobClient,
-#newJobStatus {
+/* šipky/pseudo prvky nikdy neblokují klik */
+#toolsDrawer .select-arrow,
+#toolsDrawer .pill-select::after,
+#toolsDrawer .pill-select:after { pointer-events: none !important; }
+
+/* extra pojistka pro oba selecty */
+#newJobClient, #newJobStatus {
   position: relative;
-  z-index: 2147483646; /* jen pro jistotu – nativní menu si to stejně vezme */
+  z-index: 2147483646; /* jen pro jistotu */
+  pointer-events: auto !important;
 }

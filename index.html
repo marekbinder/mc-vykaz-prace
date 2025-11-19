@@ -122,7 +122,6 @@
 <!-- Boční panel „Nástroje“ -->
 <aside
   id="toolsDrawer"
-  class=""
   role="dialog"
   aria-label="Nástroje"
   aria-hidden="true">
@@ -140,9 +139,7 @@
       <select id="newJobClient" class="pill-select"></select>
       <input  id="newJobName"   class="pill-input"  type="text" placeholder="Název zakázky" />
 
-      <select id="newJobStatus" class="pill-select">
-        <!-- naplní se z #filterStatus; pokud neexistuje, zůstanou prázdné -->
-      </select>
+      <select id="newJobStatus" class="pill-select"></select>
 
       <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
     </section>
@@ -161,6 +158,10 @@
     </section>
   </div>
 </aside>
+
+<!-- pořadí je důležité -->
+<script src="app.js"></script>
+<script src="drawer.js"></script>
 
 
 <!-- ================================================================ -->

@@ -315,3 +315,6 @@ button.pill-btn.jobDelete {
   }
 }
 
+.weekpill {
+  cursor: pointer;
+}

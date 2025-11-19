@@ -25,9 +25,10 @@ section.addRow { display: none !important; }
   transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
 #toolsFab:hover{ transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
+/* při otevření draweru FAB schovat, ať nekoliduje s křížkem */
 body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
 
-/* backdrop – při otevření bude mít zprava díru o šířce draweru (nastaví JS) */
+/* BACKDROP – defaultně bez výřezu, při otevření mu JS nastaví clip-path s dírou vpravo */
 #toolsBackdrop{
   position: fixed;
   inset: 0;
@@ -36,6 +37,9 @@ body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
   pointer-events: none;
   transition: opacity .2s ease;
   z-index: 2147483400 !important;
+  /* výchozí bez výřezu */
+  clip-path: inset(0 0 0 0);
+  -webkit-clip-path: inset(0 0 0 0);
 }
 #toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
 
@@ -72,7 +76,6 @@ body.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
 #toolsClose::after{ content:'✕'; font-size:16px; }
 
 .toolsBody{ padding:16px 18px 24px 18px; position: relative; z-index: 1; }
-
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 

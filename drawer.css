@@ -1,32 +1,32 @@
-/* ===== FAB + BACKDROP + DRAWER ===== */
-
-/* schováme původní pravý uživatelský box a řádek "přidat zakázku" na hlavní ploše */
+/* ===== skryj starý pravý box + řádek "přidat zakázku" na hlavní ploše ===== */
 #userBoxTopRight,
 section.addRow { display: none !important; }
 
-/* FAB (+) vpravo nahoře */
+/* ===== FAB (+) vpravo nahoře ===== */
 #toolsFab{
   position: fixed;
   right: 24px;
   top: 16px;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 999px;
   background: #0b1625;
   color: #fff;
-  font-weight: 700;
-  font-size: 24px;
-  line-height: 44px;
-  text-align: center;
-  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+  font-weight: 800;
+  font-size: 26px;
+  display: grid;             /* perfektní centrování i v Safari */
+  place-items: center;
+  line-height: 1;
+  box-shadow: 0 10px 26px rgba(0,0,0,.15);
   z-index: 99998;
   border: none;
   cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
-#toolsFab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
+#toolsFab:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(0,0,0,.2); }
+body.tools-open #toolsFab{ opacity:.0; pointer-events:none; }
 
-/* backdrop */
+/* ===== Backdrop ===== */
 #toolsBackdrop{
   position: fixed;
   inset: 0;
@@ -38,7 +38,7 @@ section.addRow { display: none !important; }
 }
 #toolsBackdrop.show{ opacity: 1; pointer-events: auto; }
 
-/* panel – BEZ transform (kvůli nativním selectům) a s overflow přímo na panelu */
+/* ===== Drawer (bez transform hacků pro selecty) ===== */
 #toolsDrawer{
   position: fixed;
   top: 0;
@@ -46,16 +46,15 @@ section.addRow { display: none !important; }
   height: 100vh;
   width: min(420px, 92vw);
   background: #fff;
-  box-shadow: -14px 0 30px rgba(0,0,0,.25);
+  box-shadow: -18px 0 36px rgba(0,0,0,.25);
   transition: right .22s ease;
-  z-index: 99997;
+  z-index: 99997;            /* nad backdropem */
   display: flex;
   flex-direction: column;
   border-top-left-radius: 12px;
   border-bottom-left-radius: 12px;
-
-  /* kritické: vlastní scroll kontejner */
   overflow: auto;
+  aria-hidden: true;
 }
 #toolsDrawer.open{ right: 0; }
 
@@ -70,39 +69,46 @@ section.addRow { display: none !important; }
 }
 #toolsClose::after{ content:'✕'; font-size:16px; }
 
-.toolsBody{ padding:16px 18px 24px 18px; }
+.toolsBody{ padding:16px 18px 28px 18px; }
 .toolsSection{ margin-bottom:24px; }
-.toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
+.toolsSection h3{ font-size:14px; font-weight:800; margin:10px 2px; color:#0b1625; opacity:.75; }
 
-/* pilly uvnitř zásuvky musí brát kliky a mít plnou šířku */
-.toolsBody .pill-input,
-.toolsBody .pill-select,
-.toolsBody .pill-btn{
+/* ===== sjednocené „pill“ prvky v panelu ===== */
+#toolsDrawer .pill-input,
+#toolsDrawer .pill-select,
+#toolsDrawer .pill-btn{
   width:100%;
   margin:8px 0;
-  pointer-events: auto;
+  height:56px;
+  border-radius:14px;
 }
 
-/* === nativní selecty uvnitř zásuvky – přebíjí globální "pill" vzhled === */
-#toolsDrawer select,
-#toolsDrawer .pill-select,
-#toolsDrawer select.pill-select{
-  -webkit-appearance: menulist-button !important;  /* Safari */
+/* vstup */
+#toolsDrawer .pill-input{
+  border:2px solid #e7edf7;
+  padding:0 16px;
+  font: inherit;
+  background:#fff;
+}
+
+/* nativní select – zachováme „menulist“ kvůli Safari, ale styl sjednotíme */
+#toolsDrawer .pill-select{
+  -webkit-appearance: menulist !important;
   appearance: menulist !important;
-  background-image: none !important;
+  border:2px solid #e7edf7;
+  padding:0 12px;
+  background:#fff;
   cursor: default;
-  pointer-events: auto !important;
-  min-height: 42px;
-  line-height: 1.2;
 }
 
-/* šipky/dekorace neblokují klik */
-#toolsDrawer .pill-select::after,
-#toolsDrawer .select-arrow,
-#toolsDrawer .pill-select + .select-arrow{
-  display: none !important;
-  pointer-events: none !important;
+/* tlačítko */
+#toolsDrawer .pill-btn{
+  border:none;
+  background:#0b1625;
+  color:#fff;
+  font-weight:800;
+  cursor:pointer;
 }
 
-/* jistota – nic v zásuvce není „průhledný“ overlay */
-#toolsDrawer *{ pointer-events:auto; }
+/* jistota – nic uvnitř zásuvky nesmí mít pointer-events:none */
+#toolsDrawer * { pointer-events: auto; }

@@ -114,51 +114,40 @@
 
   <div id="err" class="toast" style="display:none"></div>
 
-<!-- FAB (+) -->
+<!-- FAB + backdrop + drawer -->
 <button id="toolsFab" aria-label="Nástroje">+</button>
-
-<!-- Backdrop -->
 <div id="toolsBackdrop" aria-hidden="true"></div>
+<div id="toolsHit" aria-hidden="true"></div>
 
-<!-- Boční panel „Nástroje“ -->
-<aside
-  id="toolsDrawer"
-  role="dialog"
-  aria-label="Nástroje"
-  aria-hidden="true">
-
+<aside id="toolsDrawer" role="dialog" aria-label="Nástroje">
   <div class="toolsHead">
     <div class="toolsTitle">Nástroje</div>
     <button id="toolsClose" aria-label="Zavřít"></button>
   </div>
 
   <div class="toolsBody">
-    <!-- Přidání zakázky -->
     <section class="toolsSection">
       <h3>Přidání zakázky</h3>
-
       <select id="newJobClient" class="pill-select"></select>
-      <input  id="newJobName"   class="pill-input"  type="text" placeholder="Název zakázky" />
-
+      <input id="newJobName" class="pill-input" type="text" placeholder="Název zakázky">
       <select id="newJobStatus" class="pill-select"></select>
-
-      <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
+      <button id="btnAddJob" class="pill-btn pill-btn--dark">Přidat zakázku</button>
     </section>
 
-    <!-- Přidání klienta -->
     <section class="toolsSection">
       <h3>Přidání klienta</h3>
-      <input id="newClientName" class="pill-input" type="text" placeholder="Název klienta" />
-      <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
+      <input id="newClientName" class="pill-input" type="text" placeholder="Název klienta">
+      <button id="btnAddClient" class="pill-btn">Přidat klienta</button>
     </section>
 
-    <!-- Účet -->
     <section class="toolsSection">
       <h3>Účet</h3>
-      <button id="logoutBtn" class="pill-btn">Odhlásit</button>
+      <button id="btnLogout" class="pill-btn">Odhlásit</button>
     </section>
   </div>
 </aside>
+
+
 
 
 <!-- ================================================================ -->

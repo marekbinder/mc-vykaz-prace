@@ -1,10 +1,10 @@
-/* ===== FAB + BACKDROP + DRAWER ===== */
+/* ===== FAB + BACKDROP + DRAWER (komplet) ================================== */
 
-/* schováme původní pravý uživatelský box a řádek "přidat zakázku" na hlavní ploše */
+/* Schovej starý pravý user box a řádek "přidat zakázku" na hlavní stránce */
 #userBoxTopRight,
 section.addRow { display: none !important; }
 
-/* FAB (+) vpravo nahoře */
+/* ---- FAB (+) ------------------------------------------------------------- */
 #toolsFab{
   position: fixed;
   right: 24px;
@@ -19,29 +19,31 @@ section.addRow { display: none !important; }
   line-height: 44px;
   text-align: center;
   box-shadow: 0 6px 18px rgba(0,0,0,.18);
-  z-index: 2147483636;
   border: none;
   cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+  transition: transform .15s ease, box-shadow .15s ease;
+  z-index: 2147483643; /* pod backdropem a zásuvkou */
 }
 #toolsFab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
-.drawer-open #toolsFab{ opacity:0; pointer-events:none; }
+.drawer-open #toolsFab { display: none !important; } /* ať se nepere s křížkem */
 
-/* backdrop = VIZUÁLNÍ jen pro stmavení; NIKDY NECHYTÁ KLIKY */
+/* ---- Backdrop ------------------------------------------------------------ */
+:root { --drawerW: 420px; }  /* fallback, JS při otevření přepíše na reálnou šířku */
+
 #toolsBackdrop{
   position: fixed;
   inset: 0;
   background: rgba(10,14,20,.45);
   opacity: 0;
-  pointer-events: none !important;     /* ← klíčové */
-  transition: opacity .22s ease;
-  z-index: 2147483637;
-  clip-path: none !important;
-  right: 0 !important;
+  pointer-events: none;              /* kliky jdou skrz */
+  transition: opacity .2s ease;
+  z-index: 2147483644;               /* pod zásuvkou */
+  /* výřez pro zásuvku – viz proměnná --drawerW */
+  clip-path: inset(0 var(--drawerW) 0 0);
 }
 #toolsBackdrop.show{ opacity: 1; }
 
-/* DRAWER (bez transform, jen "right" – kvůli nativním selectům) */
+/* ---- Drawer -------------------------------------------------------------- */
 #toolsDrawer{
   position: fixed;
   top: 0;
@@ -51,12 +53,13 @@ section.addRow { display: none !important; }
   background: #fff;
   box-shadow: -14px 0 30px rgba(0,0,0,.25);
   transition: right .22s ease;
-  z-index: 2147483640;                 /* NAD vším (header, backdrop, FAB) */
+  z-index: 2147483645;               /* nejvýš ze všech */
   display: flex;
   flex-direction: column;
   border-top-left-radius: 12px;
   border-bottom-left-radius: 12px;
-  overflow: auto;                      /* vlastní scroll uvnitř */
+  overflow: auto;                    /* vlastní scroll uvnitř panelu */
+  aria-hidden: true;                 /* výchozí stav pro a11y */
 }
 #toolsDrawer.open{ right: 0; }
 
@@ -71,16 +74,23 @@ section.addRow { display: none !important; }
 }
 #toolsClose::after{ content:'✕'; font-size:16px; }
 
-.toolsBody{ padding:16px 18px 28px 18px; }
+.toolsBody{ padding:16px 18px 24px 18px; }
+
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
-/* jistota, že vše uvnitř panelu bere kliky */
-#toolsDrawer, #toolsDrawer * { pointer-events: auto; }
+/* jistota, že prvky v panelu berou kliky */
+.toolsBody .pill-input,
+.toolsBody .pill-select,
+.toolsBody .pill-btn{
+  width:100%;
+  margin:8px 0;
+  pointer-events: auto;
+}
 
-/* nativní selecty v panelu */
-#toolsDrawer select.pill-select,
-#toolsDrawer .pill-select{
+/* Nativní select v zásuvce (Safari/Chrome) */
+.toolsBody .pill-select,
+#toolsDrawer select{
   -webkit-appearance: menulist !important;
   appearance: menulist !important;
   background: #fff !important;
@@ -88,21 +98,19 @@ section.addRow { display: none !important; }
   cursor: default;
 }
 
-/* dekorativní šipky (pokud by někde byly) ať nekradou kliky */
-#toolsDrawer .select-arrow,
-#toolsDrawer .pill-select + .select-arrow,
-#toolsDrawer .pill-select::after {
+/* Pokud máš pseudo-šipky, ať neberou kliky */
+.toolsBody .select-arrow,
+.toolsBody .pill-select::after,
+.toolsBody .pill-select:after{
   pointer-events: none !important;
   display: none !important;
 }
 
-/* ===== fix: topbar je nad selectem -> vypneme mu kliky, když je open ===== */
+/* ---- Když je zásuvka otevřená, vypneme kliky okolí ---------------------- */
 .drawer-open .topbar,
-.drawer-open header.topbar {
+.drawer-open header.topbar,
+.drawer-open #app,
+.drawer-open main.wrap,
+.drawer-open .wrap {
   pointer-events: none !important;
 }
-
-/* přizvednutí zásuvky "pro jistotu" nad cokoliv dalšího */
-#toolsFab{        z-index: 2147483643; }
-#toolsBackdrop{   z-index: 2147483644; pointer-events: none !important; }
-#toolsDrawer{     z-index: 2147483645; }

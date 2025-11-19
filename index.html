@@ -114,13 +114,13 @@
 
   <div id="err" class="toast" style="display:none"></div>
 
- <!-- FAB (plus) -->
+ <!-- FAB (+) -->
   <button id="toolsFab" aria-label="Otevřít nástroje" title="Nástroje">+</button>
 
-  <!-- backdrop (stmavení pozadí) -->
+  <!-- backdrop -->
   <div id="toolsBackdrop" aria-hidden="true"></div>
 
-  <!-- zásuvka (sidebar) -->
+  <!-- zásuvka -->
   <aside id="toolsDrawer" role="dialog" aria-label="Nástroje" aria-modal="true">
     <div class="toolsHead">
       <div class="toolsTitle">Nástroje</div>
@@ -128,25 +128,20 @@
     </div>
 
     <div class="toolsBody">
-      <!-- Přidání zakázky -->
       <section class="toolsSection">
         <h3>Přidání zakázky</h3>
-
         <select id="newJobClient" class="pill-select"></select>
-        <input  id="newJobName"   class="pill-input"  placeholder="Název zakázky" />
+        <input  id="newJobName" class="pill-input" placeholder="Název zakázky" />
         <select id="newJobStatus" class="pill-select"></select>
-
         <button id="btnAddJob" class="pill-btn">Přidat zakázku</button>
       </section>
 
-      <!-- Přidání klienta -->
       <section class="toolsSection">
         <h3>Přidání klienta</h3>
         <input id="newClientName" class="pill-input" placeholder="Název klienta" />
         <button id="btnAddClient" class="pill-btn">Přidat klienta</button>
       </section>
 
-      <!-- Účet -->
       <section class="toolsSection">
         <h3>Účet</h3>
         <button id="btnLogout" class="pill-btn">Odhlásit</button>

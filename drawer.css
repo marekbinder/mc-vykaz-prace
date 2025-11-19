@@ -53,9 +53,7 @@ section.addRow { display: none !important; }
   flex-direction: column;
   border-top-left-radius: 12px;
   border-bottom-left-radius: 12px;
-
-  /* kritické: vlastní scroll kontejner */
-  overflow: auto;
+  overflow: auto; /* vlastní scroll */
 }
 #toolsDrawer.open{ right: 0; }
 
@@ -70,39 +68,36 @@ section.addRow { display: none !important; }
 }
 #toolsClose::after{ content:'✕'; font-size:16px; }
 
-.toolsBody{
-  padding:16px 18px 24px 18px;
-  position: relative;   /* pro z-index selectů níže */
-  z-index: 2;
-}
+.toolsBody{ padding:16px 18px 24px 18px; position: relative; z-index: 2; }
+
 .toolsSection{ margin-bottom:24px; }
 .toolsSection h3{ font-size:14px; font-weight:800; margin:12px 2px; color:#0b1625; opacity:.7; }
 
-/* pilly uvnitř zásuvky musí brát kliky a mít plnou šířku */
+/* prvky uvnitř zásuvky */
 .toolsBody .pill-input,
-.toolsBody .pill-select,
 .toolsBody .pill-btn{
   width:100%;
   margin:8px 0;
   pointer-events: auto;
 }
 
-/* === nativní selecty uvnitř zásuvky – přebíjí globální "pill" vzhled === */
-#toolsDrawer select,
-#toolsDrawer .pill-select,
-#toolsDrawer select.pill-select{
-  -webkit-appearance: menulist-button !important;  /* Safari/iOS */
-  appearance: menulist !important;
-  background-image: none !important;
-  cursor: default;
-  pointer-events: auto !important;
-  min-height: 42px;
+/* nativní SELECT uvnitř zásuvky – výchozí vzhled */
+#toolsDrawer select{
+  width:100%;
+  min-height: 44px;
+  border-radius: 24px;
+  border:1px solid rgba(0,0,0,.1);
+  padding:10px 14px;
+  background:#fff;
+  font: inherit;
+  color: inherit;
   line-height: 1.2;
+  pointer-events: auto !important;
   position: relative;
-  z-index: 3;    /* nad případnými dekoracemi */
+  z-index: 10; /* jistota nad dekoracemi */
 }
 
-/* šipky/dekorace neblokují klik */
+/* šipky/dekorace z globálního pilu nesmí blokovat klik */
 #toolsDrawer .pill-select::after,
 #toolsDrawer .select-arrow,
 #toolsDrawer .pill-select + .select-arrow{

@@ -23,11 +23,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const openDrawer = () => {
-    setDrawerWidthVar();
-    body.classList.add('drawer-open');
-    drawer.classList.add('open');
+    setDrawerWidthVar();                 // 1) stanov pruh vpravo
+    body.classList.add('drawer-open');   // 2) schovej FAB
+    backdrop.classList.add('show');      // 3) zapni backdrop (jen fade)
+    drawer.classList.add('open');        // 4) vyjeď zásuvku
     drawer.setAttribute('aria-hidden', 'false');
-    backdrop.classList.add('show');
 
     enableNativeSelect(selClient);
     enableNativeSelect(selStatus);
@@ -44,16 +44,16 @@ document.addEventListener('DOMContentLoaded', () => {
   fab?.addEventListener('click', openDrawer);
   btnClose?.addEventListener('click', closeDrawer);
 
-  // klik mimo panel zavře, klik vpravo (na pruh pro panel) už backdrop neinterceptuje
-  backdrop?.addEventListener('click', (e) => {
-    if (!drawer.classList.contains('open')) return;
-    closeDrawer();
+  // klik mimo panel zavře (backdrop NIKDY nepokrývá pruh zásuvky)
+  backdrop?.addEventListener('click', () => {
+    if (drawer.classList.contains('open')) closeDrawer();
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
   });
 
+  // přepočet pruhu při resize
   let rAF;
   window.addEventListener('resize', () => {
     if (!drawer.classList.contains('open')) return;

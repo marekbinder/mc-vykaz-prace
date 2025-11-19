@@ -95,3 +95,14 @@ section.addRow { display: none !important; }
   pointer-events: none !important;
   display: none !important;
 }
+
+/* ===== fix: topbar je nad selectem -> vypneme mu kliky, když je open ===== */
+.drawer-open .topbar,
+.drawer-open header.topbar {
+  pointer-events: none !important;
+}
+
+/* přizvednutí zásuvky "pro jistotu" nad cokoliv dalšího */
+#toolsFab{        z-index: 2147483643; }
+#toolsBackdrop{   z-index: 2147483644; pointer-events: none !important; }
+#toolsDrawer{     z-index: 2147483645; }

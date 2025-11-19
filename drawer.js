@@ -1,7 +1,7 @@
 /* Drawer – autonomní:
    - přidá <link href="drawer.css"> pokud chybí
    - vytvoří FAB(+), backdrop a zásuvku, pokud chybí
-   - při otevření: skryje FAB, naplní klienty a „odgumuju“ oba selecty
+   - při otevření: skryje FAB (i přes class na <body>), naplní klienty a „odgumuju“ oba selecty
 */
 
 (function () {
@@ -82,8 +82,9 @@
     const btnLogout  = drawer.querySelector('#btnLogout');
 
     // ===== utily
-    // „tvrdý reset“ selectu – odstraní pilí třídy a inline vrátí nativní vzhled
-    const normalizeSelect = (sel) => {
+    // „tvrdý reset“ selectu – odstraní pilí třídy a inline vrátí nativní vzhled,
+    // plus enhancer pro showPicker (Chrome/Edge).
+    const enhanceNativeSelect = (sel) => {
       if (!sel) return sel;
       const clone = sel.cloneNode(true);
       clone.classList.remove('pill-select');
@@ -98,19 +99,45 @@
       clone.style.minHeight = '44px';
       clone.style.width = '100%';
 
+      // „rozbalovač“ i když je prohlížeč opatrný
+      const hookShowPicker = (el) => {
+        el.addEventListener('mousedown', (e) => {
+          if (typeof el.showPicker === 'function') {
+            // necháme DOM dostat focus, pak otevřeme picker
+            setTimeout(() => el.showPicker(), 0);
+          }
+        });
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && typeof el.showPicker === 'function') {
+            e.preventDefault();
+            el.showPicker();
+          }
+        });
+      };
+
       sel.replaceWith(clone);
+      hookShowPicker(clone);
       return clone;
     };
 
-    const populateClients = (selClient) => {
-      // najdeme „horní“ select s klienty
-      let top = null;
-      for (const s of document.querySelectorAll('select')) {
+    const findTopClientSelect = () => {
+      // Najdi SELECT mimo zásuvku, který je klientský filter
+      const selects = Array.from(document.querySelectorAll('select'))
+        .filter(s => !drawer.contains(s));  // zásuvku ignoruj
+
+      for (const s of selects) {
         const n = s.options?.length || 0;
         const label = (s.getAttribute('aria-label') || s.id || '').toLowerCase();
         const first = (s.options?.[0]?.text || '').toLowerCase();
-        if (n >= 2 && (label.includes('klient') || first.includes('všichni'))) { top = s; break; }
+        if (n >= 2 && (label.includes('klient') || first.includes('všichni'))) {
+          return s;
+        }
       }
+      return null;
+    };
+
+    const populateClients = (selClient) => {
+      const top = findTopClientSelect();
       if (!top || !top.options) return;
 
       const prev = selClient.value;
@@ -129,15 +156,16 @@
 
     // otevření/zavření
     const openDrawer = () => {
-      // schovej FAB
+      // schovej FAB (JS + class na body)
       fab.style.opacity = '0';
       fab.style.pointerEvents = 'none';
+      document.body.classList.add('drawer-open');
 
       // „odgumuju“ selecty (vytvořím čisté klony)
       let selClient = document.getElementById('newJobClient');
       let selStatus = document.getElementById('newJobStatus');
-      selClient = normalizeSelect(selClient);
-      selStatus = normalizeSelect(selStatus);
+      selClient = enhanceNativeSelect(selClient);
+      selStatus = enhanceNativeSelect(selStatus);
 
       // naplním klienty
       populateClients(selClient);
@@ -154,6 +182,7 @@
       drawer.classList.remove('open');
       backdrop.classList.remove('show');
       document.body.style.overflow = '';
+      document.body.classList.remove('drawer-open');
       fab.style.opacity = '';
       fab.style.pointerEvents = '';
       fab.focus();
@@ -166,7 +195,6 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
 
     // akce – napojení na tvoje funkce, když existují
-    const getSel = (id) => document.getElementById(id);
     const getVal = (id) => (document.getElementById(id)?.value || '').trim();
 
     btnAddJob.addEventListener('click', () => {

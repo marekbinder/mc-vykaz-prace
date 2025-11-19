@@ -1,9 +1,9 @@
 (() => {
-  const html          = document.documentElement;
-  const fab           = document.getElementById('toolsFab');
-  const drawer        = document.getElementById('toolsDrawer');
-  const backdrop      = document.getElementById('toolsBackdrop');
-  const btnClose      = document.getElementById('toolsClose');
+  const html     = document.documentElement;
+  const fab      = document.getElementById('toolsFab');
+  const drawer   = document.getElementById('toolsDrawer');
+  const backdrop = document.getElementById('toolsBackdrop');
+  const btnClose = document.getElementById('toolsClose');
 
   // formuláře
   const selClient     = document.getElementById('newJobClient');
@@ -14,49 +14,74 @@
   const btnAddClient  = document.getElementById('btnAddClient');
   const btnLogout     = document.getElementById('btnLogout');
 
-  // --- pomocné ---
-  const setVar = (name, val) => html.style.setProperty(name, val);
+  const setVar = (n,v)=>html.style.setProperty(n,v);
+
+  // Bezpečnost: vyrážíme s backdropem bez „díry“ a bez kliků
+  function resetBackdrop() {
+    backdrop.removeAttribute('data-hole');
+    backdrop.style.pointerEvents = 'none'; // pojistka k CSS !important
+  }
 
   function openDrawer(){
-    // nastavíme skutečnou šířku panelu do CSS proměnné (pro výřez v backdropu)
-    const w = Math.round(drawer.getBoundingClientRect().width);
+    // šířka panelu pro „díru“ v backdropu
+    const w = Math.round(drawer.getBoundingClientRect().width || 420);
     setVar('--drawerW', w + 'px');
 
+    // výchozí stav – backdrop bez díry, žádné kliky
+    resetBackdrop();
+
+    // 1) zviditelníme backdrop (fade)
     backdrop.classList.add('show');
-    drawer.classList.add('open');
-    drawer.setAttribute('aria-hidden', 'false');
     html.classList.add('drawer-open');
 
-    // zaměř první prvek (kvůli a11y)
-    setTimeout(() => {
-      (selClient || selStatus || btnClose).focus({preventScroll:true});
-    }, 0);
+    // 2) necháme projít layout, pak otevřeme panel (slide)
+    requestAnimationFrame(() => {
+      drawer.classList.add('open');
+      drawer.setAttribute('aria-hidden','false');
+    });
+
+    // 3) po dokončení animace panelu teprve vyřežeme „díru“
+    const onDone = (e) => {
+      if (e.propertyName !== 'right') return;
+      drawer.removeEventListener('transitionend', onDone);
+      backdrop.setAttribute('data-hole','on');   // díra až teď → žádný problesk
+      // i kdyby prohlížeč ignoroval pointer-events v některých stavech,
+      // díra odhalí oblast zásuvky fyzicky.
+    };
+    drawer.addEventListener('transitionend', onDone, { once: true });
+
+    // fokus do panelu
+    setTimeout(() => (selClient || selStatus || btnClose)?.focus({preventScroll:true}), 60);
   }
 
   function closeDrawer(){
-    backdrop.classList.remove('show');
-    drawer.classList.remove('open');
-    drawer.setAttribute('aria-hidden', 'true');
-    html.classList.remove('drawer-open');
-    // vrátíme fokus zpět na FAB
-    setTimeout(() => fab && fab.focus({preventScroll:true}), 0);
+    // 1) nejdřív zacelíme „díru“, ať není vidět pozadí za panelem
+    resetBackdrop();
+
+    // 2) necháme chvíli (1 frame) a zavřeme panel
+    requestAnimationFrame(() => {
+      drawer.classList.remove('open');
+      drawer.setAttribute('aria-hidden','true');
+    });
+
+    // 3) po dokončení animace panelu teprve schováme backdrop
+    const onDone = (e) => {
+      if (e.propertyName !== 'right') return;
+      drawer.removeEventListener('transitionend', onDone);
+      backdrop.classList.remove('show');
+      html.classList.remove('drawer-open');
+      fab?.focus({preventScroll:true});
+    };
+    drawer.addEventListener('transitionend', onDone, { once: true });
   }
 
   // Ovládání
-  fab && fab.addEventListener('click', openDrawer);
-  btnClose && btnClose.addEventListener('click', closeDrawer);
-  // klik vedle zásuvky zavírá
-  backdrop && backdrop.addEventListener('click', closeDrawer);
-  // Esc zavírá
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && drawer.classList.contains('open')) {
-      closeDrawer();
-    }
-  });
+  fab?.addEventListener('click', openDrawer);
+  btnClose?.addEventListener('click', closeDrawer);
+  backdrop?.addEventListener('click', closeDrawer); // pro případ, že bys někdy zapnul pointer-events
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && drawer.classList.contains('open')) closeDrawer(); });
 
-  // === DEMO napojení – jen sloty; tvůj app.js plní data ===
-  // Ujisti se, že app.js po načtení doplňuje <option> do #newJobClient a #newJobStatus.
-  // Tady jen ohlídáme fallback, aby bylo s čím testovat:
+  // --- Fallback options, aby šel hned otestovat select ---
   function ensureOptions(){
     if (selClient && selClient.options.length === 0) {
       selClient.innerHTML = `
@@ -75,17 +100,14 @@
   }
   ensureOptions();
 
-  // Sem si zapojíš své existující handler funkce z app.js
-  btnAddJob && btnAddJob.addEventListener('click', () => {
-    // tvoje logika z app.js (pouze příklad):
+  // Hooky na akce – napoj si svoji logiku z app.js
+  btnAddJob?.addEventListener('click', () => {
     // addJob(selClient.value, inpJobName.value, selStatus.value);
   });
-  btnAddClient && btnAddClient.addEventListener('click', () => {
-    // tvoje logika z app.js
+  btnAddClient?.addEventListener('click', () => {
     // addClient(inpClientName.value);
   });
-  btnLogout && btnLogout.addEventListener('click', () => {
-    // tvoje logika z app.js
+  btnLogout?.addEventListener('click', () => {
     // logout();
   });
 })();

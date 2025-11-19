@@ -114,45 +114,40 @@
 
   <div id="err" class="toast" style="display:none"></div>
 
-<!-- FAB + backdrop + drawer -->
-    <button id="toolsFab" aria-label="Nástroje">+</button>
-    <div id="toolsBackdrop" aria-hidden="true"></div>
+ <!-- FAB (+) -->
+  <button id="toolsFab" aria-label="Otevřít nástroje" title="Nástroje">+</button>
 
-    <aside id="toolsDrawer" role="dialog" aria-label="Nástroje" aria-hidden="true">
-      <div class="toolsHead">
-        <div class="toolsTitle">Nástroje</div>
-        <button id="toolsClose" aria-label="Zavřít"></button>
-      </div>
+  <!-- backdrop -->
+  <div id="toolsBackdrop" aria-hidden="true"></div>
 
-      <div class="toolsBody">
-        <section class="toolsSection">
-          <h3>Přidání zakázky</h3>
+  <!-- zásuvka -->
+  <aside id="toolsDrawer" role="dialog" aria-label="Nástroje" aria-modal="true">
+    <div class="toolsHead">
+      <div class="toolsTitle">Nástroje</div>
+      <button id="toolsClose" aria-label="Zavřít"></button>
+    </div>
 
-          <!-- Klient (nativní select; plnění dělá stávající app.js) -->
-          <select id="newJobClient" class="pill-select">
-            <!-- options dosype app.js (necháváme tak, jak to u tebe fungovalo) -->
-          </select>
+    <div class="toolsBody">
+      <section class="toolsSection">
+        <h3>Přidání zakázky</h3>
+        <select id="newJobClient" class="pill-select"></select>
+        <input  id="newJobName" class="pill-input" placeholder="Název zakázky" />
+        <select id="newJobStatus" class="pill-select"></select>
+        <button id="btnAddJob" class="pill-btn">Přidat zakázku</button>
+      </section>
 
-          <!-- Název zakázky -->
-          <input id="newJobName" class="pill-input" type="text" placeholder="Název zakázky" />
+      <section class="toolsSection">
+        <h3>Přidání klienta</h3>
+        <input id="newClientName" class="pill-input" placeholder="Název klienta" />
+        <button id="btnAddClient" class="pill-btn">Přidat klienta</button>
+      </section>
 
-          <!-- Stav jsme odstranili – nová zakázka se vytvoří se statusem NEW -->
-
-          <button id="btnCreateJob" class="pill-btn">Přidat zakázku</button>
-        </section>
-
-        <section class="toolsSection">
-          <h3>Přidání klienta</h3>
-          <input id="newClientName" class="pill-input" type="text" placeholder="Název klienta" />
-          <button id="btnCreateClient" class="pill-btn">Přidat klienta</button>
-        </section>
-
-        <section class="toolsSection">
-          <h3>Účet</h3>
-          <button id="btnSignOut" class="pill-input" style="height:48px;">Odhlásit</button>
-        </section>
-      </div>
-    </aside>
+      <section class="toolsSection">
+        <h3>Účet</h3>
+        <button id="btnLogout" class="pill-btn">Odhlásit</button>
+      </section>
+    </div>
+  </aside>
 
 
 <!-- ================================================================ -->

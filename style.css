@@ -405,6 +405,3 @@ section.addRow,
 
 /* stav otevření */
 #toolsDrawer.open { transform: translateX(0); }
-
-/* bezpečný okraj, ať nic neleze pod panelový stín */
-body.tools-open main.wrap { will-change: transform; }

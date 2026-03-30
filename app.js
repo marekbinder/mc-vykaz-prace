@@ -197,7 +197,7 @@ document.addEventListener('click',(e)=>{
 
 function updateRow(jobId){
   const days=getDays(); const tr=document.querySelector(`tr[data-job="${jobId}"]`); if(!tr) return;
-  days.forEach((d,i)=>{ const val=cellValue(jobId,d); const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b) b.textContent=formatNum(val); });
+  days.forEach((d,i)=>{ const val=cellValue(jobId,d); const b=tr.querySelector(`td[data-day="${i}"] .bubble`); if(b){ b.textContent=formatNum(val); b.classList.toggle('bubble-active', val>0); } });
   const totalCell=tr.querySelector('.totalCell .totalVal'); if(totalCell) totalCell.textContent=formatNum(state.totalsAll[jobId]||0);
   queueMicrotask(()=>updateSumRow());
 }

@@ -318,18 +318,3 @@ button.pill-btn.jobDelete {
 .weekpill {
   cursor: pointer;
 }
-
-/* Styl pro nenulové hodiny v tabulce */
-.grid input.has-value {
-  background-color: #000 !important; /* Černé pozadí */
-  color: #fff !important;            /* Bílý text */
-  border-radius: 50%;                /* Vytvoří kolečko */
-  font-weight: bold;
-  caret-color: white;                /* Barva kurzoru při psaní */
-}
-
-/* Volitelné: zarovnání textu na střed, aby kolečko vypadalo symetricky */
-.grid input {
-  text-align: center;
-  transition: all 0.2s ease;         /* Jemný přechod barvy */
-}

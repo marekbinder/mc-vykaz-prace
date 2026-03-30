@@ -94,6 +94,15 @@ h1{font-size:42px;margin:0;font-weight:800}
 /* sumy za den */
 .sumLabel{font-weight:700;color:#111;padding-left:8px}
 #sumRow .sumCell{height:40px;text-align:center}
+
+/* plovoucí součtový řádek */
+#sumRow td{
+  position:sticky;
+  bottom:0;
+  background:#fff;
+  z-index:10;
+  box-shadow:0 -2px 12px rgba(0,0,0,.07);
+}
 .sumBubble{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:40px;font-weight:700}
 .sumRed{background:#F44336;color:#fff}
 .sumOrange{background:#FFA726;color:#fff}

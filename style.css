@@ -101,19 +101,22 @@ h1{font-size:42px;margin:0;font-weight:800}
   bottom:16px;
   background:#fff;
   z-index:10;
+  padding-top:10px;
+  padding-bottom:10px;
 }
 
-/* pill tvar – první a poslední buňka dostanou zaoblené rohy, celý řádek dostane stín */
 #sumRow td:first-child{
   border-radius:22px 0 0 22px;
-  box-shadow:-2px 4px 16px rgba(0,0,0,.10);
+  padding-left:20px;
 }
 #sumRow td:last-child{
   border-radius:0 22px 22px 0;
-  box-shadow:2px 4px 16px rgba(0,0,0,.10);
+  padding-right:20px;
 }
-#sumRow td:not(:first-child):not(:last-child){
-  box-shadow:0 4px 16px rgba(0,0,0,.10);
+
+/* Stín přes tfoot místo jednotlivých buněk */
+tfoot{
+  filter: drop-shadow(0 4px 16px rgba(0,0,0,.13));
 }
 .sumBubble{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:40px;font-weight:700}
 .sumRed{background:#F44336;color:#fff}

@@ -98,10 +98,22 @@ h1{font-size:42px;margin:0;font-weight:800}
 /* plovoucí součtový řádek */
 #sumRow td{
   position:sticky;
-  bottom:0;
+  bottom:16px;
   background:#fff;
   z-index:10;
-  box-shadow:0 -2px 12px rgba(0,0,0,.07);
+}
+
+/* pill tvar – první a poslední buňka dostanou zaoblené rohy, celý řádek dostane stín */
+#sumRow td:first-child{
+  border-radius:22px 0 0 22px;
+  box-shadow:-2px 4px 16px rgba(0,0,0,.10);
+}
+#sumRow td:last-child{
+  border-radius:0 22px 22px 0;
+  box-shadow:2px 4px 16px rgba(0,0,0,.10);
+}
+#sumRow td:not(:first-child):not(:last-child){
+  box-shadow:0 4px 16px rgba(0,0,0,.10);
 }
 .sumBubble{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:40px;font-weight:700}
 .sumRed{background:#F44336;color:#fff}

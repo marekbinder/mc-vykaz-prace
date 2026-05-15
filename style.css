@@ -1,350 +1,453 @@
-/* ==== základ ==== */
-*{box-sizing:border-box}
-:root{
-  --pill-h: 44px;
-  --pill-r: 9999px;
-}
-html,body{margin:0;padding:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:#0E1625}
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* hlavička – nadpis na střed, user vpravo */
-.topbar{
-  position:relative;
-  display:flex;
-  justify-content:center;
-  align-items:flex-start;
-  padding:16px 16px 0;
-}
-h1{font-size:42px;margin:0;font-weight:800}
-.userbox{position:absolute; right:16px; top:12px; display:flex; gap:10px; align-items:center}
-
-/* obal */
-.wrap{max-width:1100px;margin:0 auto;padding:24px 16px 60px}
-
-/* týden + export */
-.weekbar{position:relative;margin-bottom:10px}
-.weeknav{display:flex;gap:10px;justify-content:center;align-items:center}
-.navbtn{
-  border:none;background:transparent;color:#0E1625;
-  width:36px;height:36px;border-radius:12px;font-size:18px;cursor:pointer
-}
-.weekpill{background:#0E1625;color:#fff;padding:10px 18px;border-radius:28px;font-weight:700;letter-spacing:.3px;min-width:260px;text-align:center}
-.pill-btn.export{position:absolute;right:0;top:0}
-
-/* filtry */
-.filters .filters-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}
-.lbl{font-weight:700;color:#444}
-
-/* přidání – zarovnání tlačítka vpravo jako „Celkem“ */
-.add-grid{
-  display:grid;
-  grid-template-columns:240px 150px 160px 1fr 140px 160px auto;
-  gap:10px; align-items:center
-}
-#addJobBtn{justify-self:end}
-
-/* pills */
-.pill-input,.pill-select,.pill-btn{
-  height:var(--pill-h);border:1px solid #E6E6EA;border-radius:var(--pill-r);
-  padding:0 14px;background:#fff;line-height:var(--pill-h);white-space:nowrap
-}
-.pill-input{min-width:180px;line-height:normal;padding:0 14px}
-.pill-select{appearance:none;background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%23666" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>') no-repeat right 12px center;background-size:10px 6px;padding-right:26px}
-.pill-btn{cursor:pointer}
-.pill-btn.accent{background:#0E1625;color:#fff;border-color:#0E1625}
-.pill-btn.small{height:32px;line-height:32px;border-radius:12px}
-
-/* menu (ukotvené k tlačítku) */
-.menuAnchor{position:relative;display:inline-block}
-.menu[hidden]{display:none!important}
-.menu{
-  position:absolute;top:calc(100% + 8px);left:0;background:#fff;border:1px solid #E6E6EA;
-  border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:2000;min-width:160px
-}
-.menu label{display:flex;gap:8px;align-items:center;margin:6px 4px}
-.menuRow{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
-
-/* tabulka */
-.tableWrap{margin-top:10px}
-.grid{width:100%;border-collapse:separate;border-spacing:0 10px}
-.grid thead .headpill th{
-  background:#0E1625;color:#fff;border:none;padding:12px 14px;text-align:center
-}
-.grid thead .headpill th:first-child{border-top-left-radius:22px;border-bottom-left-radius:22px;text-align:left}
-.grid thead .headpill th:nth-child(2){text-align:left}
-.grid thead .headpill th:last-child{border-top-right-radius:22px;border-bottom-right-radius:22px}
-
-/* buňky */
-.grid tbody td{padding:6px 8px;border:none}
-.grid tbody tr td:first-child{width:180px}  /* menší „Klient“ */
-.grid tbody tr td:nth-child(2){width:auto}   /* „Zakázka“ může dýchat */
-
-/* bubliny s hodinami */
-.bubble{
-  width:40px;height:40px;border-radius:40px;border:none;background:#ECEEF2;
-  display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;cursor:pointer
-}
-.bubble:active{transform:translateY(1px)}
-
-/* aktivní bublina (hodnota > 0) */
-.bubble.bubble-active{
-  background:#0E1625;
-  color:#fff;
+:root {
+  --bg: #F4F5F7;
+  --white: #ffffff;
+  --dark: #0E1625;
+  --blue: #1A6FF4;
+  --blue-hover: #1560D8;
+  --border: #E2E5EB;
+  --text: #0E1625;
+  --text-muted: #6B7280;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.10);
+  --shadow-lg: 0 20px 48px rgba(0,0,0,.16);
 }
 
-/* sumy za den */
-.sumLabel{font-weight:700;color:#111;padding-left:8px}
-#sumRow .sumCell{height:40px;text-align:center}
-
-/* plovoucí součtový řádek */
-#sumRow td{
-  position:sticky;
-  bottom:16px;
-  background:#fff;
-  z-index:10;
-  padding-top:10px;
-  padding-bottom:10px;
+html, body {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-#sumRow td:first-child{
-  border-radius:22px 0 0 22px;
-  padding-left:20px;
+/* ===== AUTH ===== */
+#authPanel {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; z-index: 5000;
 }
-#sumRow td:last-child{
-  border-radius:0 22px 22px 0;
-  padding-right:20px;
+.auth-card {
+  background: var(--white); border-radius: var(--radius-lg);
+  padding: 40px; width: min(420px, 92vw);
+  box-shadow: var(--shadow-lg); text-align: center;
 }
-
-/* Stín přes tfoot místo jednotlivých buněk */
-tfoot{
-  filter: drop-shadow(0 4px 16px rgba(0,0,0,.13));
+.auth-logo {
+  width: 52px; height: 52px; background: var(--dark); color: #fff;
+  border-radius: var(--radius-md); display: inline-flex; align-items: center;
+  justify-content: center; font-weight: 800; font-size: 18px; margin-bottom: 16px;
 }
-.sumBubble{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:40px;font-weight:700}
-.sumRed{background:#F44336;color:#fff}
-.sumOrange{background:#FFA726;color:#fff}
-.sumGreen{background:#4CAF50;color:#fff}
-
-/* statusy */
-.statusSel.is-nova{background:#E6F0FF}
-.statusSel.is-probiha{background:#FDEFB4}
-.statusSel.is-hotovo{background:#D7F5E3}
-
-/* buňky zakázky */
-.jobCell{display:flex;gap:8px;align-items:center}
-.jobNameIn{min-width:220px}
-.clientSel{min-width:160px}
-.jobDelete{border:none;background:#ECEEF2;width:36px;height:36px;border-radius:10px;cursor:pointer}
-
-/* inline „Grafik“ – ikonové tlačítko, žádné jméno na první pohled */
-.assigneeIcon{background:#ECEEF2;border:1px solid #E6E6EA}
-
-/* součet vpravo – střed + stejná velikost jako bubliny */
-.totalCell{text-align:center}
-.totalVal{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:40px;height:40px;font-weight:700;font-size:16px
+.auth-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+.auth-sub { color: var(--text-muted); margin-bottom: 24px; }
+.auth-fields { display: grid; gap: 10px; }
+.auth-input {
+  height: 44px; border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 0 14px; font-size: 14px; font-family: inherit; outline: none;
+  transition: border-color .15s;
 }
-
-/* toast */
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#111;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:3000}
-
-
-/* 1) Filtry na střed */
-.filters { 
-  display: flex; 
-  justify-content: center; 
-  gap: 12px; 
-  flex-wrap: wrap; 
+.auth-input:focus { border-color: var(--blue); }
+.auth-btn-primary {
+  height: 44px; border: none; border-radius: var(--radius-md);
+  background: var(--dark); color: #fff; font-weight: 700; font-size: 14px;
+  cursor: pointer; font-family: inherit;
 }
-
-/* 2) Koš bez podbarvení a na střed */
-.pill-btn.jobDelete {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  display: inline-flex;
-  align-items: center;   /* srovná ikonku vertikálně */
-  justify-content: center;
-  padding: 0 6px;        /* jemné „klikací“ pole */
-  height: 36px;          /* sjednotí výšku s ostatními pilly */
+.auth-btn-secondary {
+  height: 44px; border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: #fff; font-size: 14px; cursor: pointer; font-family: inherit;
 }
+.auth-msg { font-size: 13px; margin-top: 8px; color: #c00; }
 
-/* 3) Přidat zakázku – zarovnat s headerem tabulky vpravo */
-.addJobBar {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  margin-inline: auto;
-  max-width: 1200px;     /* stejná šířka, jakou používáš pro tabulku */
+/* ===== TOPBAR ===== */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--white); border-bottom: 1px solid var(--border);
+  height: 64px; display: flex; align-items: center;
+  padding: 0 24px; gap: 16px;
 }
+.topbar-left { flex: 1; }
+.topbar-logo { font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
+.topbar-center { flex: none; }
+.topbar-right { flex: 1; display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
 
-
-/* Odstranění podkladu a zarovnání ikony koše */
-td .pill-btn.jobDelete,
-.jobCell .pill-btn.jobDelete,
-button.pill-btn.jobDelete {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-
-  display: inline-flex !important;
-  align-items: center !important;   /* srovná ikonku vertikálně */
-  justify-content: center !important;
-  height: 36px !important;          /* stejná výška jako ostatní pilly */
-  padding: 0 6px !important;        /* malé klikací pole */
+/* week nav */
+.weeknav { display: flex; align-items: center; gap: 4px; }
+.navbtn {
+  width: 32px; height: 32px; border: none; border-radius: var(--radius-sm);
+  background: transparent; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; color: var(--text); transition: color .12s;
 }
-
-
-/* “Široká síť” – použije se ta třída, kterou máš v projektu */
-.filters,
-.filtersRow,
-.filters-bar,
-.controls,
-.controls-row,
-#filters {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  justify-content: center !important;
-  align-items: center;
-  gap: 12px;
-  max-width: 1200px;
-  margin: 0 auto 16px !important;
-}
-
-
-/* Zkusíme nejčastější názvy wrapperů; použije se ten, který existuje */
-.addJobBar,
-.addJobWrapper,
-.add-job-bar,
-.table-actions,
-.actions-row {
-  max-width: 1200px;
-  margin: 8px auto 0;      /* zarovná s tabulkou */
-  display: flex !important;
-  justify-content: flex-end !important;
-  align-items: center;
-}
-
-.addJobBar .addJobBtn,
-.addJobWrapper .addJobBtn,
-.add-job-bar .addJobBtn,
-.table-actions .addJobBtn,
-.actions-row .addJobBtn {
-  align-self: center;
-}
-
-
-/* sjednocení výšek pilů pro čistší grid */
-.pill-btn,
-.pill-input,
-.pill-select {
-  min-height: 36px;
-  line-height: 36px;
-}
-
-
-/* 1) Všude jinde necháme anchor normální */
-.menuAnchor{
-  position: relative;
-  width: auto;
-  height: auto;
-  overflow: visible;
-}
-
-/* 2) Ale v přidávacím řádku ho „zmenšíme“, aby netlačil tlačítko */
-.addRow .menuAnchor{
-  width: 0;
-  height: 0;
-  overflow: visible;
-  margin: 0;
-  padding: 0;
-  flex: 0 0 auto;
-}
-
-/* 3) Rozložení přidávací řádky + tlačítka */
-.add-grid{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-}
-#addJobBtn{
-  margin-left: auto;
-  align-self: center;
-}
-
-
-/* — ŘÁDEK FILTRŮ — */
-.filters{
-  display: flex;          /* sjednoceně přes flex */
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;    /* VERTIKÁLNÍ ZAROVNÁNÍ NA STŘED */
-  justify-content: center;/* centrování celé řady pod datumem */
-}
-
-/* Všechny „pills“ ve filtrech bez vlastních offsetů */
-.filters .pill-select,
-.filters .pill-input,
-.filters .pill-btn{
-  margin: 0;
-  align-self: center;     /* pro jistotu, kdyby si něco neslo vlastní zarovnání */
-}
-
-/* Pokud má filtr „Grafik: …“ uvnitř anchor pro menu, ať nedělá odsazení */
-.filters .menuAnchor{
-  width: auto;
-  height: auto;
-  overflow: visible;
-  margin: 0;
-  padding: 0;
-}
-
-/* === Přidání zakázky — jeden řádek, nic se nezalamuje === */
-.addRow .add-grid{
-  display: grid;
-  /* Sloupce odpovídají pořadí prvků:
-     [Název klienta] [Přidat klienta] [Klient] [Název zakázky] [Status] [Grafik] [Přidat zakázku] */
-  grid-template-columns: 
-    320px           /* Název klienta (input) */
-    max-content     /* Přidat klienta (button) */
-    180px           /* Klient (select) */
-    360px           /* Název zakázky (input) */
-    180px           /* Status (select) */
-    max-content     /* Grafik (anchor/„pill“) -> aby se nezalamoval */
-    max-content;    /* Přidat zakázku (button) */
-  gap: 16px;
-  align-items: center;
-  justify-content: center; /* držíme celou řadu pěkně uprostřed */
-}
-
-/* „Grafik“ v přidávacím řádku je renderovaný do anchoru, ať se netváří jako blok s vlastním odsazením */
-.addRow .menuAnchor{
-  margin: 0;
-  padding: 0;
-  width: auto;
-  height: auto;
-  align-self: center;
-  justify-self: start;    /* ať drží u předchozího prvku */
-  white-space: nowrap;   /* krátký text „Grafik: nikdo“ se neprotáhne na další řádek */
-}
-
-/* Pro jistotu srovnáme i vnitřní „pills“ v add-row, aby nic netlačilo okolí */
-.addRow .pill-select,
-.addRow .pill-input,
-.addRow .pill-btn{
-  margin: 0;
-  align-self: center;
-}
-
-/* Lehké zúžení sloupců u menších šířek, aby se to stále vešlo do jedné řady */
-@media (max-width: 1600px){
-  .addRow .add-grid{
-    grid-template-columns:
-      280px max-content 160px 320px 160px max-content max-content;
-  }
-}
-
+.navbtn:hover { color: var(--blue); background: transparent; }
 .weekpill {
-  cursor: pointer;
+  height: 36px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  display: flex; align-items: center; font-weight: 600; font-size: 14px;
+  cursor: pointer; white-space: nowrap; transition: background .12s;
 }
+.weekpill:hover { background: var(--bg); }
+
+/* topbar buttons */
+.btn-outline {
+  height: 36px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  background: var(--white); font-size: 13px; font-weight: 500; font-family: inherit;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  color: var(--text); transition: background .12s;
+}
+.btn-outline:hover { background: var(--bg); }
+.btn-primary {
+  height: 36px; padding: 0 16px; border: none; border-radius: var(--radius-pill);
+  background: var(--blue); color: #fff; font-size: 13px; font-weight: 600;
+  font-family: inherit; cursor: pointer; display: inline-flex; align-items: center;
+  gap: 6px; transition: background .12s;
+}
+.btn-primary:hover { background: var(--blue-hover); }
+
+/* userbox */
+.userbox { display: flex; align-items: center; gap: 8px; }
+.userbox .pill-btn {
+  height: 34px; padding: 0 12px; border-radius: var(--radius-pill); border: 1px solid var(--border);
+  background: var(--bg); font-size: 13px; font-family: inherit; cursor: pointer;
+}
+
+/* ===== MAIN WRAP ===== */
+.wrap { max-width: 1280px; margin: 0 auto; padding: 24px 24px 80px; }
+
+/* ===== FILTRY ===== */
+.filters {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;
+  justify-content: center;
+}
+.filters-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+
+.filter-pill {
+  height: 36px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  background: var(--white) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%23666" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>') no-repeat right 12px center;
+  background-size: 10px 6px; padding-right: 30px;
+  appearance: none; font-size: 13px; font-family: inherit; color: var(--text);
+  cursor: pointer; font-weight: 500;
+}
+.filter-pill-btn {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%23666" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>');
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 10px 6px;
+  padding-right: 30px; cursor: pointer; font-family: inherit; font-weight: 500;
+}
+
+/* dropdown */
+.menuAnchor { position: relative; display: inline-block; }
+.dropdown-menu {
+  position: absolute; top: calc(100% + 6px); left: 0;
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md); z-index: 2000; min-width: 160px; padding: 8px;
+}
+.dropdown-menu[hidden] { display: none !important; }
+.dropdown-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  border-radius: var(--radius-sm); cursor: pointer; font-size: 13px;
+}
+.dropdown-item:hover { background: var(--bg); }
+.dropdown-footer { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.btn-sm {
+  height: 28px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--white); font-size: 12px; font-family: inherit; cursor: pointer;
+}
+.btn-sm:hover { background: var(--bg); }
+
+/* ===== TABULKA ===== */
+.tableWrap { }
+.grid {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  background: var(--white); border-radius: var(--radius-lg);
+  overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+}
+
+/* header */
+.grid thead .headrow th {
+  background: var(--dark); color: #fff; padding: 14px 16px;
+  font-size: 13px; font-weight: 600; text-align: center; border: none;
+}
+.headrow th.th-client,
+.headrow th.th-job { text-align: left; }
+.headrow th:first-child { border-radius: 0; }
+.headrow th:last-child { border-radius: 0; }
+
+.th-client { width: 180px; }
+.th-job { width: auto; }
+.th-status { width: 110px; }
+.th-assignee { width: 90px; }
+.th-del { width: 48px; }
+.th-day { width: 64px; }
+.th-total { width: 80px; }
+
+/* body rows */
+.grid tbody tr { border-bottom: 1px solid var(--border); }
+.grid tbody tr:last-child { border-bottom: none; }
+.grid tbody td {
+  padding: 10px 16px; border: none; vertical-align: middle;
+}
+.grid tbody tr:hover { background: #FAFBFC; }
+
+/* client select in table */
+.clientSel {
+  appearance: none; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  padding: 6px 28px 6px 12px; font-size: 13px; font-family: inherit;
+  background: var(--white) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%23888" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>') no-repeat right 10px center;
+  background-size: 10px 6px; cursor: pointer; width: 100%; color: var(--text); font-weight: 500;
+}
+.clientSel:focus { outline: none; border-color: var(--blue); }
+
+/* job name input */
+.jobNameIn {
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  padding: 6px 10px; font-size: 13px; font-family: inherit; width: 100%;
+  background: transparent; color: var(--text); transition: border-color .12s, background .12s;
+}
+.jobNameIn:hover { border-color: var(--border); background: var(--white); }
+.jobNameIn:focus { outline: none; border-color: var(--blue); background: var(--white); }
+
+/* status badge select */
+.statusSel {
+  appearance: none; border: none; border-radius: var(--radius-pill);
+  padding: 5px 10px; font-size: 12px; font-weight: 600; font-family: inherit;
+  cursor: pointer; text-align: center; width: 100%; background: #E8EDF5; color: var(--text);
+}
+.statusSel:focus { outline: none; }
+.statusSel.is-nova { background: #DBEAFE; color: #1D4ED8; }
+.statusSel.is-probiha { background: #FEF9C3; color: #854D0E; }
+.statusSel.is-hotovo { background: #DCFCE7; color: #166534; }
+
+/* grafik button in row */
+.assigneeIcon {
+  border: 1px solid var(--border); border-radius: var(--radius-pill);
+  padding: 5px 12px; font-size: 12px; font-weight: 500; font-family: inherit;
+  background: var(--white); cursor: pointer; white-space: nowrap;
+}
+.assigneeIcon:hover { background: var(--bg); }
+
+/* delete button */
+.jobDelete {
+  border: none; background: transparent; cursor: pointer;
+  color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: var(--radius-sm); font-size: 15px;
+  transition: background .12s, color .12s;
+}
+.jobDelete:hover { background: #FEE2E2; color: #DC2626; }
+
+/* hour bubbles */
+.bubble {
+  width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--border);
+  background: var(--white); display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 14px; cursor: pointer; transition: all .12s;
+  color: var(--text-muted);
+}
+.bubble:hover { border-color: var(--blue); color: var(--blue); }
+.bubble:active { transform: scale(.94); }
+.bubble.bubble-active {
+  background: var(--dark); color: #fff; border-color: var(--dark);
+}
+.bubble.bubble-active:hover { background: #1e2d45; }
+
+/* total cell */
+.totalCell { text-align: center; }
+.totalVal {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; font-weight: 700; font-size: 15px;
+}
+
+/* job cell layout */
+.jobCell { display: flex; gap: 0; align-items: center; }
+td.jobCell-td { padding: 8px 16px; }
+
+/* ===== TFOOT / SUM ROW ===== */
+tfoot { }
+#sumRow td {
+  background: var(--white); padding: 14px 16px;
+  border-top: 2px solid var(--border);
+  position: sticky; bottom: 0; z-index: 10;
+}
+.sumLabel { font-weight: 700; font-size: 14px; }
+#sumRow .sumCell { text-align: center; }
+.sumBubble {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%; font-weight: 700; font-size: 14px;
+}
+.sumRed { background: #EF4444; color: #fff; }
+.sumOrange { background: #F97316; color: #fff; }
+.sumGreen { background: #22C55E; color: #fff; }
+
+/* ===== MODALS ===== */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(10,14,25,.5);
+  z-index: 4000; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+}
+.modal-card {
+  background: var(--white); border-radius: var(--radius-lg);
+  width: min(480px, 94vw); box-shadow: var(--shadow-lg);
+  overflow: hidden; animation: modalIn .18s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(.96) translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 24px 24px 0;
+}
+.modal-title { font-size: 18px; font-weight: 700; }
+.modal-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+.modal-close {
+  width: 32px; height: 32px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--white); cursor: pointer; font-size: 14px; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.modal-close:hover { background: var(--bg); }
+.modal-body { padding: 20px 24px; }
+.modal-footer {
+  padding: 16px 24px; display: flex; justify-content: flex-end; gap: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* form elements in modal */
+.form-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+.form-input {
+  width: 100%; height: 44px; border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 0 14px; font-size: 14px; font-family: inherit; color: var(--text);
+  outline: none; transition: border-color .15s; background: var(--white);
+}
+.form-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,111,244,.08); }
+.form-select {
+  width: 100%; height: 44px; border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 0 36px 0 14px; font-size: 14px; font-family: inherit; color: var(--text);
+  appearance: none; outline: none; cursor: pointer; background: var(--white) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="7"><path d="M1 1l5 5 5-5" stroke="%23666" fill="none" stroke-width="1.6" stroke-linecap="round"/></svg>') no-repeat right 14px center;
+  background-size: 12px 7px;
+}
+.form-select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,111,244,.08); }
+
+.btn-ghost {
+  height: 40px; padding: 0 18px; border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--white); font-size: 14px; font-weight: 500; font-family: inherit;
+  cursor: pointer; color: var(--text); transition: background .12s;
+}
+.btn-ghost:hover { background: var(--bg); }
+.modal-footer .btn-primary {
+  height: 40px; padding: 0 20px; border-radius: var(--radius-md);
+}
+
+/* assignee checkboxes in modal */
+.assignee-checkboxes { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+.assignee-check {
+  display: flex; align-items: center; gap: 7px; font-size: 14px; cursor: pointer;
+  padding: 8px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  transition: border-color .12s, background .12s;
+}
+.assignee-check:has(input:checked) { border-color: var(--blue); background: #EFF5FE; }
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px;
+  background: var(--dark); color: #fff; padding: 12px 18px; border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg); z-index: 9000; font-size: 13px; font-weight: 500;
+}
+
+/* ===== OLD pill classes compat (used in app.js dynamic code) ===== */
+.pill-btn {
+  height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  background: var(--white); font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 500;
+}
+.pill-btn.accent { background: var(--dark); color: #fff; border-color: var(--dark); }
+.pill-btn.small { height: 28px; border-radius: var(--radius-sm); font-size: 12px; }
+.pill-select {
+  appearance: none; height: 34px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  padding: 0 28px 0 12px; background: var(--white) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%23666" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>') no-repeat right 10px center;
+  background-size: 10px 6px; font-size: 13px; font-family: inherit; cursor: pointer;
+}
+.pill-input {
+  height: 34px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  padding: 0 12px; font-size: 13px; font-family: inherit; background: var(--white);
+}
+.menu {
+  position: absolute; top: calc(100% + 6px); left: 0; background: var(--white);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md); z-index: 2000; min-width: 160px; padding: 8px;
+}
+.menu[hidden] { display: none !important; }
+.menu label { display: flex; gap: 8px; align-items: center; padding: 7px 10px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; }
+.menu label:hover { background: var(--bg); }
+.menuRow { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+
+/* ===== LOGO IN TOPBAR ===== */
+.topbar-logo {
+  display: flex; align-items: center; text-decoration: none;
+}
+
+/* ===== USER AVATAR BUTTON ===== */
+.user-avatar-btn {
+  height: 36px; min-width: 36px; padding: 0 10px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-pill);
+  background: var(--white); cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 600; color: var(--text);
+  transition: background .12s, border-color .12s;
+}
+.user-avatar-btn:hover { background: var(--bg); border-color: #c0c7d4; }
+#userAvatarInitials:empty { display: none; }
+
+/* ===== STICKY SUM FOOTER ===== */
+.sum-footer {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  background: var(--white); border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+  height: 80px;
+}
+.sum-footer-wrap {
+  position: relative; height: 100%;
+  max-width: 1280px; margin: 0 auto; padding: 0 24px;
+}
+.sum-footer-label {
+  position: absolute; left: 24px; top: 50%; transform: translateY(-50%);
+  font-weight: 700; font-size: 14px; color: var(--text); white-space: nowrap;
+}
+/* Bubbles are positioned absolutely relative to .sum-footer-wrap via JS */
+.sum-footer-bubbles {
+  /* not a positioning context — bubbles escape to sum-footer-wrap */
+  display: contents;
+}
+.sumBubble {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%; margin-left: -20px;
+  font-weight: 700; font-size: 14px;
+  background: transparent; color: var(--text-muted);
+  transition: background .15s, color .15s;
+}
+.sumBubble.sumRed    { background: #EF4444; color: #fff; }
+.sumBubble.sumOrange { background: #F97316; color: #fff; }
+.sumBubble.sumGreen  { background: #22C55E; color: #fff; }
+
+/* Extra bottom padding so table content doesn't hide behind footer */
+.wrap { padding-bottom: 104px !important; }
+
+/* ===== USER MODAL EXTRAS ===== */
+.form-hint {
+  font-size: 12px; color: var(--text-muted); margin-top: 5px;
+}
+.form-section-divider {
+  height: 1px; background: var(--border); margin: 20px 0 4px;
+}
+.form-section-title {
+  font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px;
+}
+.btn-danger {
+  height: 40px; padding: 0 16px; border: 1.5px solid #FCA5A5; border-radius: var(--radius-md);
+  background: #FFF5F5; color: #DC2626; font-size: 14px; font-weight: 500;
+  font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+  transition: background .12s;
+}
+.btn-danger:hover { background: #FEE2E2; }
+
+/* Hide old tfoot sum row (now replaced by footer) */
+tfoot { display: none; }

@@ -152,53 +152,9 @@
   }
 
   // ----------- Floating tlačítka (změna hesla + odhlásit) -----------
-  function hideSignedInEmailUI() {
-    // Skryj typický box s e-mailem / odhlášením (pokud existuje)
-    const style = document.createElement('style');
-    style.textContent = `
-      #userBoxTopRight { display: none !important; }
-      /* přidej sem případně další selektory, pokud máš jiné umístění e-mailu */
-    `;
-    document.head.appendChild(style);
-  }
+  // hideSignedInEmailUI removed – handled by new user modal
 
-function ensureFloatingButtons(sb) {
-  // ZMĚNIT HESLO (nahoře)
-  if (!document.getElementById('authChangePwd')) {
-    const change = document.createElement('button');
-    change.id = 'authChangePwd';
-    change.type = 'button';
-    change.textContent = 'Nastavit/změnit heslo';
-    Object.assign(change.style, {
-      position:'fixed', right:'16px', bottom:'72px',
-      background:'#fff', border:'1px solid #e8eef7', borderRadius:'10px',
-      padding:'10px 12px', boxShadow:'0 6px 18px rgba(0,0,0,.08)',
-      cursor:'pointer', zIndex: 9999, color:'#0b1625', fontWeight:'700'
-    });
-    change.addEventListener('click', () => openOverlay('new'));
-    document.body.appendChild(change);
-  }
-
-  // ODHlÁSIT (níž) – stejný styl jako výše
-  if (!document.getElementById('authLogoutFab')) {
-    const logout = document.createElement('button');
-    logout.id = 'authLogoutFab';
-    logout.type = 'button';
-    logout.textContent = 'Odhlásit';
-    Object.assign(logout.style, {
-      position:'fixed', right:'16px', bottom:'16px',
-      background:'#fff', border:'1px solid #e8eef7', borderRadius:'10px',
-      padding:'10px 12px', boxShadow:'0 6px 18px rgba(0,0,0,.08)',
-      cursor:'pointer', zIndex: 9999, color:'#0b1625', fontWeight:'700'
-    });
-    logout.addEventListener('click', async () => {
-      try { await sb.auth.signOut(); } catch {}
-      cleanupUrl();
-      location.reload();
-    });
-    document.body.appendChild(logout);
-  }
-}
+  // ensureFloatingButtons removed
 
   // ----------- Start -----------
   (async () => {
@@ -245,9 +201,7 @@ function ensureFloatingButtons(sb) {
 
     // Pokud JSI přihlášený → skryj e-mail v UI a přidej plovoucí knoflíky
     if (session?.user) {
-      hideSignedInEmailUI();
-      ensureFloatingButtons(sb);
-    }
+        }
 
     // ===== Login (email+heslo) =====
     btnIn?.addEventListener('click', async () => {

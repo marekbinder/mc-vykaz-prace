@@ -4,128 +4,367 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Výkaz práce</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 
-  <!-- knihovny -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
 <body>
-  <header class="topbar">
-  <h1 aria-hidden="true">&nbsp;</h1>
-  <div id="userBoxTopRight" class="userbox"></div>
-  </header>
 
-<!-- AUTH PANEL (email + heslo) -->
-<div id="authPanel" style="display:none; max-width:420px; margin:48px auto; padding:20px 22px; border:1px solid #e8eef7; border-radius:12px; background:#fff;">
-  <h2 style="margin:0 0 12px; text-align:center;">Přihlášení</h2>
-  <div style="display:grid; gap:10px;">
-    <input id="authEmail" type="email" placeholder="E-mail" style="height:44px; border:1px solid #dfe7f3; border-radius:10px; padding:0 12px;">
-    <input id="authPassword" type="password" placeholder="Heslo" style="height:44px; border:1px solid #dfe7f3; border-radius:10px; padding:0 12px;">
-    <button id="authSignIn" style="height:44px; border-radius:10px; border:0; background:#0b1625; color:#fff; font-weight:700;">Přihlásit</button>
-    <button id="authSignUp" style="height:44px; border-radius:10px; border:1px solid #dfe7f3; background:#fff;">Vytvořit účet</button>
+<!-- AUTH PANEL -->
+<div id="authPanel" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 93.95 22.68" style="width:120px;height:auto;">
+        <defs><style>.cls-1{fill:#fff}.cls-2{fill:#fff}.cls-3{fill:#ff4455}</style></defs>
+        <g><g><g>
+          <path class="cls-1" d="M43.31,22.57c-.07,0-.14-.01-.2-.03-.34-.11-.52-.48-.4-.82l1.32-3.94c.09-.26.33-.44.61-.44s.52.18.61.44l.69,2.11.7-2.11c.09-.26.33-.44.61-.44s.52.18.61.44h0s1.3,3.95,1.3,3.95c.11.34-.07.7-.41.81-.07.02-.13.03-.2.03-.28,0-.52-.18-.61-.44l-.69-2.11-.71,2.11c-.09.26-.33.44-.61.44s-.52-.18-.61-.44l-.69-2.11-.7,2.11c-.05.16-.17.3-.32.37-.09.04-.19.07-.29.07Z"/>
+          <path class="cls-1" d="M51.51,18.69c-1.29,0-2.04.91-2.04,1.92,0,1.05.79,1.91,2.14,1.91.47,0,.96-.1,1.38-.38.22-.15.23-.37.08-.55l-.1-.13c-.14-.18-.32-.2-.53-.09-.26.14-.52.18-.73.18-.67,0-1.05-.39-1.04-.71h2.44c.24,0,.4-.08.39-.3-.02-1.17-.88-1.84-1.98-1.85ZM50.68,20.2c.07-.42.46-.59.83-.59s.76.17.81.6h-1.64Z"/>
+          <path class="cls-1" d="M57.69,17.35h-.51c-.25,0-.38.13-.38.38v1.55c-.24-.38-.64-.57-1.11-.58-1.01,0-1.76.82-1.76,1.91s.74,1.92,1.75,1.92c.47,0,.88-.2,1.11-.56v.11c0,.25.13.38.38.38h.51c.25,0,.38-.13.38-.38v-4.35c.01-.25-.12-.38-.37-.38ZM55.99,21.55c-.49,0-.8-.41-.8-.93,0-.52.31-.93.8-.92s.81.41.81.93c0,.52-.32.93-.82.92Z"/>
+          <rect class="cls-1" x="57.75" y="20" width="3.68" height="1.27" rx=".38" ry=".38" transform="translate(38.77 80.16) rotate(-89.83)"/>
+          <path class="cls-1" d="M59.6,17.25c-.48,0-.73.27-.73.61,0,.35.27.61.73.61s.74-.26.74-.61-.25-.61-.73-.61Z"/>
+          <path class="cls-1" d="M64.65,18.81h-.51c-.25,0-.38.13-.38.38v.11c-.23-.38-.63-.57-1.12-.58-1,0-1.75.82-1.75,1.91,0,1.1.74,1.92,1.74,1.92.48,0,.88-.2,1.12-.56v.11c0,.25.13.38.38.38h.51c.25,0,.38-.13.38-.38v-2.91c0-.25-.12-.38-.37-.38ZM62.96,21.57c-.5,0-.8-.41-.8-.93,0-.52.3-.93.8-.92s.81.41.8.93-.31.93-.81.92Z"/>
+          <path class="cls-1" d="M74.17,18.76c-1.21,0-2.08.85-2.09,1.91s.86,1.92,2.07,1.92,2.08-.85,2.09-1.91-.86-1.92-2.07-1.92ZM74.16,21.59c-.51,0-.88-.4-.88-.92s.38-.9.89-.9.89.38.89.91-.38.91-.89.91Z"/>
+          <path class="cls-1" d="M79.24,18.78c-.52,0-.88.22-1.07.6v-.14c0-.25-.13-.38-.38-.38h-.51c-.25,0-.38.13-.38.38v2.91c0,.25.12.38.37.38h.51c.25,0,.38-.13.38-.38v-1.56c0-.49.23-.8.61-.8s.5.32.5.72v1.65c0,.25.13.38.38.38h.51c.25,0,.38-.13.38-.38v-1.75c0-.74-.24-1.62-1.3-1.62Z"/>
+          <path class="cls-1" d="M83.13,20.31l-.44-.17c-.18-.06-.29-.12-.29-.25s.11-.24.31-.24c.11,0,.22.03.3.11.15.12.25.19.46.14l.23-.06c.25-.07.38-.27.21-.5-.28-.39-.71-.54-1.19-.54-.82,0-1.43.47-1.43,1.18,0,.74.8,1,1.09,1.1l.43.16c.23.08.3.15.3.26,0,.16-.16.25-.41.25-.2,0-.37-.06-.49-.17-.17-.16-.25-.27-.47-.22l-.25.06c-.25.06-.38.23-.27.47.25.51.78.76,1.48.76.82,0,1.54-.37,1.54-1.16,0-.48-.32-.88-1.09-1.15Z"/>
+          <path class="cls-1" d="M88.09,18.88h-.51c-.25,0-.38.13-.38.38v1.56c0,.49-.23.81-.61.8s-.51-.33-.51-.72v-1.65c0-.25-.13-.38-.38-.38h-.51c-.25,0-.38.13-.38.38v1.75c0,.74.24,1.62,1.3,1.62.52,0,.89-.22,1.08-.59v.13c0,.25.13.38.38.38h.51c.25,0,.38-.13.38-.38v-2.91c0-.25-.12-.38-.37-.38Z"/>
+          <rect class="cls-1" x="87.44" y="19.37" width="5.11" height="1.27" rx=".38" ry=".38" transform="translate(69.72 109.94) rotate(-89.83)"/>
+          <path class="cls-1" d="M93.94,22.16c0-.28.04-.5-.24-.5,0,0-.3,0-.47,0-.13,0-.23-.09-.23-.3v-1.52s.75,0,.75,0c.13,0,.2-.07.2-.2v-.54c0-.13-.07-.2-.2-.2h-.74s0-.67,0-.67c0-.17-.09-.26-.27-.26h-.45c-.16,0-.27.08-.29.24l-.13.69h-.45c-.13,0-.2.07-.2.2v.54c0,.13.07.2.2.2h.33s0,1.5,0,1.5c0,1.05.7,1.32,1.33,1.33.23,0,.62,0,.62,0h0c.27,0,.23-.23.23-.5Z"/>
+          <path class="cls-1" d="M69.62,22.65c-.7,0-1.36-.28-1.85-.77-.49-.5-.76-1.15-.76-1.86s.28-1.36.77-1.85c.5-.49,1.16-.76,1.85-.76s1.36.28,1.85.77c.12.12.19.29.19.46s-.07.34-.19.46c-.26.25-.67.25-.92,0-.25-.25-.58-.39-.93-.39s-.68.13-.93.38c-.25.25-.39.58-.39.93,0,.35.13.68.38.93.25.25.58.39.93.39s.68-.13.93-.38c.12-.12.29-.18.46-.18s.34.07.46.19c.12.12.19.29.19.46s-.07.34-.19.46c-.5.49-1.16.76-1.86.76Z"/>
+        </g><g>
+          <path class="cls-3" d="M33.31,0c-2.74,0-4.96,2.22-4.96,4.96s2.22,4.96,4.96,4.96,4.96-2.22,4.96-4.96-2.22-4.96-4.96-4.96ZM32.33,5.93c.52.52,1.43.52,1.95,0,.29-.29.77-.29,1.06,0,.29.29.29.77,0,1.06-.54.54-1.27.84-2.03.84s-1.49-.3-2.03-.84c-1.12-1.12-1.12-2.95,0-4.07,1.12-1.12,2.95-1.12,4.07,0,.29.29.29.77,0,1.06-.29.29-.77.29-1.06,0-.54-.54-1.41-.54-1.95,0-.54.54-.54,1.41,0,1.95Z"/>
+          <path class="cls-2" d="M25.78,22.68c-1.07,0-2.07-.68-2.43-1.76l-3.38-10.19-3.38,10.19c-.35,1.05-1.33,1.76-2.43,1.76s-2.08-.71-2.43-1.76l-3.38-10.19-3.38,10.19c-.45,1.35-1.9,2.08-3.24,1.63-1.34-.45-2.07-1.91-1.62-3.26L5.94,1.76C6.29.71,7.26,0,8.37,0s2.08.71,2.43,1.76l3.38,10.19,3.38-10.19C17.9.71,18.88,0,19.98,0h0c1.1,0,2.08.71,2.43,1.76l5.81,17.52c.45,1.35-.28,2.81-1.62,3.26-.27.09-.54.13-.81.13Z"/>
+        </g></g></g>
+      </svg>
+    </div>
+    <h2 class="auth-title">Přihlášení</h2>
+    <p class="auth-sub">Výkaz práce</p>
+    <div class="auth-fields">
+      <input id="authEmail" type="email" placeholder="E-mail" class="auth-input">
+      <input id="authPassword" type="password" placeholder="Heslo" class="auth-input">
+      <button id="authSignIn" class="auth-btn-primary">Přihlásit</button>
+      <button id="authSignUp" class="auth-btn-secondary">Vytvořit účet</button>
+    </div>
+    <p id="authMsg" class="auth-msg" style="display:none;"></p>
   </div>
-  <p id="authMsg" style="margin:10px 0 0; color:#c00; text-align:center; display:none;"></p>
 </div>
-  
-  <main id="app" class="wrap">
-   <!-- týden (export se vyvolá klikem na pill) -->
-<section class="weekbar">
-  <div class="weeknav">
-    <button id="prevWeek" class="navbtn" title="Předchozí týden">◀</button>
-    <div id="weekRange" class="weekpill" title="Klikni pro export do Excelu">–</div>
-    <button id="nextWeek" class="navbtn" title="Další týden">▶</button>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="topbar-logo" href="#">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 93.95 22.68" style="height:20px;width:auto;">
+        <defs><style>.tl1{fill:#0f1d1f}.tl2{fill:#1d1d1b}.tl3{fill:#cd1626}</style></defs>
+        <g><g><g>
+          <path class="tl1" d="M43.31,22.57c-.07,0-.14-.01-.2-.03-.34-.11-.52-.48-.4-.82l1.32-3.94c.09-.26.33-.44.61-.44s.52.18.61.44l.69,2.11.7-2.11c.09-.26.33-.44.61-.44s.52.18.61.44h0s1.3,3.95,1.3,3.95c.11.34-.07.7-.41.81-.07.02-.13.03-.2.03-.28,0-.52-.18-.61-.44l-.69-2.11-.71,2.11c-.09.26-.33.44-.61.44s-.52-.18-.61-.44l-.69-2.11-.7,2.11c-.05.16-.17.3-.32.37-.09.04-.19.07-.29.07Z"/>
+          <path class="tl1" d="M51.51,18.69c-1.29,0-2.04.91-2.04,1.92,0,1.05.79,1.91,2.14,1.91.47,0,.96-.1,1.38-.38.22-.15.23-.37.08-.55l-.1-.13c-.14-.18-.32-.2-.53-.09-.26.14-.52.18-.73.18-.67,0-1.05-.39-1.04-.71h2.44c.24,0,.4-.08.39-.3-.02-1.17-.88-1.84-1.98-1.85ZM50.68,20.2c.07-.42.46-.59.83-.59s.76.17.81.6h-1.64Z"/>
+          <path class="tl1" d="M57.69,17.35h-.51c-.25,0-.38.13-.38.38v1.55c-.24-.38-.64-.57-1.11-.58-1.01,0-1.76.82-1.76,1.91s.74,1.92,1.75,1.92c.47,0,.88-.2,1.11-.56v.11c0,.25.13.38.38.38h.51c.25,0,.38-.13.38-.38v-4.35c.01-.25-.12-.38-.37-.38ZM55.99,21.55c-.49,0-.8-.41-.8-.93,0-.52.31-.93.8-.92s.81.41.81.93c0,.52-.32.93-.82.92Z"/>
+          <rect class="tl1" x="57.75" y="20" width="3.68" height="1.27" rx=".38" ry=".38" transform="translate(38.77 80.16) rotate(-89.83)"/>
+          <path class="tl1" d="M59.6,17.25c-.48,0-.73.27-.73.61,0,.35.27.61.73.61s.74-.26.74-.61-.25-.61-.73-.61Z"/>
+          <path class="tl1" d="M64.65,18.81h-.51c-.25,0-.38.13-.38.38v.11c-.23-.38-.63-.57-1.12-.58-1,0-1.75.82-1.75,1.91,0,1.1.74,1.92,1.74,1.92.48,0,.88-.2,1.12-.56v.11c0,.25.13.38.38.38h.51c.25,0,.38-.13.38-.38v-2.91c0-.25-.12-.38-.37-.38ZM62.96,21.57c-.5,0-.8-.41-.8-.93,0-.52.3-.93.8-.92s.81.41.8.93-.31.93-.81.92Z"/>
+          <path class="tl1" d="M74.17,18.76c-1.21,0-2.08.85-2.09,1.91s.86,1.92,2.07,1.92,2.08-.85,2.09-1.91-.86-1.92-2.07-1.92ZM74.16,21.59c-.51,0-.88-.4-.88-.92s.38-.9.89-.9.89.38.89.91-.38.91-.89.91Z"/>
+          <path class="tl1" d="M79.24,18.78c-.52,0-.88.22-1.07.6v-.14c0-.25-.13-.38-.38-.38h-.51c-.25,0-.38.13-.38.38v2.91c0,.25.12.38.37.38h.51c.25,0,.38-.13.38-.38v-1.56c0-.49.23-.8.61-.8s.5.32.5.72v1.65c0,.25.13.38.38.38h.51c.25,0,.38-.13.38-.38v-1.75c0-.74-.24-1.62-1.3-1.62Z"/>
+          <path class="tl1" d="M83.13,20.31l-.44-.17c-.18-.06-.29-.12-.29-.25s.11-.24.31-.24c.11,0,.22.03.3.11.15.12.25.19.46.14l.23-.06c.25-.07.38-.27.21-.5-.28-.39-.71-.54-1.19-.54-.82,0-1.43.47-1.43,1.18,0,.74.8,1,1.09,1.1l.43.16c.23.08.3.15.3.26,0,.16-.16.25-.41.25-.2,0-.37-.06-.49-.17-.17-.16-.25-.27-.47-.22l-.25.06c-.25.06-.38.23-.27.47.25.51.78.76,1.48.76.82,0,1.54-.37,1.54-1.16,0-.48-.32-.88-1.09-1.15Z"/>
+          <path class="tl1" d="M88.09,18.88h-.51c-.25,0-.38.13-.38.38v1.56c0,.49-.23.81-.61.8s-.51-.33-.51-.72v-1.65c0-.25-.13-.38-.38-.38h-.51c-.25,0-.38.13-.38.38v1.75c0,.74.24,1.62,1.3,1.62.52,0,.89-.22,1.08-.59v.13c0,.25.13.38.38.38h.51c.25,0,.38-.13.38-.38v-2.91c0-.25-.12-.38-.37-.38Z"/>
+          <rect class="tl1" x="87.44" y="19.37" width="5.11" height="1.27" rx=".38" ry=".38" transform="translate(69.72 109.94) rotate(-89.83)"/>
+          <path class="tl1" d="M93.94,22.16c0-.28.04-.5-.24-.5,0,0-.3,0-.47,0-.13,0-.23-.09-.23-.3v-1.52s.75,0,.75,0c.13,0,.2-.07.2-.2v-.54c0-.13-.07-.2-.2-.2h-.74s0-.67,0-.67c0-.17-.09-.26-.27-.26h-.45c-.16,0-.27.08-.29.24l-.13.69h-.45c-.13,0-.2.07-.2.2v.54c0,.13.07.2.2.2h.33s0,1.5,0,1.5c0,1.05.7,1.32,1.33,1.33.23,0,.62,0,.62,0h0c.27,0,.23-.23.23-.5Z"/>
+          <path class="tl1" d="M69.62,22.65c-.7,0-1.36-.28-1.85-.77-.49-.5-.76-1.15-.76-1.86s.28-1.36.77-1.85c.5-.49,1.16-.76,1.85-.76s1.36.28,1.85.77c.12.12.19.29.19.46s-.07.34-.19.46c-.26.25-.67.25-.92,0-.25-.25-.58-.39-.93-.39s-.68.13-.93.38c-.25.25-.39.58-.39.93,0,.35.13.68.38.93.25.25.58.39.93.39s.68-.13.93-.38c.12-.12.29-.18.46-.18s.34.07.46.19c.12.12.19.29.19.46s-.07.34-.19.46c-.5.49-1.16.76-1.86.76Z"/>
+        </g><g>
+          <path class="tl3" d="M33.31,0c-2.74,0-4.96,2.22-4.96,4.96s2.22,4.96,4.96,4.96,4.96-2.22,4.96-4.96-2.22-4.96-4.96-4.96ZM32.33,5.93c.52.52,1.43.52,1.95,0,.29-.29.77-.29,1.06,0,.29.29.29.77,0,1.06-.54.54-1.27.84-2.03.84s-1.49-.3-2.03-.84c-1.12-1.12-1.12-2.95,0-4.07,1.12-1.12,2.95-1.12,4.07,0,.29.29.29.77,0,1.06-.29.29-.77.29-1.06,0-.54-.54-1.41-.54-1.95,0-.54.54-.54,1.41,0,1.95Z"/>
+          <path class="tl2" d="M25.78,22.68c-1.07,0-2.07-.68-2.43-1.76l-3.38-10.19-3.38,10.19c-.35,1.05-1.33,1.76-2.43,1.76s-2.08-.71-2.43-1.76l-3.38-10.19-3.38,10.19c-.45,1.35-1.9,2.08-3.24,1.63-1.34-.45-2.07-1.91-1.62-3.26L5.94,1.76C6.29.71,7.26,0,8.37,0s2.08.71,2.43,1.76l3.38,10.19,3.38-10.19C17.9.71,18.88,0,19.98,0h0c1.1,0,2.08.71,2.43,1.76l5.81,17.52c.45,1.35-.28,2.81-1.62,3.26-.27.09-.54.13-.81.13Z"/>
+        </g></g></g>
+      </svg>
+    </a>
   </div>
-</section>
+  <div class="topbar-center">
+    <div class="weeknav">
+      <button id="prevWeek" class="navbtn" title="Předchozí týden">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div id="weekRange" class="weekpill" title="Klikni pro export do Excelu">–</div>
+      <button id="nextWeek" class="navbtn" title="Další týden">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button id="btnAddClient" class="btn-outline">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="5" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13c0-2.761 2.462-5 5.5-5s5.5 2.239 5.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 2v4M10 4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Přidat klienta
+    </button>
+    <button id="btnAddJob" class="btn-primary">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Nová zakázka
+    </button>
+    <button id="btnExport" class="btn-outline">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11v2a1 1 0 001 1h8a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Export
+    </button>
+    <!-- User avatar button -->
+    <button id="btnUserMenu" class="user-avatar-btn" title="Správa uživatele">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3.314 2.686-5.5 6-5.5s6 2.186 6 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span id="userAvatarInitials"></span>
+    </button>
+    <div id="userBoxTopRight" class="userbox" style="display:none;"></div>
+  </div>
+</header>
 
-    <!-- filtry -->
-    <section class="filters">
-      <div class="filters-row">
-        <label class="lbl">Nastavení filtru:</label>
+<main id="app" class="wrap">
 
-        <select id="filterClient" class="pill-select"></select>
-        <select id="filterStatus" class="pill-select"></select>
-
-        <select id="totalsScope" class="pill-select">
-          <option value="ME">Součty: Já</option>
-          <option value="ALL">Součty: Všichni</option>
-        </select>
-
-        <!-- filtr „Grafik“ s ukotveným menu -->
-        <div class="menuAnchor">
-          <button id="assigneeFilterBtn" class="pill-btn">Grafik: Všichni</button>
-          <div id="assigneeFilterMenu" class="menu" hidden>
-            <label><input type="checkbox" value="Viki"> Viki</label>
-            <label><input type="checkbox" value="Standa"> Standa</label>
-            <label><input type="checkbox" value="Marek"> Marek</label>
-            <div class="menuRow">
-              <button id="assigneeFilterClear" class="pill-btn small" type="button">Vymazat</button>
-              <button id="assigneeFilterClose" class="pill-btn small" type="button">Zavřít</button>
-            </div>
-          </div>
+  <!-- FILTRY -->
+  <section class="filters">
+    <span class="filters-label">Nastavení filtru:</span>
+    <select id="filterClient" class="filter-pill"></select>
+    <select id="filterStatus" class="filter-pill"></select>
+    <select id="totalsScope" class="filter-pill">
+      <option value="ME">Součty: Já</option>
+      <option value="ALL">Součty: Všichni</option>
+    </select>
+    <div class="menuAnchor">
+      <button id="assigneeFilterBtn" class="filter-pill filter-pill-btn">Grafik: Všichni</button>
+      <div id="assigneeFilterMenu" class="dropdown-menu" hidden>
+        <label class="dropdown-item"><input type="checkbox" value="Viki"> Viki</label>
+        <label class="dropdown-item"><input type="checkbox" value="Standa"> Standa</label>
+        <label class="dropdown-item"><input type="checkbox" value="Marek"> Marek</label>
+        <div class="dropdown-footer">
+          <button id="assigneeFilterClear" class="btn-sm" type="button">Vymazat</button>
+          <button id="assigneeFilterClose" class="btn-sm" type="button">Zavřít</button>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- přidání klienta/zakázky -->
-    <section class="addRow">
-      <div class="add-grid">
-        <input id="newClientName" class="pill-input" placeholder="Název klienta"/>
-        <button id="addClientBtn" class="pill-btn">Přidat klienta</button>
+  <!-- TABULKA -->
+  <section class="tableWrap">
+    <table class="grid">
+      <thead>
+        <tr class="headrow">
+          <th class="th-client">Klient</th>
+          <th class="th-job">Zakázka</th>
+          <th class="th-status">Status</th>
+          <th class="th-assignee">Grafik</th>
+          <th class="th-del"></th>
+          <th class="th-day">Po</th>
+          <th class="th-day">Út</th>
+          <th class="th-day">St</th>
+          <th class="th-day">Čt</th>
+          <th class="th-day">Pá</th>
+          <th class="th-total">Celkem</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </section>
+</main>
 
-        <select id="newJobClient" class="pill-select"></select>
-        <input id="newJobName" class="pill-input" placeholder="Název zakázky"/>
-        <select id="newJobStatus" class="pill-select"></select>
+<!-- STICKY FOOTER – součet za den -->
+<footer class="sum-footer">
+  <div class="sum-footer-wrap">
+    <span class="sum-footer-label">Součet za den</span>
+    <div class="sum-footer-bubbles" id="sumFooterBubbles">
+      <span class="sumBubble" id="sumBubble0">0</span>
+      <span class="sumBubble" id="sumBubble1">0</span>
+      <span class="sumBubble" id="sumBubble2">0</span>
+      <span class="sumBubble" id="sumBubble3">0</span>
+      <span class="sumBubble" id="sumBubble4">0</span>
+    </div>
+  </div>
+</footer>
 
-        <div class="menuAnchor">
-          <button id="assigneesNewBtn" class="pill-btn">Grafik: nikdo</button>
-          <div id="assigneesNewMenu" class="menu" hidden>
-            <label><input type="checkbox" value="Viki"> Viki</label>
-            <label><input type="checkbox" value="Standa"> Standa</label>
-            <label><input type="checkbox" value="Marek"> Marek</label>
-            <div class="menuRow">
-              <button id="assigneesNewClear" class="pill-btn small" type="button">Vymazat</button>
-              <button id="assigneesNewClose" class="pill-btn small" type="button">Zavřít</button>
-            </div>
-          </div>
-        </div>
+<div id="err" class="toast" style="display:none"></div>
 
-        <button id="addJobBtn" class="pill-btn accent">Přidat zakázku</button>
+<!-- MODÁL: Přidat klienta -->
+<div id="modalClient" class="modal-backdrop" style="display:none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">Přidat klienta</h3>
+        <p class="modal-sub">Zadejte podrobnosti pro nového klienta</p>
       </div>
-    </section>
+      <button class="modal-close" data-close="modalClient">✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label">Název klienta</label>
+      <input id="newClientName" class="form-input" placeholder="např. Acme Corp"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" data-close="modalClient">Zrušit</button>
+      <button id="addClientBtn" class="btn-primary">Přidat klienta</button>
+    </div>
+  </div>
+</div>
 
-    <!-- tabulka -->
-    <section class="tableWrap">
-      <table class="grid">
-        <thead>
-          <tr class="headpill">
-            <th>Klient</th>
-            <th>Zakázka</th>
-            <th>Po</th><th>Út</th><th>St</th><th>Čt</th><th>Pá</th>
-            <th>Celkem</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-        <tfoot>
-          <tr id="sumRow">
-            <td colspan="2" class="sumLabel">Součet za den</td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
-            <td class="sumCell"></td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
-    </section>
-  </main>
+<!-- MODÁL: Nová zakázka -->
+<div id="modalJob" class="modal-backdrop" style="display:none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">Nová zakázka</h3>
+        <p class="modal-sub">Zadejte podrobnosti pro nový projekt</p>
+      </div>
+      <button class="modal-close" data-close="modalJob">✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label">Klient</label>
+      <select id="newJobClient" class="form-select"></select>
+      <label class="form-label" style="margin-top:16px;">Název projektu</label>
+      <input id="newJobName" class="form-input" placeholder="např. Redesign webu 2024"/>
+      <label class="form-label" style="margin-top:16px;">Stav</label>
+      <select id="newJobStatus" class="form-select"></select>
+      <label class="form-label" style="margin-top:16px;">Grafik</label>
+      <div class="assignee-checkboxes">
+        <label class="assignee-check"><input type="checkbox" name="newAssignee" value="Viki"> Viki</label>
+        <label class="assignee-check"><input type="checkbox" name="newAssignee" value="Standa"> Standa</label>
+        <label class="assignee-check"><input type="checkbox" name="newAssignee" value="Marek"> Marek</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" data-close="modalJob">Zrušit</button>
+      <button id="addJobBtn" class="btn-primary">Vytvořit projekt</button>
+    </div>
+  </div>
+</div>
 
-  <div id="err" class="toast" style="display:none"></div>
+<!-- MODÁL: Uživatel -->
+<div id="modalUser" class="modal-backdrop" style="display:none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">Správa účtu</h3>
+        <p class="modal-sub" id="modalUserEmail"></p>
+      </div>
+      <button class="modal-close" data-close="modalUser">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Zobrazené jméno -->
+      <label class="form-label">Zobrazované jméno</label>
+      <input id="userDisplayName" class="form-input" placeholder="Vaše jméno" readonly/>
+      <p class="form-hint">Jméno je definováno v konfiguraci aplikace.</p>
 
-  <script src="app.js"></script>
-  <script src="auth.js"></script>
+      <!-- Změna hesla -->
+      <div class="form-section-divider"></div>
+      <p class="form-section-title">Změna hesla</p>
+      <label class="form-label" style="margin-top:12px;">Nové heslo</label>
+      <input id="userNewPass1" type="password" class="form-input" placeholder="Nové heslo"/>
+      <label class="form-label" style="margin-top:12px;">Zopakovat heslo</label>
+      <input id="userNewPass2" type="password" class="form-input" placeholder="Zopakovat heslo"/>
+      <p id="userPassMsg" class="auth-msg" style="display:none; margin-top:8px;"></p>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button id="btnUserLogout" class="btn-danger">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 5l3 3-3 3M13 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Odhlásit
+      </button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-ghost" data-close="modalUser">Zavřít</button>
+        <button id="btnUserSavePass" class="btn-primary">Uložit heslo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script src="auth.js"></script>
+<script>
+  // Modal helpers
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById(btn.dataset.close).style.display = 'none';
+    });
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) backdrop.style.display = 'none';
+    });
+  });
+
+  document.getElementById('btnAddClient').addEventListener('click', () => {
+    document.getElementById('modalClient').style.display = 'flex';
+  });
+  document.getElementById('btnAddJob').addEventListener('click', () => {
+    document.getElementById('modalJob').style.display = 'flex';
+  });
+  document.getElementById('btnExport').addEventListener('click', () => {
+    if (typeof exportExcel === 'function') exportExcel();
+  });
+
+  // Align footer bubbles under the header day-columns
+  function alignFooterBubbles() {
+    const ths = document.querySelectorAll('.grid thead th.th-day');
+    const footerWrap = document.querySelector('.sum-footer-wrap');
+    if (!ths.length || !footerWrap) return;
+
+    // Bubbles are absolute children of footerWrap (via display:contents on sum-footer-bubbles)
+    const wrapRect = footerWrap.getBoundingClientRect();
+
+    ths.forEach((th, i) => {
+      const bubble = document.getElementById('sumBubble' + i);
+      if (!bubble) return;
+      const thRect = th.getBoundingClientRect();
+      // Center of the th column, expressed as offset from footerWrap's left edge
+      const center = thRect.left + thRect.width / 2 - wrapRect.left;
+      bubble.style.left = Math.round(center) + 'px';
+    });
+  }
+
+  // Run on load and on resize
+  window.addEventListener('resize', alignFooterBubbles);
+  // Run after initial render (tables need to be painted first)
+  requestAnimationFrame(() => requestAnimationFrame(alignFooterBubbles));
+  // Also expose for app.js to call after table renders
+  window.alignFooterBubbles = alignFooterBubbles;
+
+  // User modal
+  document.getElementById('btnUserMenu').addEventListener('click', () => {
+    // Populate user info
+    const email = window.__currentUserEmail || '';
+    document.getElementById('modalUserEmail').textContent = email;
+    const displayName = (typeof nameFromEmail === 'function') ? nameFromEmail(email) : email.split('@')[0];
+    document.getElementById('userDisplayName').value = displayName;
+    document.getElementById('userNewPass1').value = '';
+    document.getElementById('userNewPass2').value = '';
+    const msg = document.getElementById('userPassMsg');
+    msg.style.display = 'none';
+    document.getElementById('modalUser').style.display = 'flex';
+  });
+
+  document.getElementById('btnUserSavePass').addEventListener('click', async () => {
+    const p1 = document.getElementById('userNewPass1').value;
+    const p2 = document.getElementById('userNewPass2').value;
+    const msg = document.getElementById('userPassMsg');
+    msg.style.display = 'none';
+    if (!p1 || !p2) { msg.textContent = 'Vyplň obě pole.'; msg.style.display = 'block'; msg.style.color = '#c00'; return; }
+    if (p1 !== p2) { msg.textContent = 'Hesla se neshodují.'; msg.style.display = 'block'; msg.style.color = '#c00'; return; }
+    if (p1.length < 6) { msg.textContent = 'Heslo musí mít aspoň 6 znaků.'; msg.style.display = 'block'; msg.style.color = '#c00'; return; }
+    try {
+      const sb = window.__sb || (typeof state !== 'undefined' && state.sb);
+      if (!sb) throw new Error('Supabase není inicializováno');
+      const { error } = await sb.auth.updateUser({ password: p1 });
+      if (error) throw error;
+      msg.textContent = 'Heslo bylo úspěšně změněno.';
+      msg.style.color = '#0a7d2a';
+      msg.style.display = 'block';
+      document.getElementById('userNewPass1').value = '';
+      document.getElementById('userNewPass2').value = '';
+    } catch(e) {
+      msg.textContent = e.message || 'Změna hesla selhala.';
+      msg.style.color = '#c00';
+      msg.style.display = 'block';
+    }
+  });
+
+  document.getElementById('btnUserLogout').addEventListener('click', async () => {
+    try {
+      const sb = window.__sb || (typeof state !== 'undefined' && state.sb);
+      if (sb) await sb.auth.signOut();
+    } catch(e) {}
+    location.reload();
+  });
+</script>
 </body>
 </html>

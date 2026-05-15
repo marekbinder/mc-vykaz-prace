@@ -85,9 +85,19 @@ async function loadEntriesMine(){
 async function loadTotalsAll(jobIds){
   if(!jobIds.length) return {};
   if(state.totalsScope==='ME'){
-    const {data,error}=await state.sb.from('time_entry').select('job_id,hours').in('job_id',jobIds).eq('user_id',state.session.user.id);
-    if(error){ showErr(error); return {}; }
-    const m={}; for(const r of (data||[])){ m[r.job_id]=(m[r.job_id]||0)+Number(r.hours||0); } return m;
+    const uid=state.session?.user?.id; if(!uid){ return {}; }
+    // Fetch all pages (Supabase default limit is 1000)
+    let all=[]; let from=0; const PAGE=1000;
+    while(true){
+      const {data,error}=await state.sb.from('time_entry').select('job_id,hours')
+        .in('job_id',jobIds).eq('user_id',uid).range(from,from+PAGE-1);
+      if(error){ showErr(error); break; }
+      if(!data||!data.length) break;
+      all=all.concat(data);
+      if(data.length<PAGE) break;
+      from+=PAGE;
+    }
+    const m={}; for(const r of all){ m[r.job_id]=(m[r.job_id]||0)+Number(r.hours||0); } return m;
   }
   const {data:rpc,error:rpcErr}=await state.sb.rpc('fn_job_totals');
   if(!rpcErr && rpc){ const m={}; for(const r of rpc){ m[r.job_id]=Number(r.sum_hours||0); } return m; }
@@ -121,49 +131,54 @@ function renderTable(){
   for(const j of visible){
     const tr=document.createElement('tr'); tr.dataset.job=j.id;
 
-    // klient
+    // Klient
     const tdC=document.createElement('td');
-    const csel=document.createElement('select'); csel.className='pill-select clientSel';
+    const csel=document.createElement('select'); csel.className='clientSel';
     csel.innerHTML = state.clients.map(c=>`<option value="${c.id}" ${String(c.id)===String(j.client_id)?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
     csel.onchange=async(e)=>{ await state.sb.from('job').update({client_id:e.target.value}).eq('id', j.id) };
     tdC.append(csel); tr.append(tdC);
 
-    // zakázka (název + status + grafik + koš)
-    const tdJ=document.createElement('td'); tdJ.className='jobCell';
-
-    const name=document.createElement('input'); name.className='pill-input jobNameIn'; name.value=j.name;
+    // Zakázka
+    const tdJ=document.createElement('td');
+    const name=document.createElement('input'); name.className='jobNameIn'; name.value=j.name;
     let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ await state.sb.from('job').update({name:e.target.value}).eq('id', j.id) }, 250); };
+    tdJ.append(name); tr.append(tdJ);
 
-    const st=document.createElement('select'); st.className='pill-select statusSel';
+    // Status
+    const tdSt=document.createElement('td');
+    const st=document.createElement('select'); st.className='statusSel';
     st.innerHTML = state.statuses.map(s=>`<option value="${s.id}" ${String(s.id)===String(j.status_id)?'selected':''}>${escapeHtml(s.label)}</option>`).join('');
     colorizeStatus(st); st.onchange=async(e)=>{ colorizeStatus(st); await state.sb.from('job').update({status_id:+e.target.value}).eq('id', j.id) };
+    tdSt.append(st); tr.append(tdSt);
 
-    const del=document.createElement('button'); del.className='pill-btn jobDelete'; del.textContent='🗑'; del.title='Odstranit';
-
-    // inline grafik – jen neutrální tlačítko „Grafik“
+    // Grafik
+    const tdAss=document.createElement('td'); tdAss.style.textAlign='center';
     const wrap=document.createElement('div'); wrap.className='menuAnchor';
-    const assBtn=document.createElement('button'); assBtn.className='pill-btn assigneeIcon'; assBtn.type='button'; assBtn.textContent='Grafik';
+    const assBtn=document.createElement('button'); assBtn.className='assigneeIcon'; assBtn.type='button';
+    assBtn.textContent = j.assignees&&j.assignees.length ? renderAssigneeLabel(j.assignees) : 'Grafik';
     const menu=document.createElement('div'); menu.className='menu'; menu.hidden=true;
     ASSIGNEE_OPTIONS.forEach(opt=>{
       const L=document.createElement('label'); const I=document.createElement('input'); I.type='checkbox'; I.value=opt; L.append(I, document.createTextNode(' '+opt)); menu.append(L);
     });
-    const row=document.createElement('div'); row.className='menuRow';
+    const mrow=document.createElement('div'); mrow.className='menuRow';
     const clr=document.createElement('button'); clr.className='pill-btn small'; clr.textContent='Vymazat'; clr.type='button';
-    const cls=document.createElement('button'); cls.className='pill-btn small'; cls.textContent='Zavřít'; cls.type='button';
-    row.append(clr,cls); menu.append(row);
-
+    const cls=document.createElement('button'); cls.className='pill-btn small'; cls.textContent='Zavrit'; cls.type='button';
+    mrow.append(clr,cls); menu.append(mrow);
     assBtn.addEventListener('click', ()=>{ setMenuChecked(menu, j.assignees); toggleMenu(menu); });
-    clr.addEventListener('click', async ()=>{ j.assignees=[]; setMenuChecked(menu,[]); await state.sb.from('job').update({assignees:j.assignees}).eq('id', j.id); renderTable(); });
-    menu.addEventListener('change', async ()=>{ j.assignees=collectMenuChecked(menu); await state.sb.from('job').update({assignees:j.assignees}).eq('id', j.id); renderTable(); });
+    clr.addEventListener('click', async ()=>{ j.assignees=[]; setMenuChecked(menu,[]); assBtn.textContent='Grafik'; await state.sb.from('job').update({assignees:j.assignees}).eq('id', j.id); });
+    menu.addEventListener('change', async ()=>{ j.assignees=collectMenuChecked(menu); assBtn.textContent=j.assignees.length?renderAssigneeLabel(j.assignees):'Grafik'; await state.sb.from('job').update({assignees:j.assignees}).eq('id', j.id); });
     cls.addEventListener('click', ()=> menu.hidden=true);
-
     wrap.append(assBtn, menu);
+    tdAss.append(wrap); tr.append(tdAss);
+
+    // Smazat
+    const tdDel=document.createElement('td'); tdDel.style.textAlign='center';
+    const del=document.createElement('button'); del.className='jobDelete'; del.title='Odstranit';
+    del.innerHTML='<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5V4M6.5 7v5M9.5 7v5M4 4l.8 8.5a1 1 0 001 .9h4.4a1 1 0 001-.9L12 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     del.onclick=()=>deleteJob(j.id);
+    tdDel.append(del); tr.append(tdDel);
 
-    tdJ.append(name, st, wrap, del);
-    tr.append(tdJ);
-
-    // dny Po–Pá
+    // Dny
     for(let i=0;i<5;i++){
       const d=days[i]; const td=document.createElement('td'); td.dataset.day=i; td.style.textAlign='center';
       const b=document.createElement('button'); b.className='bubble'; b.textContent='0';
@@ -171,7 +186,7 @@ function renderTable(){
       td.append(b); tr.append(td);
     }
 
-    // kumulativní celkem – bez podbarvení, střed, stejná velikost
+    // Celkem
     const tdT=document.createElement('td'); tdT.className='totalCell'; tdT.innerHTML = `<span class="totalVal">${formatNum(state.totalsAll[j.id]||0)}</span>`;
     tr.appendChild(tdT);
 
@@ -179,6 +194,8 @@ function renderTable(){
     updateRow(j.id);
   }
   updateSumRow(visible);
+  // Re-align footer bubbles after table re-renders (columns may have reflowed)
+  requestAnimationFrame(() => { if (window.alignFooterBubbles) window.alignFooterBubbles(); });
 }
 
 // menu helpery – zavření klikem mimo anchor
@@ -204,11 +221,12 @@ function updateRow(jobId){
 function updateSumRow(visibleJobs){
   const days=getDays(); const visible = visibleJobs || state.jobs;
   const sums = days.map(d => visible.reduce((a,j)=> a + cellValue(j.id, d), 0));
-  const tds = document.querySelectorAll('#sumRow .sumCell');
-  tds.forEach((td,i)=>{
-    const h=sums[i]||0; const cls=h<=3?'sumRed':(h<=6?'sumOrange':'sumGreen');
-    td.innerHTML = `<span class="sumBubble ${cls}">${formatNum(h)}</span>`;
-  });
+  for(let i=0;i<5;i++){
+    const el=document.getElementById('sumBubble'+i); if(!el) continue;
+    const h=sums[i]||0;
+    el.textContent=formatNum(h)||'0';
+    el.className='sumBubble'+(h===0?'':h<=3?' sumRed':h<=6?' sumOrange':' sumGreen');
+  }
 }
 
 // změna hodin
@@ -458,37 +476,30 @@ function buildShellControls(){
   fClear.onclick=()=>{ state.filterAssignees=[]; fBtn.textContent='Grafik: Všichni'; setMenuChecked(fMenu,[]); renderTable(); };
   fClose.onclick=()=> fMenu.hidden=true;
 
-  // přidávání
-  const jobClient=document.getElementById('newJobClient');
-  jobClient.innerHTML = state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-  const jobStatus=document.getElementById('newJobStatus');
-  jobStatus.innerHTML = state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
-  colorizeStatus(jobStatus); jobStatus.onchange=()=>colorizeStatus(jobStatus);
+  // Modalni formulare
+  const jobClientSel=document.getElementById('newJobClient');
+  if(jobClientSel) jobClientSel.innerHTML = state.clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  const jobStatusSel=document.getElementById('newJobStatus');
+  if(jobStatusSel) jobStatusSel.innerHTML = state.statuses.map(s=>`<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
 
   document.getElementById('addClientBtn').onclick=async()=>{
     const name=document.getElementById('newClientName').value.trim(); if(!name) return showErr('Zadej název klienta');
     const {error}=await state.sb.from('client').insert({name}); if(error) return showErr(error.message);
-    document.getElementById('newClientName').value=''; state.clients=await loadClients(); buildShellControls();
+    document.getElementById('newClientName').value='';
+    document.getElementById('modalClient').style.display='none';
+    state.clients=await loadClients(); buildShellControls();
   };
-
-  // „Grafik“ u nové zakázky
-  const aBtn=document.getElementById('assigneesNewBtn');
-  const aMenu=document.getElementById('assigneesNewMenu');
-  const aClear=document.getElementById('assigneesNewClear');
-  const aClose=document.getElementById('assigneesNewClose');
-  aBtn.onclick=()=>{ setMenuChecked(aMenu,state.newJobAssignees); toggleMenu(aMenu); };
-  aMenu.onchange=()=>{ state.newJobAssignees=collectMenuChecked(aMenu); aBtn.textContent='Grafik: '+(state.newJobAssignees.length? renderAssigneeLabel(state.newJobAssignees): 'nikdo'); };
-  aClear.onclick=()=>{ state.newJobAssignees=[]; setMenuChecked(aMenu,[]); aBtn.textContent='Grafik: nikdo'; };
-  aClose.onclick=()=> aMenu.hidden=true;
 
   document.getElementById('addJobBtn').onclick=async()=>{
     const name=document.getElementById('newJobName').value.trim(); if(!name) return showErr('Zadej název zakázky');
     const client_id=document.getElementById('newJobClient').value;
     const status_id=+document.getElementById('newJobStatus').value;
-    const assignees=state.newJobAssignees.slice();
+    const assignees=[...document.querySelectorAll('input[name="newAssignee"]:checked')].map(i=>i.value);
     const {error}=await state.sb.from('job').insert({client_id,name,status_id,assignees});
     if(error) return showErr(error.message);
-    document.getElementById('newJobName').value=''; state.newJobAssignees=[]; aBtn.textContent='Grafik: nikdo';
+    document.getElementById('newJobName').value='';
+    document.querySelectorAll('input[name="newAssignee"]').forEach(i=>i.checked=false);
+    document.getElementById('modalJob').style.display='none';
     state.jobs=await loadJobs(); await refreshTotals(); renderTable();
   };
 }
@@ -496,14 +507,21 @@ async function buildShell(){
   setWeekHandlers(); setWeekRangeLabel(); buildShellControls(); renderTable();
 }
 async function render(){
-  const ub=document.getElementById('userBoxTopRight'); ub.innerHTML='';
+  const ub=document.getElementById('userBoxTopRight'); if(ub) ub.innerHTML='';
   if(!state.session){
-    const b=document.createElement('button'); b.className='pill-btn'; b.textContent='Přihlásit'; b.onclick=showLogin; ub.append(b);
+    if(ub){ const b=document.createElement('button'); b.className='btn-outline'; b.textContent='Přihlásit'; b.onclick=showLogin; ub.append(b); }
     return showLogin();
   }else{
-    const e=document.createElement('span'); e.className='pill-btn'; e.textContent=state.session.user.email; e.style.background='#ECEEF2';
-    const o=document.createElement('button'); o.className='pill-btn'; o.textContent='Odhlásit'; o.onclick=async()=>{ await state.sb.auth.signOut(); };
-    ub.append(e,o);
+    // Store email for user modal
+    window.__currentUserEmail = state.session.user.email;
+    const displayName=nameFromEmail(state.session.user.email);
+    const initials=(displayName||'?').slice(0,2).toUpperCase();
+    // Update avatar button
+    const avatarBtn=document.getElementById('btnUserMenu');
+    if(avatarBtn){
+      const initialsEl=document.getElementById('userAvatarInitials');
+      if(initialsEl) initialsEl.textContent=displayName||initials;
+    }
   }
   await ensureProfile();
   state.clients=await loadClients(); state.statuses=await loadStatuses(); state.jobs=await loadJobs();

@@ -135,20 +135,38 @@ function renderTable(){
     const tdC=document.createElement('td');
     const csel=document.createElement('select'); csel.className='clientSel';
     csel.innerHTML = state.clients.map(c=>`<option value="${c.id}" ${String(c.id)===String(j.client_id)?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
-    csel.onchange=async(e)=>{ await state.sb.from('job').update({client_id:e.target.value}).eq('id', j.id) };
+    csel.onchange=async(e)=>{
+      const newClientId=e.target.value;
+      const {error}=await state.sb.from('job').update({client_id:newClientId}).eq('id', j.id);
+      if(error){ showErr(error.message); e.target.value=j.client_id; return; }
+      j.client_id=newClientId;
+      // update filterClient options label
+      state.jobs=await loadJobs(); renderTable();
+    };
     tdC.append(csel); tr.append(tdC);
 
     // Zakázka
     const tdJ=document.createElement('td');
     const name=document.createElement('input'); name.className='jobNameIn'; name.value=j.name;
-    let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{ await state.sb.from('job').update({name:e.target.value}).eq('id', j.id) }, 250); };
+    let t=null; name.oninput=(e)=>{ clearTimeout(t); t=setTimeout(async()=>{
+      const newName=e.target.value;
+      const {error}=await state.sb.from('job').update({name:newName}).eq('id', j.id);
+      if(error){ showErr(error.message); return; }
+      j.name=newName;
+    }, 250); };
     tdJ.append(name); tr.append(tdJ);
 
     // Status
     const tdSt=document.createElement('td');
     const st=document.createElement('select'); st.className='statusSel';
     st.innerHTML = state.statuses.map(s=>`<option value="${s.id}" ${String(s.id)===String(j.status_id)?'selected':''}>${escapeHtml(s.label)}</option>`).join('');
-    colorizeStatus(st); st.onchange=async(e)=>{ colorizeStatus(st); await state.sb.from('job').update({status_id:+e.target.value}).eq('id', j.id) };
+    colorizeStatus(st); st.onchange=async(e)=>{
+      colorizeStatus(st);
+      const newStatusId=+e.target.value;
+      const {error}=await state.sb.from('job').update({status_id:newStatusId}).eq('id', j.id);
+      if(error){ showErr(error.message); st.value=j.status_id; colorizeStatus(st); return; }
+      j.status_id=newStatusId;
+    };
     tdSt.append(st); tr.append(tdSt);
 
     // Grafik
